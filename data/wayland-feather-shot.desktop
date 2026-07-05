@@ -1,0 +1,22 @@
+[Desktop Entry]
+Type=Application
+Name=Feather Shot
+GenericName=Screenshot Tool
+Comment=Wayland-first screenshot with annotations, blur and scrolling capture
+Comment[ja]=Wayland専用スクリーンショット(注釈・ぼかし・スクロールキャプチャ対応)
+Exec=wayland-feather-shot gui
+Icon=wayland-feather-shot
+Terminal=false
+Categories=Graphics;Utility;
+Keywords=screenshot;capture;annotate;blur;scroll;wayland;
+Actions=full;scroll;
+
+[Desktop Action full]
+Name=Capture full screen
+Name[ja]=全画面キャプチャ
+Exec=wayland-feather-shot full
+
+[Desktop Action scroll]
+Name=Scrolling capture
+Name[ja]=スクロールキャプチャ
+Exec=wayland-feather-shot scroll

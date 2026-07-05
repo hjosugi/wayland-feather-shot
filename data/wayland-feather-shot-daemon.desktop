@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Feather Shot Hotkey Daemon
+Comment=Binds Ctrl+Print via the GlobalShortcuts portal
+Exec=wayland-feather-shot daemon
+Icon=wayland-feather-shot
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
