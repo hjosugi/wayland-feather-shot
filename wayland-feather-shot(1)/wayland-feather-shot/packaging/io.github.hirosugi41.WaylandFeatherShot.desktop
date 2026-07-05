@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Wayland Feather Shot
+Comment=Local-only Wayland screenshot editor
+Exec=wayland-feather-shot capture --target area
+Icon=accessories-screenshot
+Terminal=false
+Categories=Graphics;Utility;
+StartupNotify=true

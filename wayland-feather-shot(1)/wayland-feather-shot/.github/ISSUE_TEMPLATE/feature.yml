@@ -1,0 +1,30 @@
+name: Feature request
+description: Request a local-only Wayland Feather Shot feature
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the local-only implementation.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety constraints
+      options:
+        - label: No cloud upload
+          required: true
+        - label: No telemetry
+          required: true
+        - label: No compositor security bypass
+          required: true
