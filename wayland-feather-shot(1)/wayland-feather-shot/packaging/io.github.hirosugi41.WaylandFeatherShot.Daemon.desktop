@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Wayland Feather Shot Shortcut Daemon
-Comment=Bind CTRL+Print for Wayland Feather Shot when the desktop portal supports it
-Exec=wayland-feather-shot daemon --shortcut CTRL+Print
-Icon=accessories-screenshot
-Terminal=false
-X-GNOME-Autostart-enabled=true

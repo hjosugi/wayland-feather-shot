@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a Wayland Feather Shot bug
+description: Report a wayland-feather-shot bug
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -14,7 +14,12 @@ body:
     id: portal
     attributes:
       label: Portal backend
-      placeholder: xdg-desktop-portal-gnome, xdg-desktop-portal-kde, xdg-desktop-portal-hyprland, xdg-desktop-portal-wlr
+      placeholder: xdg-desktop-portal-gnome, -kde, -hyprland, -wlr, -gtk
+  - type: textarea
+    id: diagnose
+    attributes:
+      label: Output of `wayland-feather-shot diagnose`
+      render: text
   - type: textarea
     id: steps
     attributes:

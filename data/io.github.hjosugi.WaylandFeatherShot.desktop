@@ -5,10 +5,11 @@ GenericName=Screenshot Tool
 Comment=Wayland-first screenshot with annotations, blur and scrolling capture
 Comment[ja]=Wayland専用スクリーンショット(注釈・ぼかし・スクロールキャプチャ対応)
 Exec=wayland-feather-shot gui
-Icon=wayland-feather-shot
+Icon=io.github.hjosugi.WaylandFeatherShot
 Terminal=false
 Categories=Graphics;Utility;
 Keywords=screenshot;capture;annotate;blur;scroll;wayland;
+StartupNotify=true
 Actions=full;scroll;
 
 [Desktop Action full]

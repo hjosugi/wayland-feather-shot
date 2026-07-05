@@ -60,11 +60,16 @@ cp -r "$HERE/src" "$HERE/bin" "$APPDIR/"
 chmod +x "$APPDIR/bin/wayland-feather-shot"
 ln -sf "$APPDIR/bin/wayland-feather-shot" "$BINDIR/wayland-feather-shot"
 
-cp "$HERE/data/wayland-feather-shot.desktop" "$DESKDIR/"
-cp "$HERE/data/icons/wayland-feather-shot.svg" "$ICONDIR/"
+APP_ID="io.github.hjosugi.WaylandFeatherShot"
+cp "$HERE/data/$APP_ID.desktop" "$DESKDIR/"
+cp "$HERE/data/icons/$APP_ID.svg" "$ICONDIR/"
+# Clean up files installed under the pre-0.2.0 names.
+rm -f "$DESKDIR/wayland-feather-shot.desktop" \
+      "$ICONDIR/wayland-feather-shot.svg"
 if [ -n "$AUTOSTART" ]; then
     mkdir -p "$AUTOSTART"
-    cp "$HERE/data/wayland-feather-shot-daemon.desktop" "$AUTOSTART/"
+    cp "$HERE/data/$APP_ID.Daemon.desktop" "$AUTOSTART/"
+    rm -f "$AUTOSTART/wayland-feather-shot-daemon.desktop"
 fi
 command -v update-desktop-database >/dev/null 2>&1 && \
     update-desktop-database "$DESKDIR" 2>/dev/null || true

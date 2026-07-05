@@ -6,7 +6,7 @@ upload button, no accounts, no telemetry, no network code at all.**
 Flameshot風のWayland専用スクリーンショットツール。クラウドアップロード機能は
 存在しません(ネットワークコード自体がありません)。UIは日本語/英語自動切替。
 
-![tools](data/icons/wayland-feather-shot.svg)
+![tools](data/icons/io.github.hjosugi.WaylandFeatherShot.svg)
 
 ## Features / 機能
 
@@ -52,8 +52,17 @@ $ ./install.sh                # user install into ~/.local
 $ ./install.sh --with-hotkey  # …and register Ctrl+Print (GNOME: automatic)
 ```
 
+(A `pyproject.toml` is also provided, so `pip install .` works if you prefer
+pip — the GTK/GStreamer stack itself still comes from your distro.)
+
 You also need `xdg-desktop-portal` plus a backend, which every mainstream
 Wayland desktop already ships (`-gnome`, `-kde`, `-wlr`, `-hyprland`, `-gtk`).
+
+Not sure what's missing? Run the built-in environment check:
+
+```console
+$ wayland-feather-shot diagnose
+```
 
 ## Usage / 使い方
 
@@ -61,8 +70,10 @@ Wayland desktop already ships (`-gnome`, `-kde`, `-wlr`, `-hyprland`, `-gtk`).
 $ wayland-feather-shot            # region capture (default)
 $ wayland-feather-shot full       # whole screen straight into the editor
 $ wayland-feather-shot scroll     # scrolling capture
+$ wayland-feather-shot edit x.png # open an existing image in the editor
 $ wayland-feather-shot -d 3 gui   # 3-second delay
 $ wayland-feather-shot daemon     # GlobalShortcuts-portal hotkey daemon
+$ wayland-feather-shot diagnose   # check portals/GTK/GStreamer availability
 ```
 
 ### Region capture / 範囲キャプチャ
@@ -101,7 +112,15 @@ $ wayland-feather-shot daemon     # GlobalShortcuts-portal hotkey daemon
 save directory, filename pattern, default color/width, blur strength,
 scroll-capture margins and limits. See `src/wayland_feather_shot/settings.py`.
 
+`save_dir` defaults to empty = automatic: the XDG Pictures directory
+(localized, e.g. `~/画像`) plus `/Screenshots`. Set it to a path to
+override.
+
 ## Troubleshooting
+
+Start with `wayland-feather-shot diagnose` — it checks GTK, pycairo,
+wl-clipboard, GStreamer/PipeWire and the portal interfaces, and tells you
+what's missing.
 
 - **Nothing happens / error dialog about the portal** — make sure
   `xdg-desktop-portal` and your desktop's backend are running
@@ -116,9 +135,13 @@ scroll-capture margins and limits. See `src/wayland_feather_shot/settings.py`.
 
 ```console
 $ python3 tests/test_stitcher.py   # stitching engine unit tests (no GTK needed)
+$ python3 tests/test_paths.py      # XDG paths + diagnostics tests (no GTK needed)
 $ ./bin/wayland-feather-shot gui   # run from the repo without installing
 ```
 
-Known limitations and the roadmap live in [ISSUES.md](ISSUES.md).
+Design notes live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and
+[docs/SECURITY.md](docs/SECURITY.md). Known limitations and the roadmap are
+tracked as [GitHub issues](https://github.com/hjosugi/wayland-feather-shot/issues)
+(summary in [ISSUES.md](ISSUES.md)).
 
 License: [MIT](LICENSE)

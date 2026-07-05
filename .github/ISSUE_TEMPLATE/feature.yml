@@ -1,5 +1,5 @@
 name: Feature request
-description: Request a local-only Wayland Feather Shot feature
+description: Request a local-only wayland-feather-shot feature
 title: "[Feature]: "
 labels: ["enhancement"]
 body:

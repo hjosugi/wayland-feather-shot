@@ -5,14 +5,17 @@ from __future__ import annotations
 import json
 import os
 
+from .paths import default_screenshots_dir
+
 CONFIG_DIR = os.path.join(
     os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
     "wayland-feather-shot")
 CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
 
 DEFAULTS = {
-    # Where Ctrl+S drops files. Created on demand.
-    "save_dir": "~/Pictures/Screenshots",
+    # Where Ctrl+S drops files. Created on demand. Empty = auto: the XDG
+    # Pictures directory (localized, e.g. ~/画像) + "/Screenshots".
+    "save_dir": "",
     # strftime pattern for quick-save filenames.
     "filename_pattern": "feather-%Y-%m-%d_%H-%M-%S.png",
     # Default annotation style.
@@ -53,7 +56,11 @@ class Settings:
 
     @property
     def save_dir_path(self) -> str:
-        path = os.path.expanduser(str(self._data["save_dir"]))
+        configured = str(self._data["save_dir"]).strip()
+        if configured:
+            path = os.path.expanduser(configured)
+        else:
+            path = str(default_screenshots_dir())
         os.makedirs(path, exist_ok=True)
         return path
 

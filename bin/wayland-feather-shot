@@ -6,6 +6,6 @@ import sys
 base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sys.path.insert(0, os.path.join(base, "src"))
 
-from wayland_feather_shot.app import main  # noqa: E402
+from wayland_feather_shot.cli import main  # noqa: E402
 
 sys.exit(main())

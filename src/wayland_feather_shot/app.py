@@ -1,15 +1,15 @@
-"""Application entry point and mode dispatch.
+"""GTK application and mode dispatch.
 
-Modes:
+Modes (parsed in cli.py, which imports this module lazily):
   gui     frozen-screen region capture with in-place annotation (default)
   full    capture the whole screen straight into the editor window
   scroll  scrolling capture (record while you scroll, auto-stitch)
+  edit    open an existing image file in the editor
   daemon  bind Ctrl+Print etc. via the GlobalShortcuts portal
 """
 
 from __future__ import annotations
 
-import argparse
 import os
 import subprocess
 import sys
@@ -19,14 +19,12 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 
-from . import __version__
+from . import APP_ID
 from .i18n import _, tr
 from .editor.window import EditorWindow
 from .portal import Portal, PortalError, cleanup_portal_file
 from .select_overlay import OverlayWindow
 from .settings import Settings
-
-APP_ID = "io.github.wayland_feather_shot"
 
 
 def _die_dialog(app, message: str):
@@ -51,16 +49,20 @@ def _die_dialog(app, message: str):
 
 
 class FeatherShotApp(Gtk.Application):
-    def __init__(self, mode: str, delay: float):
+    def __init__(self, mode: str, delay: float, file: str | None = None):
         super().__init__(application_id=APP_ID,
                          flags=Gio.ApplicationFlags.NON_UNIQUE)
         self.mode = mode
         self.delay = delay
+        self.file = file
         self.settings = Settings()
         self.portal = None
 
     def do_activate(self):
         self.hold()  # stay alive while portal dialogs are up, windows closed
+        if self.mode == "edit":
+            self._open_existing(self.file)
+            return
         try:
             self.portal = Portal()
         except PortalError as e:
@@ -121,6 +123,18 @@ class FeatherShotApp(Gtk.Application):
                                 open_editor=self._open_editor)
         else:
             win = EditorWindow(self, pixbuf, self.settings)
+        win.connect("destroy", lambda *_: self.release())
+        win.present()
+
+    def _open_existing(self, path: str):
+        """`edit FILE` mode: no portal involved, straight into the editor."""
+        try:
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file(path)
+        except GLib.Error as e:
+            _die_dialog(self, tr("Could not read the captured image: {error}", error=e))
+            self.release()
+            return
+        win = EditorWindow(self, pixbuf, self.settings)
         win.connect("destroy", lambda *_: self.release())
         win.present()
 
@@ -204,28 +218,12 @@ def spawn_capture(mode: str):
     subprocess.Popen(cmd, start_new_session=True)
 
 
-def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(
-        prog="wayland-feather-shot",
-        description="Flameshot-style screenshot tool built Wayland-first: "
-                    "portal capture, in-place annotation (pen, arrow, blur, "
-                    "…), scrolling capture. 100%% local — no upload, no "
-                    "network code.")
-    parser.add_argument("mode", nargs="?", default="gui",
-                        choices=["gui", "full", "scroll", "daemon"],
-                        help="gui: region capture (default) / full: whole "
-                             "screen / scroll: scrolling capture / daemon: "
-                             "GlobalShortcuts-portal hotkey daemon")
-    parser.add_argument("-d", "--delay", type=float, default=0.0,
-                        metavar="SEC", help="delay before capturing")
-    parser.add_argument("--version", action="version",
-                        version=f"%(prog)s {__version__}")
-    args = parser.parse_args(argv)
-
+def run(args) -> int:
+    """Run the app for parsed CLI *args* (see cli.build_parser)."""
     Settings().write_default_config_if_missing()
 
     if args.mode == "daemon":
         return FeatherShotApp(args.mode, 0).run_daemon()
 
-    app = FeatherShotApp(args.mode, args.delay)
+    app = FeatherShotApp(args.mode, args.delay, file=getattr(args, "file", None))
     return app.run(None)

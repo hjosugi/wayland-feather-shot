@@ -3,4 +3,8 @@
 Local only: no upload, no accounts, no telemetry, no network code.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
+
+APP_ID = "io.github.hjosugi.WaylandFeatherShot"
+APP_NAME = "Feather Shot"
+DEFAULT_SHORTCUT = "CTRL+Print"

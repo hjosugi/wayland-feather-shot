@@ -1,1 +1,0 @@
-"""Scroll capture helpers."""
