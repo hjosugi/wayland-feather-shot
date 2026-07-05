@@ -153,6 +153,51 @@ class StitchTest(unittest.TestCase):
         self.assertEqual(m[0], brute)
         self.assertEqual(m[0], 55)
 
+    def test_overshoot_frame_dropped_not_duplicated(self):
+        # User scrolled 0->60->120, the page rubber-banded back to 90, then
+        # settled at 150. The 90 frame must be dropped (backwards), not append
+        # a duplicated strip.
+        doc_h = 600
+        doc = make_document(doc_h)
+        frames = [viewport(doc, doc_h, s) for s in (0, 60, 120, 90, 150)]
+        result = stitch(frames, top_margin=0, bottom_margin=0)
+        self.assertAlmostEqual(result.height, 150 + H, delta=3)
+        self.assertEqual(result.frames_dropped, 1)
+        dropped = result.warnings
+        self.assertEqual(len(dropped), 1)
+        self.assertEqual(dropped[0].index, 3)  # the 90-scroll frame
+        self.assertIn("back", dropped[0].reason)
+
+    def test_horizontal_shift_dropped_with_reason(self):
+        doc_h = 400
+        doc = make_document(doc_h)
+        base = viewport(doc, doc_h, 60)
+
+        def roll_columns(frame, dx):
+            rows = bytearray()
+            for y in range(frame.height):
+                row = bytearray(frame.row(y))
+                shift = dx * 4
+                rows += row[shift:] + row[:shift]
+            return Frame(bytes(rows), frame.width, frame.height, frame.width * 4)
+
+        frames = [viewport(doc, doc_h, 0), roll_columns(base, 20)]
+        result = stitch(frames, top_margin=0, bottom_margin=0)
+        self.assertEqual(result.frames_dropped, 1)
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("horizontal", result.warnings[0].reason)
+
+    def test_notes_cover_every_frame(self):
+        doc_h = 400
+        doc = make_document(doc_h)
+        frames = [viewport(doc, doc_h, 0), viewport(doc, doc_h, 0),
+                  viewport(doc, doc_h, 60)]
+        result = stitch(frames, top_margin=0, bottom_margin=0)
+        # one note per non-base frame
+        self.assertEqual(len(result.notes), 2)
+        actions = [n.action for n in result.notes]
+        self.assertEqual(actions, ["duplicate", "kept"])
+
     def test_signatures(self):
         doc_h = 300
         doc = make_document(doc_h)

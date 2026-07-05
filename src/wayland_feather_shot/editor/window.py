@@ -38,7 +38,8 @@ TOOL_KEYS = {
 
 
 class EditorWindow(Gtk.ApplicationWindow):
-    def __init__(self, app, pixbuf: GdkPixbuf.Pixbuf, settings, shapes=None):
+    def __init__(self, app, pixbuf: GdkPixbuf.Pixbuf, settings, shapes=None,
+                 startup_toast=None):
         super().__init__(application=app, title="Feather Shot")
         self.settings = settings
         self._dirty = False
@@ -76,6 +77,9 @@ class EditorWindow(Gtk.ApplicationWindow):
 
         iw, ih = pixbuf.get_width(), pixbuf.get_height()
         self.set_default_size(min(iw + 40, 1500), min(ih + 110, 950))
+
+        if startup_toast:
+            GLib.idle_add(lambda: (self.toast(startup_toast, 6.0), False)[1])
 
     # -- UI ------------------------------------------------------------------
 

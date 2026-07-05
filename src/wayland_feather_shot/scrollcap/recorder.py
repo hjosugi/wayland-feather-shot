@@ -34,6 +34,19 @@ def gstreamer_available() -> bool:
         return False
 
 
+def _warning_text(result) -> Optional[str]:
+    """A short, user-facing note if some frames could not be stitched, so a
+    silently mis-stitched capture doesn't look complete.  None when clean."""
+    warnings = getattr(result, "warnings", [])
+    if not warnings:
+        return None
+    n = len(warnings)
+    reasons = {_(w.reason) for w in warnings}
+    detail = "; ".join(sorted(reasons))
+    return tr("{n} frame(s) skipped while stitching: {detail}",
+              n=n, detail=detail)
+
+
 class FrameSelector:
     """Damage-driven frame keeper.
 
@@ -275,14 +288,14 @@ class ScrollCaptureWindow(Gtk.ApplicationWindow):
             pixbuf = GdkPixbuf.Pixbuf.new_from_bytes(
                 GLib.Bytes.new(data), GdkPixbuf.Colorspace.RGB, True, 8,
                 result.width, height, result.width * 4)
-            self._emit(pixbuf.copy(), None)
+            self._emit(pixbuf.copy(), None, _warning_text(result))
             return False
 
         threading.Thread(target=work, daemon=True).start()
 
-    def _emit(self, pixbuf, error):
+    def _emit(self, pixbuf, error, warning=None):
         if self._done:
             return
         self._done = True
-        self.on_result(pixbuf, error)
+        self.on_result(pixbuf, error, warning)
         self.close()

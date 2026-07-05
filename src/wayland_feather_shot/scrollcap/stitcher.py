@@ -11,7 +11,7 @@ newly revealed rows.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional, Sequence
 
 try:  # optional acceleration
@@ -42,12 +42,29 @@ class Frame:
 
 
 @dataclass
+class FrameNote:
+    """Per-frame stitching decision, for surfacing warnings in the UI."""
+    index: int          # frame index in the input list (1-based; frame 0 is the base)
+    action: str         # "kept" | "duplicate" | "dropped"
+    shift: int          # rows of new content appended (0 for duplicate/dropped)
+    score: float        # match score (lower = better); -1 when no match found
+    reason: str = ""    # human-readable reason for duplicate/dropped
+
+
+@dataclass
 class StitchResult:
     data: bytearray  # tightly packed RGBA, alpha forced opaque
     width: int
     height: int
     frames_used: int
     frames_dropped: int
+    notes: List[FrameNote] = field(default_factory=list)
+
+    @property
+    def warnings(self) -> List[FrameNote]:
+        """Frames that were dropped for a suspicious reason (not plain
+        duplicates), worth showing the user."""
+        return [n for n in self.notes if n.action == "dropped"]
 
 
 def _row_signature(frame: Frame, y: int) -> List[int]:
@@ -244,17 +261,38 @@ def stitch(frames: List[Frame], top_margin: int = -1, bottom_margin: int = -1,
     prev = first
     prev_sigs = _all_signatures(prev)
     used, dropped = 1, 0
+    notes: List[FrameNote] = []
 
     for idx, cur in enumerate(frames[1:], start=1):
         if progress:
             progress(idx, len(frames) - 1)
         cur_sigs = _all_signatures(cur)
-        s = _best_shift(prev_sigs, cur_sigs, top_margin, usable_h)
-        if s is None:
+        fwd = _match(prev_sigs, cur_sigs, top_margin, usable_h)
+
+        if fwd is None:
+            # No forward (scroll-down) overlap. Is it an overshoot / the user
+            # scrolling back up?  Then the *current* frame sits above the
+            # previous one and matching the other direction succeeds — drop it
+            # so we don't duplicate a strip.  Otherwise the frames don't share
+            # a vertical overlap at all (horizontal scroll or a scene change).
+            bwd = _match(cur_sigs, prev_sigs, top_margin, usable_h)
+            if bwd is not None and bwd[0] > 0:
+                reason = "scrolled back / overshoot"
+            else:
+                reason = "no vertical overlap (horizontal scroll or scene change)"
             dropped += 1
+            notes.append(FrameNote(idx, "dropped", 0, -1.0, reason))
             continue
-        if s > 0:  # bottom s rows of the current frame are new content
-            height += _append_rows(out, cur, usable_h - s, usable_h)
+
+        s, score = fwd
+        if s == 0:  # identical to the previous kept frame
+            notes.append(FrameNote(idx, "duplicate", 0, score, "no new content"))
+            prev, prev_sigs = cur, cur_sigs
+            used += 1
+            continue
+
+        height += _append_rows(out, cur, usable_h - s, usable_h)
+        notes.append(FrameNote(idx, "kept", s, score))
         prev, prev_sigs = cur, cur_sigs
         used += 1
 
@@ -264,4 +302,4 @@ def stitch(frames: List[Frame], top_margin: int = -1, bottom_margin: int = -1,
     # Force alpha opaque (frames may be RGBx with undefined alpha bytes).
     out[3::4] = b"\xff" * (len(out) // 4)
     return StitchResult(data=out, width=width, height=height,
-                        frames_used=used, frames_dropped=dropped)
+                        frames_used=used, frames_dropped=dropped, notes=notes)

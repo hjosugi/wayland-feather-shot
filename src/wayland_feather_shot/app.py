@@ -138,9 +138,10 @@ class FeatherShotApp(Gtk.Application):
         win.connect("destroy", lambda *_: self.release())
         win.present()
 
-    def _open_editor(self, pixbuf, shapes=None):
+    def _open_editor(self, pixbuf, shapes=None, startup_toast=None):
         self.hold()
-        win = EditorWindow(self, pixbuf, self.settings, shapes=shapes)
+        win = EditorWindow(self, pixbuf, self.settings, shapes=shapes,
+                           startup_toast=startup_toast)
         win.connect("destroy", lambda *_: self.release())
         win.present()
 
@@ -153,13 +154,13 @@ class FeatherShotApp(Gtk.Application):
             self.release()
             return
 
-        def on_result(pixbuf, error):
+        def on_result(pixbuf, error, warning=None):
             if pixbuf is None:
                 if error and error != "cancelled":
                     _die_dialog(self, tr("Scrolling capture failed: {error}", error=error))
                 self.release()
                 return
-            self._open_editor(pixbuf)
+            self._open_editor(pixbuf, startup_toast=warning)
             self.release()
 
         win = rec.ScrollCaptureWindow(self, self.settings, on_result)

@@ -87,6 +87,11 @@ JA = {
         "スクロールごとに少し止めてください。\n"
         "終わったら「終了して合成」(または Enter)。",
     "Stitching {n} frames…": "{n} フレームを合成中…",
+    "{n} frame(s) skipped while stitching: {detail}":
+        "合成時に {n} フレームをスキップしました: {detail}",
+    "scrolled back / overshoot": "上方向スクロール/行き過ぎ",
+    "no vertical overlap (horizontal scroll or scene change)":
+        "縦の重なりなし(横スクロールまたは画面変化)",
     "no frames captured — was anything scrolled?":
         "フレームを取得できませんでした — スクロールしましたか?",
     "stitching failed": "合成に失敗しました",
