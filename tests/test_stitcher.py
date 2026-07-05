@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from wayland_feather_shot.scrollcap.stitcher import (  # noqa: E402
     Frame, stitch, frame_signature, signature_diff, detect_static_margins,
+    _match, _score_shift, _all_signatures,
 )
 
 W, H = 96, 120
@@ -101,6 +102,56 @@ class StitchTest(unittest.TestCase):
         frames = [Frame(bytes(raw), W, H, W * 4), viewport(doc, doc_h, 50)]
         result = stitch(frames, top_margin=0, bottom_margin=0)
         self.assertTrue(all(b == 255 for b in result.data[3::4]))
+
+    def test_coarse_to_fine_finds_exact_shift(self):
+        # A tall frame + large scroll step is where coarse-to-fine matters.
+        # make_document() is byte-periodic (period 256), so a 900-row scroll
+        # would alias with 900-3*256; build a document whose row signature is
+        # unique over the whole height instead (coarse band + fine index).
+        doc_h = 4000
+        tall_h = 1400
+        doc = bytearray(W * doc_h * 4)
+        for y in range(doc_h):
+            coarse = (y // 16) & 0xFF   # unique block index over 0..4095
+            fine = y & 0xFF
+            for x in range(W):
+                v = coarse if x < W // 2 else fine
+                o = (y * W + x) * 4
+                doc[o + 0] = v
+                doc[o + 1] = v
+                doc[o + 2] = v
+                doc[o + 3] = 255
+
+        def big_viewport(scroll):
+            scroll = max(0, min(scroll, doc_h - tall_h))
+            rows = bytearray()
+            for y in range(tall_h):
+                o = ((scroll + y) * W) * 4
+                rows += doc[o:o + W * 4]
+            return Frame(bytes(rows), W, tall_h, W * 4)
+
+        prev, cur = big_viewport(0), big_viewport(900)
+        m = _match(_all_signatures(prev), _all_signatures(cur), 0, tall_h)
+        self.assertIsNotNone(m)
+        shift, score = m
+        self.assertEqual(shift, 900)
+        self.assertLess(score, 1.0)
+
+    def test_coarse_pass_matches_bruteforce(self):
+        # Guard: the coarse-to-fine winner equals an exhaustive scan's winner.
+        doc_h = 800
+        doc = make_document(doc_h)
+        prev, cur = viewport(doc, doc_h, 0), viewport(doc, doc_h, 55)
+        ps, cs = _all_signatures(prev), _all_signatures(cur)
+        usable_h, top = H, 0
+        band = usable_h - top
+        max_s = band - max(10, band // 8)
+        brute = min(range(0, max_s + 1),
+                    key=lambda s: _score_shift(ps, cs, top, usable_h, s))
+        m = _match(ps, cs, top, usable_h)
+        self.assertIsNotNone(m)
+        self.assertEqual(m[0], brute)
+        self.assertEqual(m[0], 55)
 
     def test_signatures(self):
         doc_h = 300

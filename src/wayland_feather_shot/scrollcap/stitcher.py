@@ -99,44 +99,76 @@ def _all_signatures(frame: Frame) -> "list":
     return [_row_signature(frame, y) for y in range(frame.height)]
 
 
-def _best_shift(prev_sigs, cur_sigs, top: int, usable_h: int) -> Optional[int]:
+def _score_shift(prev_sigs, cur_sigs, top: int, usable_h: int, s: int) -> float:
+    """Mean absolute difference (0..255) if the current frame scrolled down by
+    *s* rows relative to the previous one — lower is a better match."""
+    lo, hi = top, usable_h - s
+    n = min(OVERLAP_SAMPLES, hi - lo)
+    step = max(1, (hi - lo) // n)
+    if _np is not None:
+        rows = _np.arange(lo, hi, step)
+        return float(_np.mean(_np.abs(cur_sigs[rows] - prev_sigs[rows + s])))
+    total = 0
+    cnt = 0
+    for j in range(lo, hi, step):
+        ra = cur_sigs[j]
+        rb = prev_sigs[j + s]
+        for va, vb in zip(ra, rb):
+            total += abs(va - vb)
+            cnt += 1
+    return total / max(1, cnt)
+
+
+def _match(prev_sigs, cur_sigs, top: int, usable_h: int):
     """Find the vertical scroll amount between two frames.
 
     The content that was at row ``j + s`` of the previous frame appears at
-    row ``j`` of the current frame after scrolling down by *s* rows.  We scan
-    all shifts and score each by the mean absolute difference over rows
-    sampled from the overlapping region ``[top, usable_h - s)``.
+    row ``j`` of the current frame after scrolling down by *s* rows.  Score
+    each shift by the mean absolute difference over rows sampled from the
+    overlapping region ``[top, usable_h - s)``.
 
-    Returns the best shift (0 = identical frames) or None when even the best
-    candidate scores worse than MATCH_THRESHOLD (unrelated frames).
+    A coarse-to-fine search keeps the pure-Python path fast on large frames:
+    a strided coarse pass locates the score valley, then a dense pass refines
+    it in a small window.  The scroll-vs-position score curve is smooth enough
+    (one broad minimum) that the coarse pass never skips over the true valley.
+
+    Returns ``(shift, score)`` for the best match (shift 0 = identical
+    frames), or ``None`` when even the best candidate scores worse than
+    MATCH_THRESHOLD (unrelated / non-overlapping frames).
     """
     band = usable_h - top
     if band <= 0:
         return None
     min_overlap = max(10, band // 8)
-    best_s, best_score = None, None
-    for s in range(0, band - min_overlap + 1):
-        lo, hi = top, usable_h - s
-        n = min(OVERLAP_SAMPLES, hi - lo)
-        step = max(1, (hi - lo) // n)
-        if _np is not None:
-            rows = _np.arange(lo, hi, step)
-            score = float(_np.mean(_np.abs(cur_sigs[rows] - prev_sigs[rows + s])))
-        else:
-            total = 0
-            cnt = 0
-            for j in range(lo, hi, step):
-                ra = cur_sigs[j]
-                rb = prev_sigs[j + s]
-                for va, vb in zip(ra, rb):
-                    total += abs(va - vb)
-                    cnt += 1
-            score = total / max(1, cnt)
-        if best_score is None or score < best_score:
-            best_score, best_s = score, s
+    max_s = band - min_overlap
+    if max_s < 0:
+        return None
+
+    def scan(candidates):
+        best_s, best_score = None, None
+        for s in candidates:
+            score = _score_shift(prev_sigs, cur_sigs, top, usable_h, s)
+            if best_score is None or score < best_score:
+                best_score, best_s = score, s
+        return best_s, best_score
+
+    # Coarse pass over the whole range, then a dense refine around the winner.
+    coarse_step = max(1, max_s // 64)
+    best_s, best_score = scan(range(0, max_s + 1, coarse_step))
+    if coarse_step > 1 and best_s is not None:
+        lo = max(0, best_s - coarse_step)
+        hi = min(max_s, best_s + coarse_step)
+        best_s, best_score = scan(range(lo, hi + 1))
+
     if best_score is not None and best_score <= MATCH_THRESHOLD:
-        return best_s
+        return best_s, best_score
     return None
+
+
+def _best_shift(prev_sigs, cur_sigs, top: int, usable_h: int) -> Optional[int]:
+    """Backwards-compatible wrapper returning just the shift (or None)."""
+    m = _match(prev_sigs, cur_sigs, top, usable_h)
+    return None if m is None else m[0]
 
 
 def detect_static_margins(frames: List[Frame], max_frac: float = 0.35) -> tuple:
