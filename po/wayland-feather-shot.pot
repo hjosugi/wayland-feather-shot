@@ -15,6 +15,30 @@ msgstr ""
 msgid "Recent screenshots — Feather Shot"
 msgstr ""
 
+msgid "GIF capture — Feather Shot"
+msgstr ""
+
+msgid "Choose the area to record…"
+msgstr ""
+
+msgid "Drag to select the area, then press Enter."
+msgstr ""
+
+msgid "Start recording"
+msgstr ""
+
+msgid "Stop && save"
+msgstr ""
+
+msgid "Recording…  frames: {n}"
+msgstr ""
+
+msgid "Not enough frames captured."
+msgstr ""
+
+msgid "GIF capture failed: {error}"
+msgstr ""
+
 msgid "No screenshots yet in {dir}"
 msgstr ""
 

@@ -15,6 +15,30 @@ msgstr "スクロールキャプチャ — Feather Shot"
 msgid "Recent screenshots — Feather Shot"
 msgstr "最近のスクリーンショット — Feather Shot"
 
+msgid "GIF capture — Feather Shot"
+msgstr "GIFキャプチャ — Feather Shot"
+
+msgid "Choose the area to record…"
+msgstr "録画する範囲を選んでください…"
+
+msgid "Drag to select the area, then press Enter."
+msgstr "範囲をドラッグで選び、Enter を押してください。"
+
+msgid "Start recording"
+msgstr "録画開始"
+
+msgid "Stop && save"
+msgstr "停止して保存"
+
+msgid "Recording…  frames: {n}"
+msgstr "録画中…  フレーム: {n}"
+
+msgid "Not enough frames captured."
+msgstr "フレームが足りません。"
+
+msgid "GIF capture failed: {error}"
+msgstr "GIFキャプチャに失敗しました: {error}"
+
 msgid "No screenshots yet in {dir}"
 msgstr "{dir} にはまだスクリーンショットがありません"
 

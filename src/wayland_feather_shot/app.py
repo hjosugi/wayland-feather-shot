@@ -95,7 +95,9 @@ class FeatherShotApp(Gtk.Application):
             GLib.idle_add(self._dispatch)
 
     def _dispatch(self):
-        if self.mode == "scroll":
+        if self.mode == "gif":
+            self._start_gif()
+        elif self.mode == "scroll":
             self._start_scroll()
         elif self.mode == "window":
             # Let the portal show its own picker so the user can choose a
@@ -258,6 +260,20 @@ class FeatherShotApp(Gtk.Application):
             win = ManualScrollWindow(self, self.settings, self.portal, on_result)
             win.present()
             win.begin()
+
+    def _start_gif(self):
+        from .gifcap import GifCaptureWindow
+
+        def on_done(path, error):
+            if error:
+                _die_dialog(self, tr("GIF capture failed: {error}", error=error))
+            elif path:
+                print(path)
+            self.release()
+
+        win = GifCaptureWindow(self, self.settings, self.portal, on_done)
+        win.present()
+        win.begin()
 
     # -- global shortcut daemon --------------------------------------------------
 
