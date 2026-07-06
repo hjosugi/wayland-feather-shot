@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.4.0 (2026-07-06)
+
+Reliability and reach (GitHub issues #2, #5, #15).
+
+Global shortcuts (#5)
+- **Reliable Ctrl+Print**: the capture spawn now inherits the full session
+  environment and fixes PYTHONPATH so it launches in any install layout, and
+  logs what it runs — no more silent "I pressed the key and nothing happened".
+- **Desktop-aware setup**: `diagnose` detects your desktop (GNOME/KDE/Hyprland/
+  Sway/other) and prints the exact Ctrl+Print binding steps; the daemon logs
+  activations and, if the portal can't bind, prints the native-binding steps
+  and exits cleanly. New `daemon --shortcut TRIGGER` and `--bind-once`.
+- `setup-hotkey.sh` is idempotent and detects Hyprland/Sway; README has a
+  per-desktop status table and a troubleshooting flow.
+
+Capture
+- **`window` mode** (#2): pick a window via the portal's own picker — uniform
+  across desktops without the unreliable version-3 `target` key.
+
+Localization (#15)
+- **gettext backend**: any language via a `.mo` catalog, with the built-in
+  Japanese table as the guaranteed fallback (en/ja unchanged). `WFS_LANG`
+  accepts any code; `scripts/gen-po.py` produces the `.pot`/`.po` and compiles
+  the shipped `ja.mo`. See `po/README.md`.
+
 ## 0.3.0 (2026-07-06)
 
 Issue backlog work (GitHub issues #4, #7, #8, #9, #10, #12, #13, #14; part
