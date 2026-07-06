@@ -44,6 +44,11 @@ TOOL_KEYS = {
 EMOJI_CHOICES = ["✅", "❌", "⭐", "❤️", "👍", "👎", "⚠️", "🔥", "💡", "➡️",
                  "🎯", "🚀"]
 
+PRESET_COLORS = [(0.90, 0.15, 0.12), (0.95, 0.55, 0.10), (0.98, 0.85, 0.10),
+                 (0.20, 0.70, 0.25), (0.15, 0.50, 0.95), (0.60, 0.20, 0.80),
+                 (0.10, 0.10, 0.10), (1.0, 1.0, 1.0)]
+PRESET_WIDTHS = [2, 4, 8, 12]
+
 
 class EditorWindow(Gtk.ApplicationWindow):
     def __init__(self, app, pixbuf: GdkPixbuf.Pixbuf, settings, shapes=None,
@@ -145,6 +150,8 @@ class EditorWindow(Gtk.ApplicationWindow):
         composite.connect("toggled", self._on_composite_toggled)
         header.pack_start(composite)
 
+        header.pack_start(self._build_presets(color, width))
+
         undo = Gtk.Button.new_from_icon_name("edit-undo-symbolic")
         undo.set_tooltip_text(_("Undo (Ctrl+Z)"))
         undo.connect("clicked", lambda *_: self.canvas.undo())
@@ -170,6 +177,66 @@ class EditorWindow(Gtk.ApplicationWindow):
         header.pack_end(save_as_btn)
         header.pack_end(copy_btn)
         header.pack_end(pin_btn)
+
+    def _build_presets(self, color_btn, width_spin):
+        """A popover of colour swatches + stroke-size presets. Reuses the
+        header colour/width handlers (which also restyle the selection)."""
+        menu = Gtk.MenuButton()
+        menu.set_icon_name("color-select-symbolic")
+        menu.set_tooltip_text(_("Colour & width presets"))
+        popover = Gtk.Popover()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_margin_top(8)
+        box.set_margin_bottom(8)
+        box.set_margin_start(8)
+        box.set_margin_end(8)
+
+        flow = Gtk.FlowBox()
+        flow.set_max_children_per_line(4)
+        flow.set_selection_mode(Gtk.SelectionMode.NONE)
+        for rgb in PRESET_COLORS:
+            flow.append(self._swatch(rgb, color_btn, popover))
+        box.append(flow)
+
+        wrow = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        wrow.set_halign(Gtk.Align.CENTER)
+        for w in PRESET_WIDTHS:
+            btn = Gtk.Button(label=str(w))
+
+            def pick_width(_b, ww=w):
+                width_spin.set_value(ww)   # triggers _on_width_changed
+                popover.popdown()
+
+            btn.connect("clicked", pick_width)
+            wrow.append(btn)
+        box.append(wrow)
+
+        popover.set_child(box)
+        menu.set_popover(popover)
+        return menu
+
+    def _swatch(self, rgb, color_btn, popover):
+        r, g, b = rgb
+        btn = Gtk.Button()
+        area = Gtk.DrawingArea()
+        area.set_size_request(24, 24)
+
+        def draw(_a, cr, w, h, _d):
+            cr.set_source_rgb(r, g, b)
+            cr.rectangle(0, 0, w, h)
+            cr.fill()
+
+        area.set_draw_func(draw, None)
+        btn.set_child(area)
+
+        def pick(_b):
+            rgba = Gdk.RGBA()
+            rgba.red, rgba.green, rgba.blue, rgba.alpha = r, g, b, 1.0
+            color_btn.set_rgba(rgba)       # triggers _on_color_changed
+            popover.popdown()
+
+        btn.connect("clicked", pick)
+        return btn
 
     def _install_css(self):
         css = b"""

@@ -123,6 +123,9 @@ msgstr "注釈の色"
 msgid "Line width"
 msgstr "線の太さ"
 
+msgid "Colour & width presets"
+msgstr "色と太さのプリセット"
+
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr "ぼかし/モザイクで注釈も覆う(フラット化)"
 

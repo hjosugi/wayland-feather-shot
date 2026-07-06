@@ -118,6 +118,10 @@ class OverlayWindow(Gtk.ApplicationWindow):
         click.connect("released", self._on_click)
         self.area.add_controller(click)
 
+        motion = Gtk.EventControllerMotion()
+        motion.connect("motion", self._on_motion)
+        self.area.add_controller(motion)
+
         keys = Gtk.EventControllerKey()
         keys.connect("key-pressed", self._on_key)
         self.add_controller(keys)
@@ -341,6 +345,27 @@ class OverlayWindow(Gtk.ApplicationWindow):
             if abs(wx - hx) <= HANDLE_HIT and abs(wy - hy) <= HANDLE_HIT:
                 return name
         return None
+
+    # Wayland cursor-shape hint per resize handle (#16).
+    _HANDLE_CURSOR = {
+        "nw": "nwse-resize", "se": "nwse-resize",
+        "ne": "nesw-resize", "sw": "nesw-resize",
+        "n": "ns-resize", "s": "ns-resize",
+        "e": "ew-resize", "w": "ew-resize",
+    }
+
+    def _on_motion(self, _ctrl, x, y):
+        name = "crosshair"
+        if self.sel and self.tool == "move":
+            handle = self._handle_at(x, y)
+            if handle:
+                name = self._HANDLE_CURSOR.get(handle, "crosshair")
+            elif self._inside_sel(*self._to_image(x, y)):
+                name = "move"
+        cursor = Gdk.Cursor.new_from_name(name, None)
+        if cursor is None:
+            cursor = Gdk.Cursor.new_from_name("crosshair", None)
+        self.area.set_cursor(cursor)
 
     def _inside_sel(self, ix, iy) -> bool:
         if not self.sel:

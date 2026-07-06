@@ -123,6 +123,9 @@ msgstr ""
 msgid "Line width"
 msgstr ""
 
+msgid "Colour & width presets"
+msgstr ""
+
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr ""
 

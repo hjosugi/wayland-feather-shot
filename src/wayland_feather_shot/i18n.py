@@ -89,6 +89,7 @@ JA = {
     # header/toolbar buttons
     "Annotation color": "注釈の色",
     "Line width": "線の太さ",
+    "Colour & width presets": "色と太さのプリセット",
     "Blur/pixelate covers annotations too (flatten)":
         "ぼかし/モザイクで注釈も覆う(フラット化)",
     "Undo (Ctrl+Z)": "元に戻す (Ctrl+Z)",
