@@ -15,11 +15,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag input
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          case "$TAG" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "Tag must look like vX.Y.Z" >&2; exit 2 ;;
+          esac
 
       - name: Run headless tests
         run: |
-          python3 tests/test_stitcher.py
-          python3 tests/test_paths.py
+          for test in tests/test_*.py; do
+            python3 "$test"
+          done
+
+      - name: Install release build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y squashfs-tools
+          python3 -m pip install --upgrade build installer wheel setuptools
 
       - name: Extract release notes from CHANGELOG.md
         env:
@@ -36,12 +54,41 @@ jobs:
           fi
           cat /tmp/notes.md
 
-      - name: Create tag and GitHub release
+      - name: Create or verify tag
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            if [ "$(git rev-list -n 1 "$TAG")" != "$GITHUB_SHA" ]; then
+              echo "Tag $TAG exists but does not point at this commit" >&2
+              exit 1
+            fi
+          else
+            git tag "$TAG" "$GITHUB_SHA"
+            git push origin "$TAG"
+          fi
+
+      - name: Build release assets
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          scripts/build-release-assets.sh "$TAG"
+
+      - name: Create or update GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag }}
         run: |
-          gh release create "$TAG" \
-            --target "$GITHUB_SHA" \
-            --title "wayland-feather-shot $TAG" \
-            --notes-file /tmp/notes.md
+          ASSET_DIR="dist/release-$TAG"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" \
+              --target "$GITHUB_SHA" \
+              --title "wayland-feather-shot $TAG" \
+              --notes-file /tmp/notes.md
+            gh release upload "$TAG" "$ASSET_DIR"/* --clobber
+          else
+            gh release create "$TAG" "$ASSET_DIR"/* \
+              --target "$GITHUB_SHA" \
+              --title "wayland-feather-shot $TAG" \
+              --notes-file /tmp/notes.md
+          fi

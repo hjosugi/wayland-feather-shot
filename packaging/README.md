@@ -22,11 +22,29 @@ $ flatpak run io.github.hjosugi.WaylandFeatherShot
 
 `aur/PKGBUILD` builds a wheel and installs it plus the desktop entry, icon,
 AppStream metainfo and autostart file. Replace `sha256sums=('SKIP')` with the
-real checksum of the release tarball before publishing.
+real checksum of the release tarball before publishing. The release asset
+builder does this automatically in `wayland-feather-shot-$version-aur.tar.gz`.
 
 ```console
 $ cd packaging/aur && makepkg -si
 ```
+
+## AppImage
+
+The AppImage is intentionally a host-runtime wrapper. It carries the app code,
+desktop metadata and icon, but runs with `/usr/bin/python3` so GTK4,
+PyGObject, pycairo, portals, GStreamer/PipeWire and other desktop integrations
+come from the distro packages documented in the README.
+
+Build all release assets from an existing tag:
+
+```console
+$ python3 -m pip install --user build installer wheel setuptools
+$ scripts/build-release-assets.sh vX.Y.Z
+```
+
+This produces the AppImage, Python wheel, Python sdist, corrected AUR source
+bundle and `SHA256SUMS` in `dist/release-vX.Y.Z/`.
 
 ## AppStream metainfo
 

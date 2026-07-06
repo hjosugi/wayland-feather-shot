@@ -52,6 +52,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.7.4" date="2026-07-06">
+      <description>
+        <p>
+          Completes release packaging: automated AppImage, wheel, sdist, AUR
+          bundle and checksum generation, plus corrected AUR version metadata.
+        </p>
+      </description>
+    </release>
     <release version="0.7.3" date="2026-07-06">
       <description>
         <p>

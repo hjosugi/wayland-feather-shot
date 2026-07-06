@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+APPDIR="$(dirname "$(readlink -f "$0")")"
+PYTHON="/usr/bin/python3"
+if [ ! -x "$PYTHON" ]; then
+  PYTHON="$(command -v python3 || true)"
+fi
+
+if [ -z "$PYTHON" ]; then
+  echo "wayland-feather-shot: python3 is required" >&2
+  exit 1
+fi
+
+export PYTHONPATH="$APPDIR/usr/src${PYTHONPATH:+:$PYTHONPATH}"
+exec "$PYTHON" -m wayland_feather_shot "$@"

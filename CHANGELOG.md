@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.7.4 (2026-07-06)
+
+Release and packaging completion pass for the on-device verification issue
+(#17):
+
+- Added a reusable release-asset builder that produces the host-runtime
+  AppImage, Python wheel, Python sdist, corrected AUR source bundle and
+  `SHA256SUMS` from a tag.
+- Updated the GitHub release workflow so future releases publish the same
+  asset set automatically instead of creating source-only releases.
+- Fixed the committed AUR `PKGBUILD` version metadata and made the release
+  builder stamp the real GitHub tag tarball checksum into the uploaded AUR
+  package.
+- Checked in the AppImage wrapper and documented that it intentionally uses
+  `/usr/bin/python3` so distro GTK/PyGObject/portal integrations stay intact.
+
 ## 0.7.3 (2026-07-06)
 
 Real Wayland runtime pass:
