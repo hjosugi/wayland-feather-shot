@@ -49,6 +49,8 @@ JA = {
     # header/toolbar buttons
     "Annotation color": "注釈の色",
     "Line width": "線の太さ",
+    "Blur/pixelate covers annotations too (flatten)":
+        "ぼかし/モザイクで注釈も覆う(フラット化)",
     "Undo (Ctrl+Z)": "元に戻す (Ctrl+Z)",
     "Redo (Ctrl+Shift+Z)": "やり直し (Ctrl+Shift+Z)",
     "Save (Ctrl+S)": "保存 (Ctrl+S)",

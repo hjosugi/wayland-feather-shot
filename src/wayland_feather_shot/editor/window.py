@@ -129,6 +129,13 @@ class EditorWindow(Gtk.ApplicationWindow):
         font_btn.connect("notify::font-desc", self._on_font_changed)
         header.pack_start(font_btn)
 
+        composite = Gtk.ToggleButton()
+        composite.set_icon_name("view-conceal-symbolic")
+        composite.set_tooltip_text(
+            _("Blur/pixelate covers annotations too (flatten)"))
+        composite.connect("toggled", self._on_composite_toggled)
+        header.pack_start(composite)
+
         undo = Gtk.Button.new_from_icon_name("edit-undo-symbolic")
         undo.set_tooltip_text(_("Undo (Ctrl+Z)"))
         undo.connect("clicked", lambda *_: self.canvas.undo())
@@ -205,6 +212,9 @@ class EditorWindow(Gtk.ApplicationWindow):
         self._apply_style(Style(rgba=s.rgba, width=spin.get_value(),
                                 font_size=s.font_size,
                                 font_family=s.font_family))
+
+    def _on_composite_toggled(self, button):
+        self.canvas.blur_composite = button.get_active()
 
     def _on_font_changed(self, button, _pspec):
         desc = button.get_font_desc()

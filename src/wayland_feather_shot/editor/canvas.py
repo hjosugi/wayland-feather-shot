@@ -28,6 +28,9 @@ class EditorCanvas(Gtk.DrawingArea):
         self.shapes: List[Shape] = []
         self.style = style
         self.blur_factor = blur_factor
+        # When True, blur/pixelate flattens the annotations below it into the
+        # base first, so it can redact drawn annotations, not just the photo.
+        self.blur_composite = False
         self.tool = "pen"
         self._undo: List[Tuple[GdkPixbuf.Pixbuf, tuple]] = []
         self._redo: List[Tuple[GdkPixbuf.Pixbuf, tuple]] = []
@@ -180,6 +183,11 @@ class EditorCanvas(Gtk.DrawingArea):
             return
         if preview is not None:
             self._push_history()
+            if (self.blur_composite and self.tool in ("blur", "pixelate")):
+                # Flatten the annotations so far into the base, then blur that,
+                # so the obscure covers drawn shapes too (composite redaction).
+                self.base = self._flatten_pixbuf()
+                self.shapes = []
             self.shapes.append(preview)
             self._clear_selection()
             self._notify()
@@ -333,7 +341,8 @@ class EditorCanvas(Gtk.DrawingArea):
             cr.stroke()
             cr.set_dash([])
 
-    def export_pixbuf(self) -> GdkPixbuf.Pixbuf:
+    def _flatten_pixbuf(self) -> GdkPixbuf.Pixbuf:
+        """Render base + all committed shapes into a single opaque pixbuf."""
         w, h = self.base.get_width(), self.base.get_height()
         surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
         cr = cairo.Context(surface)
@@ -343,3 +352,6 @@ class EditorCanvas(Gtk.DrawingArea):
             shape.draw(cr, self.base)
         surface.flush()
         return Gdk.pixbuf_get_from_surface(surface, 0, 0, w, h)
+
+    def export_pixbuf(self) -> GdkPixbuf.Pixbuf:
+        return self._flatten_pixbuf()
