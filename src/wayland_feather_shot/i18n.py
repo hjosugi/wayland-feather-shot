@@ -131,6 +131,19 @@ JA = {
         "スクロールごとに少し止めてください。\n"
         "終わったら「終了して合成」(または Enter)。",
     "Stitching {n} frames…": "{n} フレームを合成中…",
+    "Preparing…": "準備中…",
+    "Choose the area to capture…": "キャプチャする範囲を選んでください…",
+    "Drag to select the scrolling area, then press Enter.":
+        "スクロールする範囲をドラッグで選び、Enter を押してください。",
+    "Use this area": "この範囲を使う",
+    "Selection too small — drag a larger area.":
+        "範囲が小さすぎます — もっと大きくドラッグしてください。",
+    "Scroll a little, then press “Capture frame”.  Frames: {n}":
+        "少しスクロールして「フレームを取込」を押してください。 フレーム: {n}",
+    "Capture frame": "フレームを取込",
+    "Capture at least two frames first.":
+        "先に 2 フレーム以上取り込んでください。",
+    "Capture failed: {error}": "取り込みに失敗しました: {error}",
     "{n} frame(s) skipped while stitching: {detail}":
         "合成時に {n} フレームをスキップしました: {detail}",
     "scrolled back / overshoot": "上方向スクロール/行き過ぎ",

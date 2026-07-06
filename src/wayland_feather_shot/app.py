@@ -213,10 +213,6 @@ class FeatherShotApp(Gtk.Application):
 
     def _start_scroll(self):
         from .scrollcap import recorder as rec
-        if not rec.gstreamer_available():
-            _die_dialog(self, _("Scrolling capture needs GStreamer (gst-plugins-base + pipewire plugin) with GObject introspection."))
-            self.release()
-            return
 
         def on_result(pixbuf, error, warning=None):
             if pixbuf is None:
@@ -227,9 +223,17 @@ class FeatherShotApp(Gtk.Application):
             self._open_editor(pixbuf, startup_toast=warning)
             self.release()
 
-        win = rec.ScrollCaptureWindow(self, self.settings, on_result)
-        win.present()
-        win.begin(self.portal)
+        if rec.gstreamer_available():
+            win = rec.ScrollCaptureWindow(self, self.settings, on_result)
+            win.present()
+            win.begin(self.portal)
+        else:
+            # No GStreamer/PipeWire: fall back to manual repeated-screenshot
+            # capture (slower, but no extra dependency) instead of failing.
+            from .scrollcap.manual import ManualScrollWindow
+            win = ManualScrollWindow(self, self.settings, self.portal, on_result)
+            win.present()
+            win.begin()
 
     # -- global shortcut daemon --------------------------------------------------
 

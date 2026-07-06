@@ -169,8 +169,11 @@ what's missing.
   holder process (or `wl-copy` if installed), so it should survive closing
   the window. If neither can start, the UI says to keep the window open
   until you paste.
-- **Scroll capture button greyed out** — install the GStreamer PipeWire
-  plugin (`gst-plugin-pipewire` / `gstreamer1.0-pipewire`).
+- **Scroll capture without GStreamer** — if the GStreamer PipeWire plugin
+  (`gst-plugin-pipewire` / `gstreamer1.0-pipewire`) is missing, `scroll` falls
+  back to a manual mode: pick an area, then scroll and press *Capture frame*
+  for each step. Installing the plugin enables the smoother automatic
+  frame-keeping instead.
 
 ## Development
 

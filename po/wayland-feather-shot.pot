@@ -201,6 +201,33 @@ msgstr ""
 msgid "Stitching {n} frames…"
 msgstr ""
 
+msgid "Preparing…"
+msgstr ""
+
+msgid "Choose the area to capture…"
+msgstr ""
+
+msgid "Drag to select the scrolling area, then press Enter."
+msgstr ""
+
+msgid "Use this area"
+msgstr ""
+
+msgid "Selection too small — drag a larger area."
+msgstr ""
+
+msgid "Scroll a little, then press “Capture frame”.  Frames: {n}"
+msgstr ""
+
+msgid "Capture frame"
+msgstr ""
+
+msgid "Capture at least two frames first."
+msgstr ""
+
+msgid "Capture failed: {error}"
+msgstr ""
+
 msgid "{n} frame(s) skipped while stitching: {detail}"
 msgstr ""
 
