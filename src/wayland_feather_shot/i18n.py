@@ -30,7 +30,7 @@ JA = {
     # tool labels
     "Move": "移動", "Pen": "ペン", "Line": "直線", "Arrow": "矢印",
     "Rect": "矩形", "Ellipse": "楕円", "High": "蛍光", "Text": "文字",
-    "Blur": "ぼかし", "Pixel": "モザイク", "Crop": "切抜",
+    "Blur": "ぼかし", "Pixel": "モザイク", "Crop": "切抜", "Select": "選択",
     # tool tooltips
     "Move / resize selection (V)": "選択範囲の移動・リサイズ (V)",
     "Freehand pen (P)": "フリーハンドペン (P)",
@@ -45,6 +45,7 @@ JA = {
     "Numbered marker — click (M)": "番号マーカー — クリックで配置 (M)",
     "Numbered marker — click to place (M)": "番号マーカー — クリックで配置 (M)",
     "Crop image (C)": "画像を切り抜き (C)",
+    "Select / move a shape (V)": "図形を選択・移動 (V)",
     # header/toolbar buttons
     "Annotation color": "注釈の色",
     "Line width": "線の太さ",

@@ -36,6 +36,12 @@ class EditorCanvas(Gtk.DrawingArea):
         self._preview: Optional[Shape] = None
         self._crop_preview: Optional[Tuple[float, float, float, float]] = None
 
+        # Select tool state.
+        self.selected: Optional[int] = None
+        self._move_orig: Optional[Shape] = None
+        self._sel_preview: Optional[Shape] = None
+        self._scratch_cr = None
+
         # Set by the window: called as (img_x, img_y, widget_x, widget_y).
         self.on_request_text: Optional[Callable] = None
         self.on_changed: Optional[Callable] = None
@@ -91,6 +97,7 @@ class EditorCanvas(Gtk.DrawingArea):
         self._redo.append((self.base, tuple(self.shapes)))
         self.base, shapes = self._undo.pop()
         self.shapes = list(shapes)
+        self._clear_selection()
         self._notify()
 
     def redo(self):
@@ -99,6 +106,7 @@ class EditorCanvas(Gtk.DrawingArea):
         self._undo.append((self.base, tuple(self.shapes)))
         self.base, shapes = self._redo.pop()
         self.shapes = list(shapes)
+        self._clear_selection()
         self._notify()
 
     def _notify(self):
@@ -109,6 +117,14 @@ class EditorCanvas(Gtk.DrawingArea):
     # -- input -----------------------------------------------------------------
 
     def _on_drag_begin(self, gesture, x, y):
+        if self.tool == "select":
+            self._drag_start = self._to_image(x, y)
+            idx = tools.hit_test(self.shapes, self._scratch(), *self._drag_start)
+            self.selected = idx
+            self._move_orig = self.shapes[idx] if idx is not None else None
+            self._sel_preview = None
+            self.queue_draw()
+            return
         if self.tool not in DRAG_TOOLS:
             return
         self._drag_start = self._to_image(x, y)
@@ -122,6 +138,13 @@ class EditorCanvas(Gtk.DrawingArea):
         if not ok:
             return
         cur = self._to_image(sx + dx, sy + dy)
+        if self.tool == "select":
+            if self._move_orig is not None:
+                ddx = cur[0] - self._drag_start[0]
+                ddy = cur[1] - self._drag_start[1]
+                self._sel_preview = self._move_orig.translate(ddx, ddy)
+                self.queue_draw()
+            return
         self._update_preview(cur)
         self.queue_draw()
 
@@ -130,6 +153,19 @@ class EditorCanvas(Gtk.DrawingArea):
             return
         ok, sx, sy = gesture.get_start_point()
         cur = self._to_image(sx + dx, sy + dy) if ok else self._drag_start
+
+        if self.tool == "select":
+            self._drag_start = None
+            if self._move_orig is not None and self._sel_preview is not None:
+                self._push_history()
+                self.shapes[self.selected] = self._sel_preview
+                self._move_orig = self.shapes[self.selected]
+                self._sel_preview = None
+                self._notify()
+            else:
+                self.queue_draw()
+            return
+
         self._update_preview(cur)
         start, self._drag_start = self._drag_start, None
         preview, self._preview = self._preview, None
@@ -145,6 +181,7 @@ class EditorCanvas(Gtk.DrawingArea):
         if preview is not None:
             self._push_history()
             self.shapes.append(preview)
+            self._clear_selection()
             self._notify()
         else:
             self.queue_draw()
@@ -185,6 +222,7 @@ class EditorCanvas(Gtk.DrawingArea):
             number = sum(1 for s in self.shapes if isinstance(s, Marker)) + 1
             self._push_history()
             self.shapes.append(Marker((ix, iy), number, self.style))
+            self._clear_selection()
             self._notify()
         elif self.tool == "text" and self.on_request_text:
             self.on_request_text(ix, iy, x, y)
@@ -196,7 +234,45 @@ class EditorCanvas(Gtk.DrawingArea):
         self._push_history()
         self.shapes.append(Text((ix, iy), text, self.style,
                                 outline=outline, background=background))
+        self._clear_selection()
         self._notify()
+
+    # -- select tool --------------------------------------------------------
+
+    def _scratch(self):
+        """A 1x1 cairo context used only to measure text for hit-testing."""
+        if self._scratch_cr is None:
+            surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 1, 1)
+            self._scratch_cr = cairo.Context(surface)
+        return self._scratch_cr
+
+    def _clear_selection(self):
+        self.selected = None
+        self._move_orig = None
+        self._sel_preview = None
+
+    def delete_selected(self) -> bool:
+        if self.selected is None or not (0 <= self.selected < len(self.shapes)):
+            return False
+        self._push_history()
+        del self.shapes[self.selected]
+        self._clear_selection()
+        self._notify()
+        return True
+
+    def restyle_selected(self, style: Style) -> bool:
+        """Re-apply *style* to the selected shape (colour/width/font)."""
+        if self.selected is None or not (0 <= self.selected < len(self.shapes)):
+            return False
+        current = self.shapes[self.selected]
+        new = tools.with_style(current, style)
+        if new is current:
+            return False
+        self._push_history()
+        self.shapes[self.selected] = new
+        self._move_orig = new
+        self._notify()
+        return True
 
     # -- crop --------------------------------------------------------------------
 
@@ -239,10 +315,23 @@ class EditorCanvas(Gtk.DrawingArea):
     def _render_content(self, cr):
         Gdk.cairo_set_source_pixbuf(cr, self.base, 0, 0)
         cr.paint()
-        for shape in self.shapes:
-            shape.draw(cr, self.base)
+        for i, shape in enumerate(self.shapes):
+            if i == self.selected and self._sel_preview is not None:
+                self._sel_preview.draw(cr, self.base)
+            else:
+                shape.draw(cr, self.base)
         if self._preview is not None:
             self._preview.draw(cr, self.base)
+        if (self.tool == "select" and self.selected is not None
+                and 0 <= self.selected < len(self.shapes)):
+            sel = self._sel_preview or self.shapes[self.selected]
+            bx, by, bw, bh = tools.shape_bbox(sel, cr)
+            cr.set_source_rgba(0.2, 0.6, 1.0, 0.95)
+            cr.set_line_width(1.5)
+            cr.set_dash([5.0, 3.0])
+            cr.rectangle(bx, by, bw, bh)
+            cr.stroke()
+            cr.set_dash([])
 
     def export_pixbuf(self) -> GdkPixbuf.Pixbuf:
         w, h = self.base.get_width(), self.base.get_height()

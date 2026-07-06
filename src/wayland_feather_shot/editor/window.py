@@ -27,13 +27,14 @@ TOOLS = [
     ("pixelate", "Pixel", "Pixelate region (X)"),
     ("marker", "1,2,3", "Numbered marker — click to place (M)"),
     ("crop", "Crop", "Crop image (C)"),
+    ("select", "Select", "Select / move a shape (V)"),
 ]
 
 TOOL_KEYS = {
     Gdk.KEY_p: "pen", Gdk.KEY_l: "line", Gdk.KEY_a: "arrow",
     Gdk.KEY_r: "rect", Gdk.KEY_e: "ellipse", Gdk.KEY_h: "highlight",
     Gdk.KEY_t: "text", Gdk.KEY_b: "blur", Gdk.KEY_x: "pixelate",
-    Gdk.KEY_m: "marker", Gdk.KEY_c: "crop",
+    Gdk.KEY_m: "marker", Gdk.KEY_c: "crop", Gdk.KEY_v: "select",
 }
 
 
@@ -185,18 +186,25 @@ class EditorWindow(Gtk.ApplicationWindow):
         if btn:
             btn.set_active(True)
 
+    def _apply_style(self, style: Style):
+        """Set the active style and, on the select tool, restyle the
+        currently selected shape too."""
+        self.canvas.style = style
+        if self.canvas.tool == "select":
+            self.canvas.restyle_selected(style)
+
     def _on_color_changed(self, button, _pspec):
         rgba = button.get_rgba()
         s = self.canvas.style
-        self.canvas.style = Style(
+        self._apply_style(Style(
             rgba=(rgba.red, rgba.green, rgba.blue, rgba.alpha),
-            width=s.width, font_size=s.font_size, font_family=s.font_family)
+            width=s.width, font_size=s.font_size, font_family=s.font_family))
 
     def _on_width_changed(self, spin):
         s = self.canvas.style
-        self.canvas.style = Style(rgba=s.rgba, width=spin.get_value(),
-                                  font_size=s.font_size,
-                                  font_family=s.font_family)
+        self._apply_style(Style(rgba=s.rgba, width=spin.get_value(),
+                                font_size=s.font_size,
+                                font_family=s.font_family))
 
     def _on_font_changed(self, button, _pspec):
         desc = button.get_font_desc()
@@ -205,10 +213,10 @@ class EditorWindow(Gtk.ApplicationWindow):
         family = desc.get_family() or "Sans"
         size = desc.get_size() / Pango.SCALE
         s = self.canvas.style
-        self.canvas.style = Style(
+        self._apply_style(Style(
             rgba=s.rgba, width=s.width,
             font_size=size if size > 0 else s.font_size,
-            font_family=family)
+            font_family=family))
 
     # -- text tool ---------------------------------------------------------------
 
@@ -337,6 +345,9 @@ class EditorWindow(Gtk.ApplicationWindow):
         if ctrl and key == Gdk.KEY_y:
             self.canvas.redo()
             return True
+        if keyval in (Gdk.KEY_Delete, Gdk.KEY_BackSpace):
+            if self.canvas.delete_selected():
+                return True
         if keyval == Gdk.KEY_Escape:
             self.close()
             return True

@@ -8,8 +8,8 @@ mutated after being committed (translate() returns a copy).
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field, replace
-from typing import List, Tuple
+from dataclasses import dataclass, field, fields, replace
+from typing import List, Optional, Tuple
 
 import gi
 
@@ -317,3 +317,56 @@ class Marker(Shape):
 
 def norm_rect(x0: float, y0: float, x1: float, y1: float):
     return _norm_rect(x0, y0, x1, y1)
+
+
+# -- selection helpers (used by the select tool) --------------------------
+
+def shape_bbox(shape: Shape, cr) -> Tuple[float, float, float, float]:
+    """Axis-aligned bounding box (x, y, w, h) of *shape* in image coords.
+
+    *cr* is a cairo context used only to measure text; it may be a scratch
+    context on any surface.
+    """
+    if isinstance(shape, Pen):
+        xs = [p[0] for p in shape.points] or [0.0]
+        ys = [p[1] for p in shape.points] or [0.0]
+        pad = shape.style.width
+        return (min(xs) - pad, min(ys) - pad,
+                max(xs) - min(xs) + 2 * pad, max(ys) - min(ys) + 2 * pad)
+    if isinstance(shape, (Line, Arrow)):
+        (x0, y0), (x1, y1) = shape.p0, shape.p1
+        pad = max(shape.style.width, 6.0)
+        return (min(x0, x1) - pad, min(y0, y1) - pad,
+                abs(x1 - x0) + 2 * pad, abs(y1 - y0) + 2 * pad)
+    if isinstance(shape, (RectShape, EllipseShape, Highlight, Obscure)):
+        x, y, w, h = shape.rect
+        return (x, y, w, h)
+    if isinstance(shape, Text):
+        return shape.bounds(cr)
+    if isinstance(shape, Marker):
+        x, y = shape.pos
+        r = max(13.0, shape.style.font_size * 0.65)
+        return (x - r, y - r, 2 * r, 2 * r)
+    return (0.0, 0.0, 0.0, 0.0)
+
+
+def hit_test(shapes: List[Shape], cr, x: float, y: float) -> Optional[int]:
+    """Index of the topmost shape whose bounding box contains (x, y), or
+    None.  Shapes are drawn in order, so the last match wins (topmost)."""
+    for i in range(len(shapes) - 1, -1, -1):
+        bx, by, bw, bh = shape_bbox(shapes[i], cr)
+        if bx <= x <= bx + bw and by <= y <= by + bh:
+            return i
+    return None
+
+
+def has_style(shape: Shape) -> bool:
+    return any(f.name == "style" for f in fields(shape))
+
+
+def with_style(shape: Shape, style: Style) -> Shape:
+    """Return a copy of *shape* restyled, or the shape unchanged if it has no
+    style (e.g. Obscure blur/pixelate has no colour)."""
+    if has_style(shape):
+        return replace(shape, style=style)
+    return shape
