@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0 (2026-07-06)
+
+- **Scrolling capture without GStreamer** (#1): when the GStreamer/PipeWire
+  plugin is missing, `scroll` falls back to a manual mode — pick an area, then
+  scroll and press *Capture frame* per step; the frames feed the same
+  unit-tested stitcher and open in the editor. PipeWire stays the default when
+  present. No new dependency (GdkPixbuf, not PIL).
+
+GTK/portal features shipped in 0.3.0–0.5.0 are runtime-verified on a real
+Wayland session — tracked in the on-device checklist (#17).
+
 ## 0.4.0 (2026-07-06)
 
 Reliability and reach (GitHub issues #2, #5, #15).

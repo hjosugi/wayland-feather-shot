@@ -52,6 +52,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.5.0" date="2026-07-06">
+      <description>
+        <p>
+          Scrolling capture now works without GStreamer via a manual
+          repeated-screenshot fallback that feeds the same stitcher.
+        </p>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-07-06">
       <description>
         <p>
