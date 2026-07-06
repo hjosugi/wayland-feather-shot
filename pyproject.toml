@@ -39,5 +39,8 @@ wayland-feather-shot = "wayland_feather_shot.cli:main"
 [tool.setuptools]
 package-dir = { "" = "src" }
 
+[tool.setuptools.package-data]
+wayland_feather_shot = ["locale/*/LC_MESSAGES/*.mo"]
+
 [tool.setuptools.packages.find]
 where = ["src"]

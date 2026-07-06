@@ -1,27 +1,60 @@
-"""Tiny English/Japanese UI localization.
+"""UI localization.
 
-The UI language follows LC_ALL / LC_MESSAGES / LANG (ja* -> Japanese,
-anything else -> English).  Set WFS_LANG=en or WFS_LANG=ja to override.
-Source strings are English; `_()` looks them up in the Japanese table.
+Source strings are English.  Lookups go through gettext first — drop a
+compiled catalog at ``locale/<lang>/LC_MESSAGES/wayland-feather-shot.mo``
+(override the search dir with ``WFS_LOCALEDIR``) and any language works.  The
+built-in Japanese table below is the guaranteed fallback, so ``ja`` needs no
+catalog and en/ja behave exactly as before.
+
+Language follows LC_ALL / LC_MESSAGES / LANG; ``WFS_LANG`` overrides it and may
+be any code (e.g. ``de``), not just en/ja.  See ``po/README.md`` to add one.
 """
 
 from __future__ import annotations
 
+import gettext as _gettext
 import os
 
+DOMAIN = "wayland-feather-shot"
 
-def _detect_lang() -> str:
+
+def _detect_locale_lang() -> str:
+    """Full 2-letter language code for catalog lookup (e.g. 'de', 'ja')."""
     forced = os.environ.get("WFS_LANG")
-    if forced in ("en", "ja"):
-        return forced
+    if forced:
+        return forced.split("_")[0].split(".")[0].lower()
     for var in ("LC_ALL", "LC_MESSAGES", "LANG"):
         value = os.environ.get(var)
-        if value:
-            return "ja" if value.lower().startswith("ja") else "en"
+        if value and value not in ("C", "POSIX"):
+            return value.split("_")[0].split(".")[0].lower()
     return "en"
 
 
+def _detect_lang() -> str:
+    """Which built-in table to use as fallback: 'ja' or 'en'."""
+    forced = os.environ.get("WFS_LANG")
+    if forced in ("en", "ja"):
+        return forced
+    return "ja" if LOCALE_LANG == "ja" else "en"
+
+
+def _localedir() -> str:
+    return (os.environ.get("WFS_LOCALEDIR")
+            or os.path.join(os.path.dirname(__file__), "locale"))
+
+
+def _load_catalog(lang: str):
+    if not lang:
+        return None
+    try:
+        return _gettext.translation(DOMAIN, _localedir(), languages=[lang])
+    except OSError:
+        return None  # no catalog for this language; fall back to the table
+
+
+LOCALE_LANG = _detect_locale_lang()
 LANG = _detect_lang()
+_catalog = _load_catalog(LOCALE_LANG)
 
 JA = {
     # window titles
@@ -128,6 +161,10 @@ JA = {
 
 
 def _(text: str) -> str:
+    if _catalog is not None:
+        translated = _catalog.gettext(text)
+        if translated != text:  # the catalog had an entry
+            return translated
     if LANG == "ja":
         return JA.get(text, text)
     return text
