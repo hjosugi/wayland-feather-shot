@@ -258,13 +258,14 @@ class ScrollCaptureWindow(Gtk.ApplicationWindow):
     def _begin_auto_scroll(self, portal):
         from ..portal import RemoteDesktop
         if not RemoteDesktop.available(portal):
-            self.toast(_("Auto-scroll unavailable — scroll manually."))
+            self._status.set_text(_("Auto-scroll unavailable — scroll manually."))
             return
         self._remote = RemoteDesktop(portal)
 
         def ready(ok, error):
             if not ok:
-                self.toast(_("Auto-scroll unavailable — scroll manually."))
+                self._status.set_text(
+                    _("Auto-scroll unavailable — scroll manually."))
                 self._remote = None
                 return
             self._status.set_text(_("Auto-scrolling…  it stops at the bottom."))

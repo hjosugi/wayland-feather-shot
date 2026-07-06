@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.1 (2026-07-06)
+
+Bug fixes found by a static review of the 0.3.0–0.7.0 GTK code:
+
+- **Auto-scroll no longer crashes**: `scroll --auto` called a non-existent
+  `toast()` on the recorder window when the RemoteDesktop portal was
+  unavailable/denied — the "scroll manually" fallback message now shows
+  correctly instead of a swallowed AttributeError.
+- **No more zombie process**: closing the GIF/scroll/manual capture window with
+  the window-manager close button (rather than Cancel/Esc) left the app held
+  with no windows and hung. `release()` is now wired to the window's destroy
+  signal, so it fires however the window closes.
+- Added a CI workflow (compile + unit tests on 3.10/3.12 + po-sync check).
+
 ## 0.7.0 (2026-07-06)
 
 Backlog sweep (#16) — the editor and capture goodies:

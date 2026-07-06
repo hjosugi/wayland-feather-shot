@@ -234,18 +234,20 @@ class FeatherShotApp(Gtk.Application):
     def _start_scroll(self):
         from .scrollcap import recorder as rec
 
+        # release() is wired to the window's destroy below, so it fires however
+        # the window closes (Finish, Cancel, Esc, or the WM close button) — the
+        # callback must not release again.
         def on_result(pixbuf, error, warning=None):
             if pixbuf is None:
                 if error and error != "cancelled":
                     _die_dialog(self, tr("Scrolling capture failed: {error}", error=error))
-                self.release()
                 return
             self._open_editor(pixbuf, startup_toast=warning)
-            self.release()
 
         if rec.gstreamer_available():
             win = rec.ScrollCaptureWindow(self, self.settings, on_result,
                                           auto=self.auto)
+            win.connect("destroy", lambda *_: self.release())
             win.present()
             win.begin(self.portal)
         else:
@@ -258,20 +260,23 @@ class FeatherShotApp(Gtk.Application):
             # capture (slower, but no extra dependency) instead of failing.
             from .scrollcap.manual import ManualScrollWindow
             win = ManualScrollWindow(self, self.settings, self.portal, on_result)
+            win.connect("destroy", lambda *_: self.release())
             win.present()
             win.begin()
 
     def _start_gif(self):
         from .gifcap import GifCaptureWindow
 
+        # release() is wired to destroy (see below), so closing the window any
+        # way — including the WM close button — releases exactly once.
         def on_done(path, error):
             if error:
                 _die_dialog(self, tr("GIF capture failed: {error}", error=error))
             elif path:
                 print(path)
-            self.release()
 
         win = GifCaptureWindow(self, self.settings, self.portal, on_done)
+        win.connect("destroy", lambda *_: self.release())
         win.present()
         win.begin()
 
