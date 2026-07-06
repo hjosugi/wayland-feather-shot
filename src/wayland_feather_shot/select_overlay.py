@@ -89,6 +89,7 @@ class OverlayWindow(Gtk.ApplicationWindow):
         self._drag_start_img: Optional[Tuple[float, float]] = None
         self._pen_points: List[Tuple[float, float]] = []
         self._preview = None
+        self._mon_rects = self._monitor_rects_image()  # for edge snapping (#6)
 
         self._build_ui()
         self.set_decorated(False)
@@ -241,6 +242,71 @@ class OverlayWindow(Gtk.ApplicationWindow):
         iw, ih = self.pixbuf.get_width(), self.pixbuf.get_height()
         scale = min(w / iw, h / ih)
         return scale, (w - iw * scale) / 2, (h - ih * scale) / 2
+
+    # -- HiDPI / multi-monitor (issues #11, #6) --------------------------------
+
+    def _device_scale(self) -> float:
+        """The surface's device scale (fractional on 125%/150% displays)."""
+        try:
+            surface = self.get_surface()
+            if surface is not None and hasattr(surface, "get_scale"):
+                s = surface.get_scale()
+                if s and s > 0:
+                    return float(s)
+        except Exception:
+            pass
+        try:
+            return float(self.get_scale_factor()) or 1.0
+        except Exception:
+            return 1.0
+
+    def _monitor_rects_image(self):
+        """Monitor geometries mapped into image (buffer-pixel) coords.
+
+        The portal returns one image spanning every monitor; map each
+        GdkMonitor's logical geometry through the union bounding box so the
+        selection can snap to monitor edges.  Returns [] on any failure so the
+        single-monitor path is never affected.
+        """
+        try:
+            monitors = list(Gdk.Display.get_default().get_monitors())
+            geos = [m.get_geometry() for m in monitors]
+            geos = [g for g in geos if g and g.width > 0 and g.height > 0]
+            if len(geos) < 2:
+                return []  # snapping only matters with 2+ monitors
+            ux0 = min(g.x for g in geos)
+            uy0 = min(g.y for g in geos)
+            uw = max(g.x + g.width for g in geos) - ux0
+            uh = max(g.y + g.height for g in geos) - uy0
+            if uw <= 0 or uh <= 0:
+                return []
+            iw, ih = self.pixbuf.get_width(), self.pixbuf.get_height()
+            sx, sy = iw / uw, ih / uh
+            return [(round((g.x - ux0) * sx), round((g.y - uy0) * sy),
+                     round(g.width * sx), round(g.height * sy)) for g in geos]
+        except Exception:
+            return []
+
+    def _snap_selection(self, x0, y0, x1, y1, thresh=14):
+        """Snap selection edges to nearby monitor boundaries (buffer coords)."""
+        rects = self._mon_rects
+        if not rects:
+            return x0, y0, x1, y1
+        xs, ys = set(), set()
+        for mx, my, mw, mh in rects:
+            xs |= {mx, mx + mw}
+            ys |= {my, my + mh}
+
+        def snap(v, cands):
+            best = v
+            bestd = thresh + 1
+            for c in cands:
+                d = abs(v - c)
+                if d <= thresh and d < bestd:
+                    best, bestd = c, d
+            return best
+
+        return snap(x0, xs), snap(y0, ys), snap(x1, xs), snap(y1, ys)
 
     def _to_image(self, wx, wy) -> Tuple[float, float]:
         scale, ox, oy = self._view_params()
@@ -400,6 +466,7 @@ class OverlayWindow(Gtk.ApplicationWindow):
         kind = self._drag_kind
         if kind == "select":
             x0, y0, x1, y1 = min(sx, ix), min(sy, iy), max(sx, ix), max(sy, iy)
+            x0, y0, x1, y1 = self._snap_selection(x0, y0, x1, y1)
             self.sel = self._clamp_rect(x0, y0, x1 - x0, y1 - y0)
         elif kind == "move" and self._drag_sel0:
             x, y, w, h = self._drag_sel0
@@ -664,6 +731,14 @@ class OverlayWindow(Gtk.ApplicationWindow):
             x, y, sw, sh = self.sel
             wx0, wy0 = self._to_widget(x, y)
             wx1, wy1 = self._to_widget(x + sw, y + sh)
+            # Under fractional scaling, align the 1px hairline to a device-pixel
+            # boundary so it stays crisp (integer scale is left untouched — #11).
+            ds = self._device_scale()
+            if abs(ds - round(ds)) > 0.01:
+                wx0 = round(wx0 * ds) / ds
+                wy0 = round(wy0 * ds) / ds
+                wx1 = round(wx1 * ds) / ds
+                wy1 = round(wy1 * ds) / ds
             cr.save()
             cr.rectangle(wx0, wy0, wx1 - wx0, wy1 - wy0)
             cr.clip()
