@@ -6,12 +6,15 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import tempfile
 import time
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gdk, GdkPixbuf, GLib, GObject  # noqa: E402
+
+from . import clipboard_holder
 
 
 def timestamp_path(settings) -> str:
@@ -43,6 +46,28 @@ def _writable_formats():
     return {f.get_name() for f in GdkPixbuf.Pixbuf.get_formats() if f.is_writable()}
 
 
+def _spawn_holder(png: bytes):
+    """Write *png* to a temp file and launch the detached clipboard holder.
+    Returns a short description on success, or None to fall back."""
+    tmp = None
+    try:
+        fd, tmp = tempfile.mkstemp(prefix="wfs-clip-", suffix=".png")
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(png)
+        cmd, env = clipboard_holder.holder_command(tmp)
+        subprocess.Popen(cmd, env=env, start_new_session=True,
+                         stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return "holder process"
+    except OSError:
+        if tmp:
+            try:
+                os.unlink(tmp)  # holder never started; clean up our temp
+            except OSError:
+                pass
+        return None
+
+
 def copy_pixbuf(pixbuf: GdkPixbuf.Pixbuf) -> str:
     """Copy *pixbuf* to the clipboard.  Returns a short description of the
     mechanism used.
@@ -64,6 +89,13 @@ def copy_pixbuf(pixbuf: GdkPixbuf.Pixbuf) -> str:
             return "wl-copy"
         except OSError:
             pass
+
+    # No wl-clipboard: spawn our own detached holder process so the copy
+    # still outlives this app (see clipboard_holder).  Falls back to the
+    # in-process GDK clipboard (valid only while the window stays open).
+    holder = _spawn_holder(png)
+    if holder:
+        return holder
 
     display = Gdk.Display.get_default()
     clipboard = display.get_clipboard()

@@ -142,7 +142,10 @@ what's missing.
   (`systemctl --user status xdg-desktop-portal`). On wlroots compositors
   you need `xdg-desktop-portal-wlr` *and* `xdg-desktop-portal-gtk` (for the
   file chooser), plus `XDG_CURRENT_DESKTOP` exported to your session.
-- **Copy disappears after closing** — install `wl-clipboard`.
+- **Copy disappears after closing** — the copy is kept alive by a bundled
+  holder process (or `wl-copy` if installed), so it should survive closing
+  the window. If neither can start, the UI says to keep the window open
+  until you paste.
 - **Scroll capture button greyed out** — install the GStreamer PipeWire
   plugin (`gst-plugin-pipewire` / `gstreamer1.0-pipewire`).
 

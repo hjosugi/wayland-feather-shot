@@ -67,6 +67,7 @@ JA = {
         "(wl-clipboard を入れるとコピー後すぐ閉じられます)",
     "clipboard (valid while the editor stays open)":
         "クリップボード(エディタを開いている間有効)",
+    "holder process": "保持プロセス",
     "Text… (Enter to add)": "テキスト…(Enterで追加)",
     # selector hint
     "Drag: select area   •   Click / Enter: full screen   •   Esc: cancel":
