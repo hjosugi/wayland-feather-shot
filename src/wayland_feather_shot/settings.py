@@ -32,6 +32,10 @@ DEFAULTS = {
     "scroll_max_height": 24000,
     # Seconds between "scene became still" and the frame being kept.
     "scroll_settle_seconds": 0.35,
+    # Optional auto-scroll (scroll --auto, needs the RemoteDesktop portal).
+    "scroll_auto_delta": 500,      # pixels scrolled per step
+    "scroll_auto_interval": 0.9,   # seconds between steps
+    "scroll_auto_steps": 24,       # max steps before auto-finishing
 }
 
 

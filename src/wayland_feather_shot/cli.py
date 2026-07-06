@@ -78,6 +78,11 @@ def build_parser() -> argparse.ArgumentParser:
                         help="do not open a window; capture, save, print the "
                              "path, and exit")
 
+    scroll = parser.add_argument_group("scroll", "options for scroll mode")
+    scroll.add_argument("--auto", action="store_true",
+                        help="auto-scroll via the RemoteDesktop portal "
+                             "(experimental; falls back to manual if denied)")
+
     daemon = parser.add_argument_group(
         "daemon", "options for the GlobalShortcuts hotkey daemon")
     daemon.add_argument("--shortcut", metavar="TRIGGER",
@@ -104,6 +109,9 @@ def _validate(parser: argparse.ArgumentParser, args) -> None:
             parser.error(str(e))
     if args.output:
         args.output = os.path.abspath(os.path.expanduser(args.output))
+
+    if getattr(args, "auto", False) and args.mode != "scroll":
+        parser.error("--auto only applies to the 'scroll' mode")
 
     if (args.shortcut or args.bind_once) and args.mode != "daemon":
         parser.error("--shortcut/--bind-once only apply to the 'daemon' mode")

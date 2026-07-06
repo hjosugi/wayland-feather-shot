@@ -71,7 +71,8 @@ $ wayland-feather-shot diagnose
 $ wayland-feather-shot            # region capture (default)
 $ wayland-feather-shot full       # whole screen straight into the editor
 $ wayland-feather-shot window     # pick a window via the portal picker
-$ wayland-feather-shot scroll     # scrolling capture
+$ wayland-feather-shot scroll     # scrolling capture (you scroll)
+$ wayland-feather-shot scroll --auto  # auto-scroll via RemoteDesktop portal (experimental)
 $ wayland-feather-shot edit x.png # open an existing image in the editor
 $ wayland-feather-shot -d 3 gui   # 3-second delay
 $ wayland-feather-shot daemon     # GlobalShortcuts-portal hotkey daemon

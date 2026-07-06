@@ -186,12 +186,19 @@ class ScrollRecorder:
 class ScrollCaptureWindow(Gtk.ApplicationWindow):
     """Small control panel shown while recording a scrolling capture."""
 
-    def __init__(self, app, settings, on_result):
-        """on_result(pixbuf_or_None, error_msg)"""
+    def __init__(self, app, settings, on_result, auto: bool = False):
+        """on_result(pixbuf_or_None, error_msg).  auto=True drives scrolling
+        through the RemoteDesktop portal instead of the user (experimental)."""
         super().__init__(application=app,
                          title=_("Scrolling capture — Feather Shot"))
         self.settings = settings
         self.on_result = on_result
+        self.auto = auto
+        self._remote = None
+        self._auto_id = 0
+        self._auto_count = 0
+        self._auto_stall = 0
+        self._last_kept = 0
         self._recorder: Optional[ScrollRecorder] = None
         self._done = False
 
@@ -241,8 +248,58 @@ class ScrollCaptureWindow(Gtk.ApplicationWindow):
                 "Recording.  Scroll the content slowly, top to bottom,\n"
                 "pausing briefly after each scroll.\n"
                 "Then press “Finish & stitch”  (or Enter)."))
+            if self.auto:
+                self._begin_auto_scroll(portal)
 
         self._recorder.start(started)
+
+    # -- optional auto-scroll (RemoteDesktop portal, experimental) ----------
+
+    def _begin_auto_scroll(self, portal):
+        from ..portal import RemoteDesktop
+        if not RemoteDesktop.available(portal):
+            self.toast(_("Auto-scroll unavailable — scroll manually."))
+            return
+        self._remote = RemoteDesktop(portal)
+
+        def ready(ok, error):
+            if not ok:
+                self.toast(_("Auto-scroll unavailable — scroll manually."))
+                self._remote = None
+                return
+            self._status.set_text(_("Auto-scrolling…  it stops at the bottom."))
+            interval = int(float(self.settings.scroll_auto_interval) * 1000)
+            self._auto_id = GLib.timeout_add(max(200, interval), self._auto_tick)
+
+        self._remote.start(ready)
+
+    def _auto_tick(self):
+        if self._done or self._remote is None:
+            return False
+        max_steps = int(self.settings.scroll_auto_steps)
+        kept = len(self._recorder.selector.kept) if self._recorder else 0
+        # Stop if we've hit the step cap or the page stopped producing new
+        # frames (reached the bottom / nothing scrolling).
+        if kept == self._last_kept:
+            self._auto_stall += 1
+        else:
+            self._auto_stall = 0
+        self._last_kept = kept
+        if self._auto_count >= max_steps or self._auto_stall >= 3:
+            self._auto_id = 0
+            self.finish()
+            return False
+        self._remote.scroll(float(self.settings.scroll_auto_delta))
+        self._auto_count += 1
+        return True
+
+    def _stop_auto(self):
+        if self._auto_id:
+            GLib.source_remove(self._auto_id)
+            self._auto_id = 0
+        if self._remote is not None:
+            self._remote.close()
+            self._remote = None
 
     def _on_key(self, _ctrl, keyval, _keycode, _state):
         if keyval == Gdk.KEY_Escape:
@@ -255,12 +312,14 @@ class ScrollCaptureWindow(Gtk.ApplicationWindow):
         return False
 
     def cancel(self):
+        self._stop_auto()
         if self._recorder:
             self._recorder.stop()
             self._recorder = None
         self._emit(None, "cancelled")
 
     def finish(self):
+        self._stop_auto()
         if not self._recorder:
             return
         frames = self._recorder.stop()

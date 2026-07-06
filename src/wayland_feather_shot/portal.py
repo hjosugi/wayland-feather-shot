@@ -23,6 +23,7 @@ IFACE_SESSION = "org.freedesktop.portal.Session"
 IFACE_SCREENSHOT = "org.freedesktop.portal.Screenshot"
 IFACE_SCREENCAST = "org.freedesktop.portal.ScreenCast"
 IFACE_SHORTCUTS = "org.freedesktop.portal.GlobalShortcuts"
+IFACE_REMOTEDESKTOP = "org.freedesktop.portal.RemoteDesktop"
 
 
 class PortalError(Exception):
@@ -262,3 +263,89 @@ class GlobalShortcuts:
         session, shortcut_id, _timestamp, _opts = params.unpack()
         if session == self.session_handle:
             self.on_activated(shortcut_id)
+
+
+class RemoteDesktop:
+    """RemoteDesktop portal session used for optional auto-scroll (issue #3).
+
+    Injecting synthetic input on Wayland requires this portal, which shows a
+    permission dialog and is not available on every compositor.  It is only
+    used opt-in (`scroll --auto`); manual scrolling stays the default and this
+    never bypasses the compositor's security model.
+
+    EXPERIMENTAL / untested on hardware — see the on-device checklist (#17).
+    """
+
+    def __init__(self, portal: Portal):
+        self.portal = portal
+        self.session_handle = None
+
+    @staticmethod
+    def available(portal: Portal) -> bool:
+        """Best-effort check that the RemoteDesktop interface is present."""
+        try:
+            portal.bus.call_sync(
+                PORTAL_BUS, PORTAL_PATH, "org.freedesktop.DBus.Properties",
+                "Get", GLib.Variant("(ss)", (IFACE_REMOTEDESKTOP, "version")),
+                GLib.VariantType("(v)"), Gio.DBusCallFlags.NONE, 2000, None)
+            return True
+        except GLib.Error:
+            return False
+
+    def start(self, callback) -> None:
+        """callback(ok, error_msg) once input injection is authorized."""
+
+        def fail(msg):
+            self.close()
+            callback(False, msg)
+
+        def on_created(code, results):
+            if code != 0:
+                return fail(f"CreateSession failed ({results})")
+            self.session_handle = results["session_handle"]
+            self.portal.request(
+                IFACE_REMOTEDESKTOP, "SelectDevices",
+                lambda opts: GLib.Variant("(oa{sv})",
+                                          (self.session_handle, opts)),
+                {"types": GLib.Variant("u", 2)},   # 2 = pointer
+                on_selected)
+
+        def on_selected(code, results):
+            if code != 0:
+                return fail("SelectDevices failed or was cancelled")
+            self.portal.request(
+                IFACE_REMOTEDESKTOP, "Start",
+                lambda opts: GLib.Variant("(osa{sv})",
+                                          (self.session_handle, "", opts)),
+                {},
+                on_started)
+
+        def on_started(code, results):
+            if code != 0:
+                return fail("input injection not authorized (cancelled?)")
+            callback(True, None)
+
+        self.portal.request(
+            IFACE_REMOTEDESKTOP, "CreateSession",
+            lambda opts: GLib.Variant("(a{sv})", (opts,)),
+            {"session_handle_token": GLib.Variant("s", self.portal._token())},
+            on_created)
+
+    def scroll(self, dy: float) -> bool:
+        """Inject a vertical scroll of *dy* pixels (positive = down)."""
+        if not self.session_handle:
+            return False
+        try:
+            self.portal.bus.call_sync(
+                PORTAL_BUS, PORTAL_PATH, IFACE_REMOTEDESKTOP,
+                "NotifyPointerAxis",
+                GLib.Variant("(oa{sv}dd)", (self.session_handle, {}, 0.0, dy)),
+                None, Gio.DBusCallFlags.NONE, -1, None)
+            return True
+        except GLib.Error:
+            return False
+
+    def close(self) -> None:
+        if self.session_handle:
+            self.portal.close_session(self.session_handle)
+            self.session_handle = None

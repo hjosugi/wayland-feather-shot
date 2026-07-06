@@ -60,6 +60,7 @@ class FeatherShotApp(Gtk.Application):
         self.region = region          # (x, y, w, h) crop, or None
         self.output = output          # explicit save path, or None
         self.no_editor = no_editor    # capture -> save -> print -> exit
+        self.auto = False             # scroll --auto (set in run())
         self.settings = Settings()
         self.portal = None
         self.exit_code = 0
@@ -224,10 +225,16 @@ class FeatherShotApp(Gtk.Application):
             self.release()
 
         if rec.gstreamer_available():
-            win = rec.ScrollCaptureWindow(self, self.settings, on_result)
+            win = rec.ScrollCaptureWindow(self, self.settings, on_result,
+                                          auto=self.auto)
             win.present()
             win.begin(self.portal)
         else:
+            if self.auto:
+                # Auto-scroll needs the continuous recorder; without GStreamer
+                # we can only do the manual repeated-screenshot fallback.
+                print("wayland-feather-shot: --auto needs GStreamer; "
+                      "using manual scroll capture.", file=sys.stderr)
             # No GStreamer/PipeWire: fall back to manual repeated-screenshot
             # capture (slower, but no extra dependency) instead of failing.
             from .scrollcap.manual import ManualScrollWindow
@@ -347,6 +354,7 @@ def run(args) -> int:
         region=getattr(args, "region", None),
         output=getattr(args, "output", None),
         no_editor=getattr(args, "no_editor", False))
+    app.auto = getattr(args, "auto", False)
     status = app.run(None)
     # Prefer our scripting exit code; fall back to GTK's run status.
     return app.exit_code or status

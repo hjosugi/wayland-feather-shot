@@ -201,6 +201,12 @@ msgstr ""
 msgid "Stitching {n} frames…"
 msgstr ""
 
+msgid "Auto-scroll unavailable — scroll manually."
+msgstr ""
+
+msgid "Auto-scrolling…  it stops at the bottom."
+msgstr ""
+
 msgid "Preparing…"
 msgstr ""
 

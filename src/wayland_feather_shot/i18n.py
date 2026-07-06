@@ -131,6 +131,10 @@ JA = {
         "スクロールごとに少し止めてください。\n"
         "終わったら「終了して合成」(または Enter)。",
     "Stitching {n} frames…": "{n} フレームを合成中…",
+    "Auto-scroll unavailable — scroll manually.":
+        "自動スクロールは使えません — 手動でスクロールしてください。",
+    "Auto-scrolling…  it stops at the bottom.":
+        "自動スクロール中…  最下部で停止します。",
     "Preparing…": "準備中…",
     "Choose the area to capture…": "キャプチャする範囲を選んでください…",
     "Drag to select the scrolling area, then press Enter.":
