@@ -39,9 +39,10 @@ TOOL_KEYS = {
 
 class EditorWindow(Gtk.ApplicationWindow):
     def __init__(self, app, pixbuf: GdkPixbuf.Pixbuf, settings, shapes=None,
-                 startup_toast=None):
+                 startup_toast=None, save_path=None):
         super().__init__(application=app, title="Feather Shot")
         self.settings = settings
+        self._save_path = save_path  # --output override for Ctrl+S, or None
         self._dirty = False
         self._force_close = False
 
@@ -212,7 +213,7 @@ class EditorWindow(Gtk.ApplicationWindow):
     # -- actions -------------------------------------------------------------------
 
     def quick_save(self):
-        path = save_mod.timestamp_path(self.settings)
+        path = self._save_path or save_mod.timestamp_path(self.settings)
         try:
             path = save_mod.save_pixbuf(self.canvas.export_pixbuf(), path)
         except Exception as e:  # GLib.Error or OSError

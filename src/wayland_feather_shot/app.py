@@ -49,14 +49,20 @@ def _die_dialog(app, message: str):
 
 
 class FeatherShotApp(Gtk.Application):
-    def __init__(self, mode: str, delay: float, file: str | None = None):
+    def __init__(self, mode: str, delay: float, file: str | None = None,
+                 region=None, output: str | None = None,
+                 no_editor: bool = False):
         super().__init__(application_id=APP_ID,
                          flags=Gio.ApplicationFlags.NON_UNIQUE)
         self.mode = mode
         self.delay = delay
         self.file = file
+        self.region = region          # (x, y, w, h) crop, or None
+        self.output = output          # explicit save path, or None
+        self.no_editor = no_editor    # capture -> save -> print -> exit
         self.settings = Settings()
         self.portal = None
+        self.exit_code = 0
 
     def do_activate(self):
         self.hold()  # stay alive while portal dialogs are up, windows closed
@@ -79,52 +85,102 @@ class FeatherShotApp(Gtk.Application):
         if self.mode == "scroll":
             self._start_scroll()
         else:
-            self._start_screenshot(region=(self.mode == "gui"))
+            # Overlay region-select only in interactive gui mode; a scripted
+            # capture (--region / --output / --no-editor) is non-interactive.
+            overlay = (self.mode == "gui" and not self._scripted())
+            self._start_screenshot(overlay=overlay)
         return False  # one-shot timeout
+
+    def _scripted(self) -> bool:
+        return bool(self.no_editor or self.output or self.region)
 
     # -- screenshot modes ---------------------------------------------------
 
-    def _start_screenshot(self, region: bool):
+    def _start_screenshot(self, overlay: bool):
         def on_shot(path, error):
             if path is None:
                 if error == "cancelled":
-                    self.release()
+                    self._cancel()
                     return
                 # Some portals refuse non-interactive shots; ask again with
                 # the portal's own dialog before giving up.
                 self.portal.screenshot(on_interactive_shot, interactive=True)
                 return
-            self._open_capture(path, region)
+            self._open_capture(path, overlay)
 
         def on_interactive_shot(path, error):
             if path is None:
                 if error == "cancelled":
-                    self.release()
+                    self._cancel()
                 else:
-                    _die_dialog(self, tr("Screenshot portal failed: {error}", error=error))
-                    self.release()
+                    self._fail(tr("Screenshot portal failed: {error}", error=error))
                 return
-            self._open_capture(path, region)
+            self._open_capture(path, overlay)
 
         self.portal.screenshot(on_shot, interactive=False)
 
-    def _open_capture(self, path: str, region: bool):
+    def _crop(self, pixbuf):
+        """Crop *pixbuf* to self.region, clamped to the image bounds."""
+        if not self.region:
+            return pixbuf
+        bw, bh = pixbuf.get_width(), pixbuf.get_height()
+        x, y, w, h = self.region
+        x = max(0, min(x, bw - 1))
+        y = max(0, min(y, bh - 1))
+        w = max(1, min(w, bw - x))
+        h = max(1, min(h, bh - y))
+        return pixbuf.new_subpixbuf(x, y, w, h).copy()
+
+    def _open_capture(self, path: str, overlay: bool):
         try:
             pixbuf = GdkPixbuf.Pixbuf.new_from_file(path)
         except GLib.Error as e:
-            _die_dialog(self, tr("Could not read the captured image: {error}", error=e))
-            self.release()
+            self._fail(tr("Could not read the captured image: {error}", error=e))
             return
         finally:
             cleanup_portal_file(path)
 
-        if region:
+        pixbuf = self._crop(pixbuf)
+
+        if self._scripted() and self.no_editor:
+            self._save_and_exit(pixbuf)
+            return
+
+        if overlay:
             win = OverlayWindow(self, pixbuf, self.settings,
                                 open_editor=self._open_editor)
         else:
-            win = EditorWindow(self, pixbuf, self.settings)
+            win = EditorWindow(self, pixbuf, self.settings,
+                               save_path=self.output)
         win.connect("destroy", lambda *_: self.release())
         win.present()
+
+    def _save_and_exit(self, pixbuf):
+        """Headless --no-editor path: save, print the path, quit."""
+        from . import save as save_mod
+        path = self.output or save_mod.timestamp_path(self.settings)
+        try:
+            path = save_mod.save_pixbuf(pixbuf, path)
+        except Exception as e:  # GLib.Error or OSError
+            self._fail(tr("Save failed: {error}", error=e))
+            return
+        print(path)
+        self.release()
+
+    def _fail(self, message: str):
+        """Report an error: dialog when interactive, stderr when scripted."""
+        self.exit_code = 1
+        if self._scripted():
+            print(f"wayland-feather-shot: {message}", file=sys.stderr)
+            self.release()
+        else:
+            _die_dialog(self, message)
+            self.release()
+
+    def _cancel(self):
+        if self._scripted():
+            self.exit_code = 130
+        self.release()
 
     def _open_existing(self, path: str):
         """`edit FILE` mode: no portal involved, straight into the editor."""
@@ -226,5 +282,12 @@ def run(args) -> int:
     if args.mode == "daemon":
         return FeatherShotApp(args.mode, 0).run_daemon()
 
-    app = FeatherShotApp(args.mode, args.delay, file=getattr(args, "file", None))
-    return app.run(None)
+    app = FeatherShotApp(
+        args.mode, args.delay,
+        file=getattr(args, "file", None),
+        region=getattr(args, "region", None),
+        output=getattr(args, "output", None),
+        no_editor=getattr(args, "no_editor", False))
+    status = app.run(None)
+    # Prefer our scripting exit code; fall back to GTK's run status.
+    return app.exit_code or status

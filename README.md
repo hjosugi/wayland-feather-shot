@@ -76,6 +76,21 @@ $ wayland-feather-shot daemon     # GlobalShortcuts-portal hotkey daemon
 $ wayland-feather-shot diagnose   # check portals/GTK/GStreamer availability
 ```
 
+### Scripting / スクリプト
+
+`gui` and `full` take non-interactive options so captures can be automated:
+
+```console
+$ wayland-feather-shot full --no-editor                 # save, print the path, exit
+$ wayland-feather-shot full --region 0,0,1280,720 -o a.png --no-editor
+$ wayland-feather-shot full -o ~/shot.png               # open editor, Ctrl+S → that path
+```
+
+`--region X,Y,W,H` crops the capture (clamped to the screen), `--output/-o PATH`
+chooses the file (PNG/JPEG/WebP by extension), `--no-editor` skips the UI and
+prints the saved path. Exit codes: `0` ok, `1` error, `2` bad usage,
+`130` cancelled — suitable for shell scripts.
+
 ### Region capture / 範囲キャプチャ
 
 1. The screen freezes. Drag to select (click or Enter = full screen).
