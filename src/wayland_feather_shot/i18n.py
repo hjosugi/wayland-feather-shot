@@ -62,6 +62,10 @@ JA = {
     "Scrolling capture — Feather Shot": "スクロールキャプチャ — Feather Shot",
     "Recent screenshots — Feather Shot": "最近のスクリーンショット — Feather Shot",
     "No screenshots yet in {dir}": "{dir} にはまだスクリーンショットがありません",
+    "Settings — Feather Shot": "設定 — Feather Shot",
+    "Save": "保存",
+    "Invalid value for: {keys}": "無効な値: {keys}",
+    "Could not save settings: {error}": "設定を保存できませんでした: {error}",
     # tool labels
     "Move": "移動", "Pen": "ペン", "Line": "直線", "Arrow": "矢印",
     "Rect": "矩形", "Ellipse": "楕円", "High": "蛍光", "Text": "文字",

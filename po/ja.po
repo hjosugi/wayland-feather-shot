@@ -18,6 +18,18 @@ msgstr "最近のスクリーンショット — Feather Shot"
 msgid "No screenshots yet in {dir}"
 msgstr "{dir} にはまだスクリーンショットがありません"
 
+msgid "Settings — Feather Shot"
+msgstr "設定 — Feather Shot"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Invalid value for: {keys}"
+msgstr "無効な値: {keys}"
+
+msgid "Could not save settings: {error}"
+msgstr "設定を保存できませんでした: {error}"
+
 msgid "Move"
 msgstr "移動"
 

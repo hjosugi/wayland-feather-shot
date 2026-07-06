@@ -58,6 +58,32 @@ class Settings:
         except KeyError:
             raise AttributeError(name)
 
+    def get(self, key, default=None):
+        return self._data.get(key, default)
+
+    def set(self, key, value) -> bool:
+        """Set a known setting, coercing to the default's type.  Returns True
+        if the key is valid and was stored."""
+        if key not in DEFAULTS:
+            return False
+        proto = DEFAULTS[key]
+        try:
+            if isinstance(proto, bool):
+                value = bool(value)
+            elif isinstance(proto, int) and not isinstance(value, bool):
+                value = int(value)
+            elif isinstance(proto, float):
+                value = float(value)
+            else:
+                value = str(value)
+        except (TypeError, ValueError):
+            return False
+        self._data[key] = value
+        return True
+
+    def as_dict(self) -> dict:
+        return dict(self._data)
+
     @property
     def save_dir_path(self) -> str:
         configured = str(self._data["save_dir"]).strip()

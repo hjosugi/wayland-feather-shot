@@ -18,6 +18,18 @@ msgstr ""
 msgid "No screenshots yet in {dir}"
 msgstr ""
 
+msgid "Settings — Feather Shot"
+msgstr ""
+
+msgid "Save"
+msgstr ""
+
+msgid "Invalid value for: {keys}"
+msgstr ""
+
+msgid "Could not save settings: {error}"
+msgstr ""
+
 msgid "Move"
 msgstr ""
 

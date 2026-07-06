@@ -77,6 +77,11 @@ class FeatherShotApp(Gtk.Application):
                 lambda p: self._open_existing(p, hold=True))
             win.connect("destroy", lambda *_: self.release())
             return
+        if self.mode == "settings":
+            from . import prefs
+            win = prefs.open_settings(self, self.settings)
+            win.connect("destroy", lambda *_: self.release())
+            return
         try:
             self.portal = Portal()
         except PortalError as e:
