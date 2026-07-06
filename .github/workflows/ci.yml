@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "claude/**"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Byte-compile all sources
+        run: python -m compileall -q src
+
+      - name: Run the (GTK-free) unit tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Check the shipped ja.mo is in sync with the source table
+        run: |
+          python scripts/gen-po.py
+          git diff --exit-code -- src/wayland_feather_shot/locale po \
+            || (echo "::error::po/ or ja.mo out of date — run scripts/gen-po.py" && exit 1)
