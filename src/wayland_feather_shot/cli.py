@@ -14,7 +14,8 @@ import sys
 
 from . import __version__
 
-MODES = ["gui", "full", "window", "scroll", "edit", "daemon", "diagnose"]
+MODES = ["gui", "full", "window", "scroll", "edit", "history", "daemon",
+         "diagnose"]
 
 # Stable exit codes, so `wayland-feather-shot` can be used in scripts.
 EXIT_OK = 0

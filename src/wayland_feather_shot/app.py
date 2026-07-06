@@ -70,6 +70,13 @@ class FeatherShotApp(Gtk.Application):
         if self.mode == "edit":
             self._open_existing(self.file)
             return
+        if self.mode == "history":
+            from . import history
+            win = history.open_gallery(
+                self, self.settings,
+                lambda p: self._open_existing(p, hold=True))
+            win.connect("destroy", lambda *_: self.release())
+            return
         try:
             self.portal = Portal()
         except PortalError as e:
@@ -191,8 +198,13 @@ class FeatherShotApp(Gtk.Application):
             self.exit_code = 130
         self.release()
 
-    def _open_existing(self, path: str):
-        """`edit FILE` mode: no portal involved, straight into the editor."""
+    def _open_existing(self, path: str, hold: bool = False):
+        """Open an image file in the editor (edit mode / history gallery).
+
+        *hold* keeps the app alive independently (used when opening from the
+        gallery, which stays open behind the editor)."""
+        if hold:
+            self.hold()
         try:
             pixbuf = GdkPixbuf.Pixbuf.new_from_file(path)
         except GLib.Error as e:

@@ -12,6 +12,12 @@ msgstr "Feather Shot"
 msgid "Scrolling capture — Feather Shot"
 msgstr "スクロールキャプチャ — Feather Shot"
 
+msgid "Recent screenshots — Feather Shot"
+msgstr "最近のスクリーンショット — Feather Shot"
+
+msgid "No screenshots yet in {dir}"
+msgstr "{dir} にはまだスクリーンショットがありません"
+
 msgid "Move"
 msgstr "移動"
 
