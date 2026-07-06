@@ -114,7 +114,7 @@ def print_diagnostics() -> int:
     support = hotkey.portal_support(desktop)
     print(f"\n[info] desktop: {desktop} "
           f"(GlobalShortcuts portal daemon: {support})")
-    print("Hotkey setup (Ctrl+Print → region capture):")
+    print("Hotkey setup (Ctrl+PrtSc → region capture):")
     for line in hotkey.setup_hint(desktop).splitlines():
         print("  " + line)
 

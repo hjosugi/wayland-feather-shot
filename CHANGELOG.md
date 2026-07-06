@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.2 (2026-07-06)
+
+Release hygiene:
+
+- Standardized user-facing default-shortcut wording as `Ctrl+PrtSc` while
+  keeping compositor/portal trigger examples in their required `Print` syntax.
+- Fixed the settings round-trip unit test so it closes the temporary
+  `config.json` file handle. This keeps warning-sensitive CI/test runs clean.
+- Re-ran the full headless validation suite after syncing to the latest
+  released codebase.
+
 ## 0.7.1 (2026-07-06)
 
 Bug fixes found by a static review of the 0.3.0–0.7.0 GTK code:
@@ -63,11 +74,11 @@ Wayland session — tracked in the on-device checklist (#17).
 Reliability and reach (GitHub issues #2, #5, #15).
 
 Global shortcuts (#5)
-- **Reliable Ctrl+Print**: the capture spawn now inherits the full session
+- **Reliable Ctrl+PrtSc**: the capture spawn now inherits the full session
   environment and fixes PYTHONPATH so it launches in any install layout, and
   logs what it runs — no more silent "I pressed the key and nothing happened".
 - **Desktop-aware setup**: `diagnose` detects your desktop (GNOME/KDE/Hyprland/
-  Sway/other) and prints the exact Ctrl+Print binding steps; the daemon logs
+  Sway/other) and prints the exact Ctrl+PrtSc binding steps; the daemon logs
   activations and, if the portal can't bind, prints the native-binding steps
   and exits cleanly. New `daemon --shortcut TRIGGER` and `--bind-once`.
 - `setup-hotkey.sh` is idempotent and detects Hyprland/Sway; README has a
@@ -156,5 +167,5 @@ First release.
 - Scrolling capture: ScreenCast portal + PipeWire recording with
   automatic frame keeping and overlap-detected vertical stitching
 - English / Japanese UI (follows LANG, override with WFS_LANG)
-- Default hotkey Ctrl+Print (GlobalShortcuts portal daemon + setup script)
+- Default hotkey Ctrl+PrtSc (GlobalShortcuts portal daemon + setup script)
 - 100% local: no upload, no accounts, no telemetry, no network code

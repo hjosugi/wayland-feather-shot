@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Register the default hotkeys for wayland-feather-shot:
-#   Ctrl+Print        -> region capture (gui)
-#   Ctrl+Shift+Print  -> scrolling capture
+#   Ctrl+PrtSc        -> region capture (gui)
+#   Ctrl+Shift+PrtSc  -> scrolling capture
 #
 # GNOME is configured automatically (gsettings, idempotent). Other desktops
 # get either the GlobalShortcuts-portal daemon or a config snippet printed.
@@ -67,20 +67,20 @@ setup_gnome() {
 case "$desktop" in
     *GNOME*)
         if setup_gnome; then
-            echo "GNOME shortcuts ready: Ctrl+Print / Ctrl+Shift+Print"
+            echo "GNOME shortcuts ready: Ctrl+PrtSc / Ctrl+Shift+PrtSc"
         else
             echo "Could not configure gsettings automatically." >&2
             echo "Bind manually: Settings → Keyboard → Custom Shortcuts:" >&2
-            echo "    $CMD gui      Ctrl+Print" >&2
+            echo "    $CMD gui      Ctrl+PrtSc" >&2
         fi
         ;;
     *KDE*)
         echo "KDE Plasma implements the GlobalShortcuts portal — start the daemon:"
         echo "    $CMD daemon"
         echo "(the installed autostart entry does this at login), then approve the"
-        echo "shortcut dialog. Default trigger requested: Ctrl+Print."
+        echo "shortcut dialog. Default shortcut: Ctrl+PrtSc."
         echo "Or add it manually: System Settings → Shortcuts → Custom:"
-        echo "    command:  $CMD gui      key: Ctrl+Print"
+        echo "    command:  $CMD gui      key: Ctrl+PrtSc"
         ;;
     *Hyprland*)
         echo "Add to ~/.config/hypr/hyprland.conf:"
@@ -94,8 +94,8 @@ case "$desktop" in
         ;;
     *)
         echo "Register these in your desktop's keyboard-shortcut settings:"
-        echo "    Ctrl+Print        ->  $CMD gui"
-        echo "    Ctrl+Shift+Print  ->  $CMD scroll"
+        echo "    Ctrl+PrtSc        ->  $CMD gui"
+        echo "    Ctrl+Shift+PrtSc  ->  $CMD scroll"
         echo "If your desktop implements the GlobalShortcuts portal you can"
         echo "instead run:  $CMD daemon"
         ;;

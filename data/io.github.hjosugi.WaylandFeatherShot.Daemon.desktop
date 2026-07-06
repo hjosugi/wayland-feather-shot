@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Feather Shot Hotkey Daemon
-Comment=Binds Ctrl+Print via the GlobalShortcuts portal
+Comment=Binds Ctrl+PrtSc via the GlobalShortcuts portal
 Exec=wayland-feather-shot daemon
 Icon=io.github.hjosugi.WaylandFeatherShot
 Terminal=false

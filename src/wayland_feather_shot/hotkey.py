@@ -75,12 +75,12 @@ def portal_support(desktop: str) -> str:
 
 
 def setup_hint(desktop: str, cmd: str = "wayland-feather-shot") -> str:
-    """Exact, copy-pasteable instructions to bind Ctrl+Print on *desktop*."""
+    """Exact, copy-pasteable instructions to bind Ctrl+PrtSc on *desktop*."""
     if desktop == "gnome":
         return (
             "GNOME: run the helper to bind it via gsettings —\n"
             "    ./scripts/setup-hotkey.sh\n"
-            "  (Ctrl+Print → region, Ctrl+Shift+Print → scroll). GNOME 46+ can\n"
+            "  (Ctrl+PrtSc → region, Ctrl+Shift+PrtSc → scroll). GNOME 46+ can\n"
             f"  also use the portal daemon:  {cmd} daemon")
     if desktop == "kde":
         return (
@@ -88,7 +88,7 @@ def setup_hint(desktop: str, cmd: str = "wayland-feather-shot") -> str:
             f"    {cmd} daemon\n"
             "  (the installed autostart entry runs it at login; approve the\n"
             "  shortcut dialog once). Or System Settings → Shortcuts → Custom:\n"
-            f"    command:  {cmd} gui      key: Ctrl+Print")
+            f"    command:  {cmd} gui      key: Ctrl+PrtSc")
     if desktop == "hyprland":
         return (
             "Hyprland: add to ~/.config/hypr/hyprland.conf —\n"
@@ -101,8 +101,8 @@ def setup_hint(desktop: str, cmd: str = "wayland-feather-shot") -> str:
             f"    bindsym Ctrl+Shift+Print exec {cmd} scroll")
     return (
         "Register these in your desktop's keyboard-shortcut settings:\n"
-        f"    Ctrl+Print        ->  {cmd} gui\n"
-        f"    Ctrl+Shift+Print  ->  {cmd} scroll\n"
+        f"    Ctrl+PrtSc        ->  {cmd} gui\n"
+        f"    Ctrl+Shift+PrtSc  ->  {cmd} scroll\n"
         "  If your desktop implements the GlobalShortcuts portal you can\n"
         f"  instead run:  {cmd} daemon")
 

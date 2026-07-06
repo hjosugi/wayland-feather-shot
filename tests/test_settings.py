@@ -51,7 +51,8 @@ class SettingsTests(unittest.TestCase):
         s.set("blur_factor", 20)
         s.set("save_dir", "/tmp/shots")
         s.save()
-        on_disk = json.load(open(self.mod.CONFIG_PATH))
+        with open(self.mod.CONFIG_PATH, encoding="utf-8") as f:
+            on_disk = json.load(f)
         self.assertEqual(on_disk["blur_factor"], 20)
         s2 = self.mod.Settings()
         self.assertEqual(s2.get("blur_factor"), 20)

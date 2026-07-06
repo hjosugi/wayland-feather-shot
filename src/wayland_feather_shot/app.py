@@ -5,7 +5,7 @@ Modes (parsed in cli.py, which imports this module lazily):
   full    capture the whole screen straight into the editor window
   scroll  scrolling capture (record while you scroll, auto-stitch)
   edit    open an existing image file in the editor
-  daemon  bind Ctrl+Print etc. via the GlobalShortcuts portal
+  daemon  bind Ctrl+PrtSc etc. via the GlobalShortcuts portal
 """
 
 from __future__ import annotations
@@ -286,7 +286,7 @@ class FeatherShotApp(Gtk.Application):
                    bind_once: bool = False) -> int:
         """Blocking daemon using the GlobalShortcuts portal (no GTK window).
 
-        *shortcut* overrides the region trigger (default Ctrl+Print).
+        *shortcut* overrides the region trigger (default Ctrl+PrtSc).
         *bind_once* binds the shortcuts and exits, for testing the binding.
         """
         from . import hotkey

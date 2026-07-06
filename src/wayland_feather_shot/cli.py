@@ -88,7 +88,8 @@ def build_parser() -> argparse.ArgumentParser:
         "daemon", "options for the GlobalShortcuts hotkey daemon")
     daemon.add_argument("--shortcut", metavar="TRIGGER",
                         help="portal trigger for region capture "
-                             "(default CTRL+Print), e.g. CTRL+Print")
+                             "(default Ctrl+PrtSc; portal syntax CTRL+Print), "
+                             "e.g. CTRL+Print")
     daemon.add_argument("--bind-once", action="store_true",
                         help="bind the shortcuts and exit (test the binding)")
 

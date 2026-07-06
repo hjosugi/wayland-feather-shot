@@ -40,11 +40,16 @@ class DetectDesktopTests(unittest.TestCase):
 
 
 class SetupHintTests(unittest.TestCase):
-    def test_each_desktop_mentions_ctrl_print_or_daemon(self):
+    def test_each_desktop_mentions_shortcut_or_daemon(self):
         for d in ("gnome", "kde", "hyprland", "sway", "other"):
             hint = hotkey.setup_hint(d, cmd="wfs")
             self.assertTrue(hint)
-            self.assertTrue("Print" in hint or "daemon" in hint)
+            self.assertTrue(
+                "PrtSc" in hint or "Print" in hint or "daemon" in hint)
+
+    def test_human_hints_use_prtsc_label(self):
+        for d in ("gnome", "kde", "other"):
+            self.assertIn("PrtSc", hotkey.setup_hint(d, cmd="wfs"))
 
     def test_uses_given_command_name(self):
         self.assertIn("myapp gui", hotkey.setup_hint("sway", cmd="myapp"))
