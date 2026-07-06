@@ -14,7 +14,7 @@ import sys
 
 from . import __version__
 
-MODES = ["gui", "full", "scroll", "edit", "daemon", "diagnose"]
+MODES = ["gui", "full", "window", "scroll", "edit", "daemon", "diagnose"]
 
 # Stable exit codes, so `wayland-feather-shot` can be used in scripts.
 EXIT_OK = 0
@@ -56,7 +56,8 @@ def build_parser() -> argparse.ArgumentParser:
                     "network code.")
     parser.add_argument("mode", nargs="?", default="gui", choices=MODES,
                         help="gui: region capture (default) / full: whole "
-                             "screen / scroll: scrolling capture / edit: "
+                             "screen / window: pick a window via the portal "
+                             "picker / scroll: scrolling capture / edit: "
                              "open an existing image in the editor / "
                              "daemon: GlobalShortcuts-portal hotkey daemon "
                              "/ diagnose: print runtime environment checks")

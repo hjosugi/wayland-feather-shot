@@ -84,6 +84,11 @@ class FeatherShotApp(Gtk.Application):
     def _dispatch(self):
         if self.mode == "scroll":
             self._start_scroll()
+        elif self.mode == "window":
+            # Let the portal show its own picker so the user can choose a
+            # window (or region) — uniform across GNOME/KDE/wlroots without
+            # relying on the version-3 `target` key that backends vary on.
+            self._start_screenshot(overlay=False, force_interactive=True)
         else:
             # Overlay region-select only in interactive gui mode; a scripted
             # capture (--region / --output / --no-editor) is non-interactive.
@@ -96,7 +101,7 @@ class FeatherShotApp(Gtk.Application):
 
     # -- screenshot modes ---------------------------------------------------
 
-    def _start_screenshot(self, overlay: bool):
+    def _start_screenshot(self, overlay: bool, force_interactive: bool = False):
         def on_shot(path, error):
             if path is None:
                 if error == "cancelled":
@@ -117,7 +122,10 @@ class FeatherShotApp(Gtk.Application):
                 return
             self._open_capture(path, overlay)
 
-        self.portal.screenshot(on_shot, interactive=False)
+        if force_interactive:
+            self.portal.screenshot(on_interactive_shot, interactive=True)
+        else:
+            self.portal.screenshot(on_shot, interactive=False)
 
     def _crop(self, pixbuf):
         """Crop *pixbuf* to self.region, clamped to the image bounds."""
