@@ -17,6 +17,7 @@ rm -f  "$PREFIX/share/applications/$APP_ID.desktop" \
        "$PREFIX/share/applications/wayland-feather-shot.desktop"
 rm -f  "$PREFIX/share/icons/hicolor/scalable/apps/$APP_ID.svg" \
        "$PREFIX/share/icons/hicolor/scalable/apps/wayland-feather-shot.svg"
+rm -f  "$PREFIX/share/metainfo/$APP_ID.metainfo.xml"
 [ -n "$AUTOSTART" ] && rm -f "$AUTOSTART/$APP_ID.Daemon.desktop" \
                              "$AUTOSTART/wayland-feather-shot-daemon.desktop"
 

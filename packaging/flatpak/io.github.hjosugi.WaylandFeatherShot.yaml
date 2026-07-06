@@ -1,0 +1,46 @@
+# Flatpak manifest for wayland-feather-shot.
+#
+# Deliberately has NO network permission: this app has no upload, telemetry
+# or network code, and the sandbox enforces that. Screen access is via the
+# portals, which are available to sandboxed apps without extra permissions.
+#
+# Build (from the repo root):
+#   flatpak-builder --user --install --force-clean build-dir \
+#       packaging/flatpak/io.github.hjosugi.WaylandFeatherShot.yaml
+app-id: io.github.hjosugi.WaylandFeatherShot
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+command: wayland-feather-shot
+
+finish-args:
+  # Wayland-first; X11 is intentionally not offered.
+  - --socket=wayland
+  - --share=ipc
+  - --device=dri
+  # Quick-save (Ctrl+S) writes into the user's Pictures directory.
+  - --filesystem=xdg-pictures:create
+  # NOTE: no --share=network — capture and clipboard need no network at all.
+  # Screenshot / ScreenCast / GlobalShortcuts go through xdg-desktop-portal,
+  # which is reachable from the sandbox by default.
+
+cleanup:
+  - '*.pyc'
+  - '/lib/python*/site-packages/*/__pycache__'
+
+modules:
+  - name: wayland-feather-shot
+    buildsystem: simple
+    build-commands:
+      # PyGObject and pycairo are provided by the GNOME runtime, so install
+      # our package without dependencies or build isolation (offline build).
+      - pip3 install --no-deps --no-build-isolation --prefix=/app .
+      - install -Dm644 data/io.github.hjosugi.WaylandFeatherShot.desktop
+          /app/share/applications/io.github.hjosugi.WaylandFeatherShot.desktop
+      - install -Dm644 data/io.github.hjosugi.WaylandFeatherShot.metainfo.xml
+          /app/share/metainfo/io.github.hjosugi.WaylandFeatherShot.metainfo.xml
+      - install -Dm644 data/icons/io.github.hjosugi.WaylandFeatherShot.svg
+          /app/share/icons/hicolor/scalable/apps/io.github.hjosugi.WaylandFeatherShot.svg
+    sources:
+      - type: dir
+        path: ../..

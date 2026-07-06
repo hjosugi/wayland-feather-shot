@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.hjosugi.WaylandFeatherShot</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <name>Feather Shot</name>
+  <summary>Wayland-first screenshot tool with annotation and scrolling capture</summary>
+  <summary xml:lang="ja">Wayland専用スクリーンショット(注釈・スクロールキャプチャ対応)</summary>
+
+  <description>
+    <p>
+      Flameshot-style screenshot tool built Wayland-first. Freeze the screen,
+      drag a selection, and annotate it in place with a floating toolbar —
+      pen, line, arrow, rectangle, ellipse, highlighter, text, blur, pixelate,
+      auto-numbered markers and crop. Save to disk or copy to the clipboard.
+    </p>
+    <p>
+      It also records a scrolling capture while you scroll and stitches the
+      frames into one tall image.
+    </p>
+    <p>
+      100% local: no upload button, no accounts, no telemetry, and no network
+      code at all. Every capture goes through xdg-desktop-portal, so it works
+      on GNOME, KDE Plasma, Hyprland, Sway and anything with a portal backend.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.hjosugi.WaylandFeatherShot.desktop</launchable>
+
+  <categories>
+    <category>Graphics</category>
+    <category>Utility</category>
+  </categories>
+
+  <keywords>
+    <keyword>screenshot</keyword>
+    <keyword>capture</keyword>
+    <keyword>annotate</keyword>
+    <keyword>blur</keyword>
+    <keyword>scroll</keyword>
+    <keyword>wayland</keyword>
+  </keywords>
+
+  <url type="homepage">https://github.com/hjosugi/wayland-feather-shot</url>
+  <url type="bugtracker">https://github.com/hjosugi/wayland-feather-shot/issues</url>
+
+  <provides>
+    <binary>wayland-feather-shot</binary>
+  </provides>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.2.0" date="2026-07-06">
+      <description>
+        <p>
+          Unified app: added edit and diagnose modes, scriptable
+          capture flags, a bundled clipboard holder, a faster and more
+          robust scroll stitcher, and packaging.
+        </p>
+      </description>
+    </release>
+    <release version="0.1.0" date="2026-07-06">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

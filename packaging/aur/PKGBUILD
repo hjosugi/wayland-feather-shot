@@ -1,0 +1,39 @@
+# Maintainer: wayland-feather-shot contributors
+pkgname=wayland-feather-shot
+pkgver=0.2.0
+pkgrel=1
+pkgdesc="Flameshot-style, local-only screenshot tool for Wayland (portal capture, annotation, scrolling capture)"
+arch=('any')
+url="https://github.com/hjosugi/wayland-feather-shot"
+license=('MIT')
+depends=('python' 'python-gobject' 'gtk4' 'python-cairo')
+optdepends=(
+  'wl-clipboard: clipboard copy survives after the app closes'
+  'gst-plugin-pipewire: scrolling capture'
+  'gst-plugins-base: scrolling capture'
+  'python-numpy: faster scroll stitching'
+)
+makedepends=('python-build' 'python-installer' 'python-wheel' 'python-setuptools')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')  # replace with the real checksum when tagging a release
+
+build() {
+  cd "$pkgname-$pkgver"
+  python -m build --wheel --no-isolation
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+
+  local appid=io.github.hjosugi.WaylandFeatherShot
+  install -Dm644 "data/$appid.desktop" \
+    "$pkgdir/usr/share/applications/$appid.desktop"
+  install -Dm644 "data/$appid.metainfo.xml" \
+    "$pkgdir/usr/share/metainfo/$appid.metainfo.xml"
+  install -Dm644 "data/icons/$appid.svg" \
+    "$pkgdir/usr/share/icons/hicolor/scalable/apps/$appid.svg"
+  install -Dm644 "data/$appid.Daemon.desktop" \
+    "$pkgdir/etc/xdg/autostart/$appid.Daemon.desktop"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

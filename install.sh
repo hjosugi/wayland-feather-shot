@@ -63,6 +63,9 @@ ln -sf "$APPDIR/bin/wayland-feather-shot" "$BINDIR/wayland-feather-shot"
 APP_ID="io.github.hjosugi.WaylandFeatherShot"
 cp "$HERE/data/$APP_ID.desktop" "$DESKDIR/"
 cp "$HERE/data/icons/$APP_ID.svg" "$ICONDIR/"
+METAINFODIR="$(dirname "$DESKDIR")/metainfo"
+mkdir -p "$METAINFODIR"
+cp "$HERE/data/$APP_ID.metainfo.xml" "$METAINFODIR/"
 # Clean up files installed under the pre-0.2.0 names.
 rm -f "$DESKDIR/wayland-feather-shot.desktop" \
       "$ICONDIR/wayland-feather-shot.svg"
