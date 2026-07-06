@@ -152,6 +152,10 @@ class EditorWindow(Gtk.ApplicationWindow):
 
         header.pack_start(self._build_presets(color, width))
 
+        extract = self._build_extract_menu()
+        if extract is not None:
+            header.pack_start(extract)
+
         undo = Gtk.Button.new_from_icon_name("edit-undo-symbolic")
         undo.set_tooltip_text(_("Undo (Ctrl+Z)"))
         undo.connect("clicked", lambda *_: self.canvas.undo())
@@ -214,6 +218,61 @@ class EditorWindow(Gtk.ApplicationWindow):
         popover.set_child(box)
         menu.set_popover(popover)
         return menu
+
+    def _build_extract_menu(self):
+        """OCR / QR menu, or None when neither tool is installed."""
+        from .. import recognize
+        has_ocr, has_qr = recognize.ocr_available(), recognize.qr_available()
+        if not (has_ocr or has_qr):
+            return None
+        menu = Gtk.MenuButton()
+        menu.set_icon_name("edit-find-symbolic")
+        menu.set_tooltip_text(_("Extract text / QR (local)"))
+        popover = Gtk.Popover()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        box.set_margin_top(6)
+        box.set_margin_bottom(6)
+        box.set_margin_start(6)
+        box.set_margin_end(6)
+        if has_ocr:
+            b = Gtk.Button(label=_("Copy text (OCR)"))
+            b.add_css_class("flat")
+            b.connect("clicked",
+                      lambda *_: (popover.popdown(), self.extract_text("ocr")))
+            box.append(b)
+        if has_qr:
+            b = Gtk.Button(label=_("Copy QR / barcode"))
+            b.add_css_class("flat")
+            b.connect("clicked",
+                      lambda *_: (popover.popdown(), self.extract_text("qr")))
+            box.append(b)
+        popover.set_child(box)
+        menu.set_popover(popover)
+        return menu
+
+    def extract_text(self, kind):
+        import os
+        import tempfile
+        from .. import recognize
+        fd, tmp = tempfile.mkstemp(prefix="wfs-ocr-", suffix=".png")
+        os.close(fd)
+        try:
+            save_mod.save_pixbuf(self.canvas.export_pixbuf(), tmp)
+            text = (recognize.run_ocr(tmp) if kind == "ocr"
+                    else recognize.run_qr(tmp))
+        except Exception as e:
+            self.toast(tr("Recognition failed: {error}", error=e))
+            return
+        finally:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+        if not text:
+            self.toast(_("Nothing recognized."))
+            return
+        save_mod.copy_text(text)
+        self.toast(_("Recognized text copied to clipboard."))
 
     def _swatch(self, rgb, color_btn, popover):
         r, g, b = rgb

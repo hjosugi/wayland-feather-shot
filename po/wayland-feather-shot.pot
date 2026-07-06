@@ -126,6 +126,24 @@ msgstr ""
 msgid "Colour & width presets"
 msgstr ""
 
+msgid "Extract text / QR (local)"
+msgstr ""
+
+msgid "Copy text (OCR)"
+msgstr ""
+
+msgid "Copy QR / barcode"
+msgstr ""
+
+msgid "Recognition failed: {error}"
+msgstr ""
+
+msgid "Nothing recognized."
+msgstr ""
+
+msgid "Recognized text copied to clipboard."
+msgstr ""
+
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr ""
 

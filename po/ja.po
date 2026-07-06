@@ -126,6 +126,24 @@ msgstr "線の太さ"
 msgid "Colour & width presets"
 msgstr "色と太さのプリセット"
 
+msgid "Extract text / QR (local)"
+msgstr "テキスト/QR を抽出(ローカル)"
+
+msgid "Copy text (OCR)"
+msgstr "テキストをコピー(OCR)"
+
+msgid "Copy QR / barcode"
+msgstr "QR/バーコードをコピー"
+
+msgid "Recognition failed: {error}"
+msgstr "認識に失敗しました: {error}"
+
+msgid "Nothing recognized."
+msgstr "何も認識できませんでした。"
+
+msgid "Recognized text copied to clipboard."
+msgstr "認識したテキストをクリップボードにコピーしました。"
+
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr "ぼかし/モザイクで注釈も覆う(フラット化)"
 

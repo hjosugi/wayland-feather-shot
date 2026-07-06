@@ -90,6 +90,13 @@ JA = {
     "Annotation color": "注釈の色",
     "Line width": "線の太さ",
     "Colour & width presets": "色と太さのプリセット",
+    "Extract text / QR (local)": "テキスト/QR を抽出(ローカル)",
+    "Copy text (OCR)": "テキストをコピー(OCR)",
+    "Copy QR / barcode": "QR/バーコードをコピー",
+    "Recognition failed: {error}": "認識に失敗しました: {error}",
+    "Nothing recognized.": "何も認識できませんでした。",
+    "Recognized text copied to clipboard.":
+        "認識したテキストをクリップボードにコピーしました。",
     "Blur/pixelate covers annotations too (flatten)":
         "ぼかし/モザイクで注釈も覆う(フラット化)",
     "Undo (Ctrl+Z)": "元に戻す (Ctrl+Z)",
