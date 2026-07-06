@@ -73,11 +73,20 @@ $ wayland-feather-shot full       # whole screen straight into the editor
 $ wayland-feather-shot window     # pick a window via the portal picker
 $ wayland-feather-shot scroll     # scrolling capture (you scroll)
 $ wayland-feather-shot scroll --auto  # auto-scroll via RemoteDesktop portal (experimental)
+$ wayland-feather-shot gif        # record a region to an animated GIF
 $ wayland-feather-shot edit x.png # open an existing image in the editor
+$ wayland-feather-shot history    # gallery of recent screenshots
+$ wayland-feather-shot settings   # edit the config in a window
 $ wayland-feather-shot -d 3 gui   # 3-second delay
 $ wayland-feather-shot daemon     # GlobalShortcuts-portal hotkey daemon
 $ wayland-feather-shot diagnose   # check portals/GTK/GStreamer availability
 ```
+
+The editor toolbar adds a **step-arrow** (numbered), **speech bubble** and
+**emoji sticker**, colour/width **presets**, a **flatten-blur** toggle, and —
+when `tesseract` / `zbarimg` are installed — **OCR / QR** extraction that
+copies recognized text to the clipboard. `Ctrl+Shift+C` copies the saved file
+path; images save as PNG/JPEG/WebP/AVIF by extension.
 
 ### Scripting / スクリプト
 

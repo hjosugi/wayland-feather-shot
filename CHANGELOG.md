@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.7.0 (2026-07-06)
+
+Backlog sweep (#16) — the editor and capture goodies:
+
+- **New annotations**: numbered step-arrow (G), speech bubble (U), emoji
+  sticker (J) — all movable/restyle-able via the select tool.
+- **Toolbar presets**: colour-swatch + stroke-size popover.
+- **Export formats**: save PNG/JPEG/WebP/AVIF/TIFF/BMP by extension;
+  `Ctrl+Shift+C` copies the saved file path.
+- **OCR / QR** (local): when `tesseract` / `zbarimg` are installed, extract
+  text or QR/barcode contents from the capture to the clipboard.
+- **Capture history**: `history` mode — a gallery of recent screenshots.
+- **Settings window**: `settings` mode edits config.json.
+- **GIF recording**: `gif` mode records a region to an animated GIF via a
+  dependency-free GIF89a encoder (unit-tested LZW).
+- **Cursor hints**: per-resize-handle Wayland cursor shapes in the overlay.
+
 ## 0.6.0 (2026-07-06)
 
 First cuts of the remaining hardware-dependent issues (verify on real

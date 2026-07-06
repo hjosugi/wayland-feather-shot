@@ -52,6 +52,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.7.0" date="2026-07-06">
+      <description>
+        <p>
+          Editor and capture goodies: step-arrow/speech-bubble/emoji
+          annotations, colour presets, WebP/AVIF export, local OCR/QR,
+          a recent-screenshots gallery, a settings window, and GIF recording.
+        </p>
+      </description>
+    </release>
     <release version="0.6.0" date="2026-07-06">
       <description>
         <p>
