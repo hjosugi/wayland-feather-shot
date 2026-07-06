@@ -17,6 +17,8 @@ import sys
 import gi
 
 gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
+gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 
 from . import APP_ID
@@ -323,6 +325,7 @@ class FeatherShotApp(Gtk.Application):
         shortcuts = GlobalShortcuts(portal, activated, shortcuts=defs)
 
         exit_code = {"value": 0}
+        finished_before_loop = {"value": False}
 
         def bound(ok, error):
             if ok:
@@ -330,21 +333,33 @@ class FeatherShotApp(Gtk.Application):
                 print(f"feather-shot daemon: shortcuts bound via the "
                       f"GlobalShortcuts portal ({triggers}).", file=sys.stderr)
                 if bind_once:
+                    finished_before_loop["value"] = True
                     loop.quit()
             else:
                 exit_code["value"] = 2
+                finished_before_loop["value"] = True
+                if error and "app id is required" in error.lower():
+                    reason = (
+                        "The GlobalShortcuts portal needs a desktop app id; "
+                        "a source-tree terminal run does not provide one. "
+                        "Use the installed autostart entry, or bind the key "
+                        "natively instead:")
+                else:
+                    reason = (
+                        "Your desktop probably does not implement the "
+                        "GlobalShortcuts portal. Bind the key natively "
+                        "instead:")
                 print(f"feather-shot daemon: could not bind shortcuts "
-                      f"({error}).\n"
-                      "Your desktop probably does not implement the "
-                      "GlobalShortcuts portal. Bind the key natively instead:\n"
+                      f"({error}).\n{reason}\n"
                       + hotkey.setup_hint(desktop), file=sys.stderr)
                 loop.quit()
 
         shortcuts.bind(bound)
-        try:
-            loop.run()
-        except KeyboardInterrupt:
-            pass
+        if not finished_before_loop["value"]:
+            try:
+                loop.run()
+            except KeyboardInterrupt:
+                pass
         return exit_code["value"]
 
 

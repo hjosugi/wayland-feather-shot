@@ -68,6 +68,8 @@ def main(argv=None) -> int:
 
     import gi
     gi.require_version("Gtk", "4.0")
+    gi.require_version("Gdk", "4.0")
+    gi.require_version("GdkPixbuf", "2.0")
     from gi.repository import Gdk, GdkPixbuf, GLib, GObject  # noqa: E402
 
     try:

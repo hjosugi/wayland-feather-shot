@@ -115,6 +115,7 @@ JA = {
     "Copy to clipboard (Ctrl+C)": "クリップボードへコピー (Ctrl+C)",
     "Copy to clipboard (Ctrl+C / Enter)":
         "クリップボードへコピー (Ctrl+C / Enter)",
+    "Open save folder (Ctrl+O)": "保存先フォルダーを開く (Ctrl+O)",
     "Open in editor window (W)": "エディタウィンドウで開く (W)",
     "Pin to screen (frameless window)": "画面にピン留め(枠なしウィンドウ)",
     "Pin to screen (Ctrl+P)": "画面にピン留め (Ctrl+P)",
@@ -122,6 +123,8 @@ JA = {
     # toasts / messages
     "Saved  {path}": "保存しました  {path}",
     "Copied path  {path}": "パスをコピーしました  {path}",
+    "Opened save folder  {path}": "保存先フォルダーを開きました  {path}",
+    "Open folder failed: {error}": "フォルダーを開けませんでした: {error}",
     "Save failed: {error}": "保存に失敗しました: {error}",
     "Copy failed: {error}": "コピーに失敗しました: {error}",
     "Copied to clipboard via {how}": "クリップボードへコピーしました ({how})",

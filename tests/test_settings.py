@@ -22,14 +22,16 @@ def fresh_settings(config_home):
 class SettingsTests(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
-        self._old = os.environ.get("XDG_CONFIG_HOME")
+        self._old = {k: os.environ.get(k) for k in ("XDG_CONFIG_HOME", "HOME")}
+        os.environ["HOME"] = self._tmp.name
         self.mod = fresh_settings(self._tmp.name)
 
     def tearDown(self):
-        if self._old is None:
-            os.environ.pop("XDG_CONFIG_HOME", None)
-        else:
-            os.environ["XDG_CONFIG_HOME"] = self._old
+        for key, value in self._old.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
         self._tmp.cleanup()
 
     def test_set_coerces_types(self):
@@ -57,6 +59,16 @@ class SettingsTests(unittest.TestCase):
         s2 = self.mod.Settings()
         self.assertEqual(s2.get("blur_factor"), 20)
         self.assertEqual(s2.get("save_dir"), "/tmp/shots")
+
+    def test_default_save_dir_follows_xdg_pictures(self):
+        user_dirs = os.path.join(self._tmp.name, "user-dirs.dirs")
+        with open(user_dirs, "w", encoding="utf-8") as f:
+            f.write('XDG_PICTURES_DIR="$HOME/画像"\n')
+        s = self.mod.Settings()
+        self.assertEqual(s.get("save_dir"), "")
+        self.assertEqual(s.save_dir_path,
+                         os.path.join(self._tmp.name, "画像", "Screenshots"))
+        self.assertTrue(os.path.isdir(s.save_dir_path))
 
 
 if __name__ == "__main__":

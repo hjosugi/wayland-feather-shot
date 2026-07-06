@@ -7,6 +7,9 @@ import os
 import gi
 
 gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
+gi.require_version("GdkPixbuf", "2.0")
+gi.require_version("Pango", "1.0")
 from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango  # noqa: E402
 
 from .. import save as save_mod
@@ -174,12 +177,16 @@ class EditorWindow(Gtk.ApplicationWindow):
         save_as_btn = Gtk.Button.new_from_icon_name("document-save-as-symbolic")
         save_as_btn.set_tooltip_text(_("Save as… (Ctrl+Shift+S)"))
         save_as_btn.connect("clicked", lambda *_: self.save_as())
+        folder_btn = Gtk.Button.new_from_icon_name("folder-open-symbolic")
+        folder_btn.set_tooltip_text(_("Open save folder (Ctrl+O)"))
+        folder_btn.connect("clicked", lambda *_: self.open_save_folder())
         pin_btn = Gtk.Button.new_from_icon_name("view-pin-symbolic")
         pin_btn.set_tooltip_text(_("Pin to screen (Ctrl+P)"))
         pin_btn.connect("clicked", lambda *_: self.pin_to_screen())
         header.pack_end(save_btn)
         header.pack_end(save_as_btn)
         header.pack_end(copy_btn)
+        header.pack_end(folder_btn)
         header.pack_end(pin_btn)
 
     def _build_presets(self, color_btn, width_spin):
@@ -536,6 +543,14 @@ class EditorWindow(Gtk.ApplicationWindow):
         self._dirty = False
         self.toast(tr("Copied path  {path}", path=path))
 
+    def open_save_folder(self):
+        try:
+            path = save_mod.open_folder(self.settings.save_dir_path)
+        except Exception as e:
+            self.toast(tr("Open folder failed: {error}", error=e))
+            return
+        self.toast(tr("Opened save folder  {path}", path=path))
+
     def pin_to_screen(self):
         from .pin import PinWindow
         PinWindow(self.get_application(),
@@ -556,6 +571,9 @@ class EditorWindow(Gtk.ApplicationWindow):
                 self.copy_file_path()
             else:
                 self.copy_to_clipboard()
+            return True
+        if ctrl and key == Gdk.KEY_o:
+            self.open_save_folder()
             return True
         if ctrl and key == Gdk.KEY_p:
             self.pin_to_screen()

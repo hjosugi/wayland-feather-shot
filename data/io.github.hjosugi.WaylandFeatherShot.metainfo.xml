@@ -52,6 +52,16 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.7.3" date="2026-07-06">
+      <description>
+        <p>
+          Adds an open-save-folder action to the screenshot UI, fixes source
+          launches when PATH points to a non-distro Python without GTK
+          bindings, and cleans up GI version warnings found during a real
+          GNOME Wayland validation pass.
+        </p>
+      </description>
+    </release>
     <release version="0.7.2" date="2026-07-06">
       <description>
         <p>Release hygiene: default shortcut wording, settings test

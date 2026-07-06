@@ -12,7 +12,10 @@ import time
 import gi
 
 gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
+gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gdk, GdkPixbuf, GLib, GObject  # noqa: E402
+from gi.repository import Gio  # noqa: E402
 
 from . import clipboard_holder
 from .imaging import format_for_path, writable_image_extensions
@@ -35,6 +38,14 @@ def save_pixbuf(pixbuf: GdkPixbuf.Pixbuf, path: str) -> str:
     keys = [k for k, _v in options]
     values = [v for _k, v in options]
     pixbuf.savev(path, name, keys, values)
+    return path
+
+
+def open_folder(path: str) -> str:
+    """Open *path* in the desktop file manager and return the opened path."""
+    os.makedirs(path, exist_ok=True)
+    uri = GLib.filename_to_uri(path, None)
+    Gio.AppInfo.launch_default_for_uri(uri, None)
     return path
 
 

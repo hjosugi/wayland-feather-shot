@@ -19,7 +19,7 @@ wayland-feather-shot is local-only.
   when available, otherwise a bundled local holder process, otherwise the
   in-process GDK clipboard). The holder only ever owns the clipboard — it
   opens no files beyond the temp PNG it is handed, and no sockets.
-- Optional GlobalShortcuts portal session for Ctrl+Print.
+- Optional GlobalShortcuts portal session for Ctrl+PrtSc.
 - Optional ScreenCast portal + PipeWire session for scrolling capture,
   started only on explicit user action and closed when done.
 

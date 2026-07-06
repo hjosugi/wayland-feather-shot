@@ -33,6 +33,8 @@ def recent_screenshots(directory, limit: int = 40, exts=IMAGE_EXTS):
 def _build_window(app, settings, open_file):
     import gi
     gi.require_version("Gtk", "4.0")
+    gi.require_version("Gdk", "4.0")
+    gi.require_version("GdkPixbuf", "2.0")
     from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 
     from .i18n import _, tr

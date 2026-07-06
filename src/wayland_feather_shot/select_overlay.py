@@ -15,6 +15,8 @@ from typing import Callable, List, Optional, Tuple
 import gi
 
 gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
+gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 
 import cairo  # noqa: E402
@@ -206,6 +208,8 @@ class OverlayWindow(Gtk.ApplicationWindow):
         button("document-save-symbolic", "Save (Ctrl+S)", self.save_and_close)
         button("document-save-as-symbolic", "Save as… (Ctrl+Shift+S)",
                self.save_as)
+        button("folder-open-symbolic", "Open save folder (Ctrl+O)",
+               self.open_save_folder)
         if self.open_editor:
             button("window-new-symbolic", "Open in editor window (W)",
                    self._to_editor)
@@ -592,6 +596,9 @@ class OverlayWindow(Gtk.ApplicationWindow):
         if ctrl and key == Gdk.KEY_c:
             self.copy_and_close()
             return True
+        if ctrl and key == Gdk.KEY_o:
+            self.open_save_folder()
+            return True
         if ctrl and key == Gdk.KEY_z:
             self.redo() if shift else self.undo()
             return True
@@ -713,6 +720,14 @@ class OverlayWindow(Gtk.ApplicationWindow):
             self.close()  # a holder keeps owning the clipboard after we exit
         else:
             self.toast(_("Copied — keep this window open while pasting (install wl-clipboard to copy & close)"))
+
+    def open_save_folder(self):
+        try:
+            path = save_mod.open_folder(self.settings.save_dir_path)
+        except Exception as e:
+            self.toast(tr("Open folder failed: {error}", error=e))
+            return
+        self.toast(tr("Opened save folder  {path}", path=path))
 
     def pin_to_screen(self):
         from .editor.pin import PinWindow

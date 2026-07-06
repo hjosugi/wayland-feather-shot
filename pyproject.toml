@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wayland-feather-shot"
-version = "0.7.2"
+version = "0.7.3"
 description = "Flameshot-style, local-only screenshot tool for Linux Wayland: portal capture, in-place annotation, scrolling capture"
 readme = "README.md"
 requires-python = ">=3.10"

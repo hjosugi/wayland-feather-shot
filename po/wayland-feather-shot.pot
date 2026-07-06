@@ -189,6 +189,9 @@ msgstr ""
 msgid "Copy to clipboard (Ctrl+C / Enter)"
 msgstr ""
 
+msgid "Open save folder (Ctrl+O)"
+msgstr ""
+
 msgid "Open in editor window (W)"
 msgstr ""
 
@@ -205,6 +208,12 @@ msgid "Saved  {path}"
 msgstr ""
 
 msgid "Copied path  {path}"
+msgstr ""
+
+msgid "Opened save folder  {path}"
+msgstr ""
+
+msgid "Open folder failed: {error}"
 msgstr ""
 
 msgid "Save failed: {error}"

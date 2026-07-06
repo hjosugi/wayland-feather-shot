@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.7.3 (2026-07-06)
+
+Real Wayland runtime pass:
+
+- Added an **Open save folder** action to the region-capture overlay and the
+  editor toolbar. The folder button and `Ctrl+O` open the configured
+  screenshot destination immediately from the screenshot UI; when `save_dir`
+  is empty this remains the OS/XDG Pictures directory plus `Screenshots`.
+- Fixed source/install launches when `python3` on `PATH` is a pyenv/mise-style
+  interpreter without distro GTK bindings: the bundled launcher now uses the
+  distro Python at `/usr/bin/python3`, matching the documented package
+  dependencies.
+- Added explicit GI version pins for GDK, GdkPixbuf and Pango imports so real
+  PyGObject runs no longer emit version-selection warnings.
+- Fixed a `daemon --bind-once` race where an immediate portal rejection could
+  print the fallback instructions but leave the daemon running; source-tree
+  GNOME runs now also explain the portal's desktop-app-id requirement.
+- Verified on a real GNOME Wayland session: `diagnose` passes with GTK,
+  pycairo, wl-clipboard, GStreamer/PipeWire and portal interfaces available;
+  scripted portal screenshot capture saved a 2240x1400 PNG; opening the save
+  folder launched the desktop file manager.
+
 ## 0.7.2 (2026-07-06)
 
 Release hygiene:

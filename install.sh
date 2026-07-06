@@ -28,8 +28,12 @@ fi
 echo "== wayland-feather-shot installer =="
 
 # --- dependency check ---------------------------------------------------
+PYTHON=/usr/bin/python3
+if ! [ -x "$PYTHON" ]; then
+    PYTHON="$(command -v python3 || true)"
+fi
 missing=""
-python3 - <<'EOF' || missing=1
+"$PYTHON" - <<'EOF' || missing=1
 import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk  # noqa

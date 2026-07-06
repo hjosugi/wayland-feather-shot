@@ -189,6 +189,9 @@ msgstr "クリップボードへコピー (Ctrl+C)"
 msgid "Copy to clipboard (Ctrl+C / Enter)"
 msgstr "クリップボードへコピー (Ctrl+C / Enter)"
 
+msgid "Open save folder (Ctrl+O)"
+msgstr "保存先フォルダーを開く (Ctrl+O)"
+
 msgid "Open in editor window (W)"
 msgstr "エディタウィンドウで開く (W)"
 
@@ -206,6 +209,12 @@ msgstr "保存しました  {path}"
 
 msgid "Copied path  {path}"
 msgstr "パスをコピーしました  {path}"
+
+msgid "Opened save folder  {path}"
+msgstr "保存先フォルダーを開きました  {path}"
+
+msgid "Open folder failed: {error}"
+msgstr "フォルダーを開けませんでした: {error}"
 
 msgid "Save failed: {error}"
 msgstr "保存に失敗しました: {error}"
