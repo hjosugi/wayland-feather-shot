@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.0 (2026-07-06)
+
+First cuts of the remaining hardware-dependent issues (verify on real
+hardware — tracked in #17):
+
+- **Multi-monitor edge snapping** (#6): the selection snaps to monitor
+  boundaries, computed by mapping each `GdkMonitor` geometry into the
+  combined-image buffer coordinates. Single-monitor behaviour is untouched.
+- **Fractional-scaling hairline** (#11): under 125%/150% scaling the selection
+  outline aligns to device-pixel boundaries so it stays crisp; integer scale is
+  unchanged, and the saved crop was already exact buffer pixels.
+- **Auto-scroll** (#3, experimental): `scroll --auto` drives scrolling through
+  the RemoteDesktop portal and auto-finishes at the bottom. Opt-in; falls back
+  to manual if the portal is unavailable or denied — never bypasses the
+  compositor security model.
+
 ## 0.5.0 (2026-07-06)
 
 - **Scrolling capture without GStreamer** (#1): when the GStreamer/PipeWire

@@ -52,6 +52,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.6.0" date="2026-07-06">
+      <description>
+        <p>
+          First cuts of multi-monitor edge snapping, fractional-scaling hairline
+          alignment, and optional RemoteDesktop-portal auto-scroll.
+        </p>
+      </description>
+    </release>
     <release version="0.5.0" date="2026-07-06">
       <description>
         <p>
