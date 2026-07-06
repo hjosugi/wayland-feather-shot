@@ -97,6 +97,7 @@ JA = {
     "Cancel (Esc)": "キャンセル (Esc)",
     # toasts / messages
     "Saved  {path}": "保存しました  {path}",
+    "Copied path  {path}": "パスをコピーしました  {path}",
     "Save failed: {error}": "保存に失敗しました: {error}",
     "Copy failed: {error}": "コピーに失敗しました: {error}",
     "Copied to clipboard via {how}": "クリップボードへコピーしました ({how})",

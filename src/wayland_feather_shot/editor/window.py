@@ -340,6 +340,18 @@ class EditorWindow(Gtk.ApplicationWindow):
         self._dirty = False
         self.toast(tr("Copied to clipboard via {how}", how=_(how)))
 
+    def copy_file_path(self):
+        """Save to disk (if needed) and copy the file path as text."""
+        path = self._save_path or save_mod.timestamp_path(self.settings)
+        try:
+            path = save_mod.save_pixbuf(self.canvas.export_pixbuf(), path)
+            save_mod.copy_text(path)
+        except Exception as e:
+            self.toast(tr("Copy failed: {error}", error=e))
+            return
+        self._dirty = False
+        self.toast(tr("Copied path  {path}", path=path))
+
     def pin_to_screen(self):
         from .pin import PinWindow
         PinWindow(self.get_application(),
@@ -356,7 +368,10 @@ class EditorWindow(Gtk.ApplicationWindow):
             self.save_as() if shift else self.quick_save()
             return True
         if ctrl and key == Gdk.KEY_c:
-            self.copy_to_clipboard()
+            if shift:
+                self.copy_file_path()
+            else:
+                self.copy_to_clipboard()
             return True
         if ctrl and key == Gdk.KEY_p:
             self.pin_to_screen()

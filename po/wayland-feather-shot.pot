@@ -132,6 +132,9 @@ msgstr ""
 msgid "Saved  {path}"
 msgstr ""
 
+msgid "Copied path  {path}"
+msgstr ""
+
 msgid "Save failed: {error}"
 msgstr ""
 

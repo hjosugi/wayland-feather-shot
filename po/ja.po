@@ -132,6 +132,9 @@ msgstr "キャンセル (Esc)"
 msgid "Saved  {path}"
 msgstr "保存しました  {path}"
 
+msgid "Copied path  {path}"
+msgstr "パスをコピーしました  {path}"
+
 msgid "Save failed: {error}"
 msgstr "保存に失敗しました: {error}"
 

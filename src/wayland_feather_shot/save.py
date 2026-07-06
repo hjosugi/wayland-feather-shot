@@ -15,6 +15,7 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gdk, GdkPixbuf, GLib, GObject  # noqa: E402
 
 from . import clipboard_holder
+from .imaging import format_for_path, writable_image_extensions
 
 
 def timestamp_path(settings) -> str:
@@ -30,20 +31,40 @@ def pixbuf_to_png_bytes(pixbuf: GdkPixbuf.Pixbuf) -> bytes:
 
 
 def save_pixbuf(pixbuf: GdkPixbuf.Pixbuf, path: str) -> str:
-    ext = os.path.splitext(path)[1].lower().lstrip(".")
-    if ext in ("jpg", "jpeg"):
-        pixbuf.savev(path, "jpeg", ["quality"], ["92"])
-    elif ext == "webp" and "webp" in _writable_formats():
-        pixbuf.savev(path, "webp", [], [])
-    else:
-        if ext != "png":
-            path = path + ".png"
-        pixbuf.savev(path, "png", [], [])
+    name, path, options = format_for_path(path, _writable_formats())
+    keys = [k for k, _v in options]
+    values = [v for _k, v in options]
+    pixbuf.savev(path, name, keys, values)
     return path
 
 
 def _writable_formats():
     return {f.get_name() for f in GdkPixbuf.Pixbuf.get_formats() if f.is_writable()}
+
+
+def writable_image_formats():
+    """Extensions we can save to on this system (always includes png)."""
+    return writable_image_extensions(_writable_formats())
+
+
+def copy_text(text: str) -> str:
+    """Copy plain *text* (e.g. a saved file path) to the clipboard."""
+    wl_copy = shutil.which("wl-copy")
+    if wl_copy:
+        try:
+            proc = subprocess.Popen(
+                [wl_copy, "--type", "text/plain"], stdin=subprocess.PIPE,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            proc.stdin.write(text.encode("utf-8"))
+            proc.stdin.close()
+            return "wl-copy"
+        except OSError:
+            pass
+    display = Gdk.Display.get_default()
+    clipboard = display.get_clipboard()
+    clipboard.set_content(Gdk.ContentProvider.new_for_bytes(
+        "text/plain;charset=utf-8", GLib.Bytes.new(text.encode("utf-8"))))
+    return "clipboard (valid while the editor stays open)"
 
 
 def _spawn_holder(png: bytes):
