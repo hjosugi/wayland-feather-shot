@@ -66,6 +66,15 @@ msgstr ""
 msgid "Select"
 msgstr ""
 
+msgid "Step"
+msgstr ""
+
+msgid "Bubble"
+msgstr ""
+
+msgid "Emoji"
+msgstr ""
+
 msgid "Move / resize selection (V)"
 msgstr ""
 

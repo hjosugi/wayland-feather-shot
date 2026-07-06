@@ -13,12 +13,13 @@ from gi.repository import Gdk, GdkPixbuf, Gtk  # noqa: E402
 import cairo  # noqa: E402
 
 from . import tools
-from .tools import (Arrow, EllipseShape, Highlight, Line, Marker, Obscure,
-                    Pen, RectShape, Shape, Style, Text)
+from .tools import (Arrow, EllipseShape, EmojiSticker, Highlight, Line, Marker,
+                    Obscure, Pen, RectShape, Shape, SpeechBubble, StepArrow,
+                    Style, Text)
 
 RECT_TOOLS = {"rect", "ellipse", "highlight", "blur", "pixelate", "crop"}
-DRAG_TOOLS = RECT_TOOLS | {"pen", "line", "arrow"}
-CLICK_TOOLS = {"text", "marker"}
+DRAG_TOOLS = RECT_TOOLS | {"pen", "line", "arrow", "steparrow"}
+CLICK_TOOLS = {"text", "marker", "bubble", "emoji"}
 
 
 class EditorCanvas(Gtk.DrawingArea):
@@ -47,6 +48,8 @@ class EditorCanvas(Gtk.DrawingArea):
 
         # Set by the window: called as (img_x, img_y, widget_x, widget_y).
         self.on_request_text: Optional[Callable] = None
+        self.on_request_bubble: Optional[Callable] = None
+        self.on_request_emoji: Optional[Callable] = None
         self.on_changed: Optional[Callable] = None
 
         self.set_hexpand(True)
@@ -206,6 +209,9 @@ class EditorCanvas(Gtk.DrawingArea):
             self._preview = Line(start, cur, self.style)
         elif tool == "arrow":
             self._preview = Arrow(start, cur, self.style)
+        elif tool == "steparrow":
+            number = sum(1 for s in self.shapes if isinstance(s, StepArrow)) + 1
+            self._preview = StepArrow(start, cur, number, self.style)
         elif tool in RECT_TOOLS:
             rect = tools.norm_rect(start[0], start[1], cur[0], cur[1])
             if tool == "rect":
@@ -234,6 +240,10 @@ class EditorCanvas(Gtk.DrawingArea):
             self._notify()
         elif self.tool == "text" and self.on_request_text:
             self.on_request_text(ix, iy, x, y)
+        elif self.tool == "bubble" and self.on_request_bubble:
+            self.on_request_bubble(ix, iy, x, y)
+        elif self.tool == "emoji" and self.on_request_emoji:
+            self.on_request_emoji(ix, iy, x, y)
 
     def add_text(self, ix: float, iy: float, text: str,
                  outline: bool = True, background: bool = False):
@@ -242,6 +252,23 @@ class EditorCanvas(Gtk.DrawingArea):
         self._push_history()
         self.shapes.append(Text((ix, iy), text, self.style,
                                 outline=outline, background=background))
+        self._clear_selection()
+        self._notify()
+
+    def add_bubble(self, ix: float, iy: float, text: str,
+                   w: float = 170.0, h: float = 74.0):
+        if not text.strip():
+            return
+        self._push_history()
+        self.shapes.append(SpeechBubble((ix, iy, w, h), text, self.style))
+        self._clear_selection()
+        self._notify()
+
+    def add_emoji(self, ix: float, iy: float, char: str):
+        if not char:
+            return
+        self._push_history()
+        self.shapes.append(EmojiSticker((ix, iy), char, self.style))
         self._clear_selection()
         self._notify()
 

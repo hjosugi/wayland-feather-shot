@@ -315,6 +315,103 @@ class Marker(Shape):
         return replace(self, pos=(self.pos[0] + dx, self.pos[1] + dy))
 
 
+@dataclass(frozen=True)
+class StepArrow(Shape):
+    """An arrow with an auto-numbered badge at its tail (step-by-step guides)."""
+    p0: Tuple[float, float]   # tail (numbered end)
+    p1: Tuple[float, float]   # head
+    number: int
+    style: Style
+
+    def draw(self, cr, base_pixbuf):
+        Arrow(self.p0, self.p1, self.style).draw(cr, base_pixbuf)
+        x, y = self.p0
+        radius = max(11.0, self.style.font_size * 0.55)
+        _set_color(cr, self.style)
+        cr.arc(x, y, radius, 0, 2 * math.pi)
+        cr.fill()
+        cr.set_source_rgba(1, 1, 1, 1)
+        cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL,
+                            cairo.FONT_WEIGHT_BOLD)
+        cr.set_font_size(radius * 1.1)
+        label = str(self.number)
+        ext = cr.text_extents(label)
+        cr.move_to(x - ext.width / 2 - ext.x_bearing,
+                   y - ext.height / 2 - ext.y_bearing)
+        cr.show_text(label)
+
+    def translate(self, dx, dy):
+        return replace(self, p0=(self.p0[0] + dx, self.p0[1] + dy),
+                       p1=(self.p1[0] + dx, self.p1[1] + dy))
+
+
+@dataclass(frozen=True)
+class SpeechBubble(Shape):
+    """A rounded speech bubble with a tail and text."""
+    rect: Tuple[float, float, float, float]  # body x, y, w, h
+    text: str
+    style: Style
+
+    def draw(self, cr, base_pixbuf):
+        x, y, w, h = self.rect
+        if w < 6 or h < 6:
+            return
+        r = min(14.0, w / 3, h / 3)
+        # White body with a coloured outline.
+        _rounded_rect(cr, x, y, w, h, r)
+        cr.set_source_rgba(1, 1, 1, 0.96)
+        cr.fill()
+        # Tail pointing down-left from the bottom edge.
+        tx = x + w * 0.28
+        cr.move_to(tx, y + h)
+        cr.line_to(tx + w * 0.12, y + h)
+        cr.line_to(tx, y + h + min(24.0, h * 0.4))
+        cr.close_path()
+        cr.set_source_rgba(1, 1, 1, 0.96)
+        cr.fill()
+        _rounded_rect(cr, x, y, w, h, r)
+        _set_color(cr, self.style)
+        cr.set_line_width(max(1.5, self.style.width))
+        cr.stroke()
+        # Text.
+        cr.set_source_rgba(0.1, 0.1, 0.12, 1)
+        cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL,
+                            cairo.FONT_WEIGHT_NORMAL)
+        cr.set_font_size(self.style.font_size * 0.8)
+        line_h = self.style.font_size
+        pad = 8.0
+        for i, line in enumerate(self.text.split("\n")):
+            cr.move_to(x + pad, y + pad + line_h * (i + 0.8))
+            cr.show_text(line)
+
+    def translate(self, dx, dy):
+        x, y, w, h = self.rect
+        return replace(self, rect=(x + dx, y + dy, w, h))
+
+
+@dataclass(frozen=True)
+class EmojiSticker(Shape):
+    """A large emoji/character placed as a sticker."""
+    pos: Tuple[float, float]
+    char: str
+    style: Style
+
+    def _size(self):
+        return max(28.0, self.style.font_size * 2.2)
+
+    def draw(self, cr, base_pixbuf):
+        cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL,
+                            cairo.FONT_WEIGHT_NORMAL)
+        cr.set_font_size(self._size())
+        cr.set_source_rgba(0, 0, 0, 1)
+        x, y = self.pos
+        cr.move_to(x, y + self._size())
+        cr.show_text(self.char)
+
+    def translate(self, dx, dy):
+        return replace(self, pos=(self.pos[0] + dx, self.pos[1] + dy))
+
+
 def norm_rect(x0: float, y0: float, x1: float, y1: float):
     return _norm_rect(x0, y0, x1, y1)
 
@@ -333,14 +430,21 @@ def shape_bbox(shape: Shape, cr) -> Tuple[float, float, float, float]:
         pad = shape.style.width
         return (min(xs) - pad, min(ys) - pad,
                 max(xs) - min(xs) + 2 * pad, max(ys) - min(ys) + 2 * pad)
-    if isinstance(shape, (Line, Arrow)):
+    if isinstance(shape, (Line, Arrow, StepArrow)):
         (x0, y0), (x1, y1) = shape.p0, shape.p1
         pad = max(shape.style.width, 6.0)
+        if isinstance(shape, StepArrow):
+            pad = max(pad, shape.style.font_size * 0.6)
         return (min(x0, x1) - pad, min(y0, y1) - pad,
                 abs(x1 - x0) + 2 * pad, abs(y1 - y0) + 2 * pad)
-    if isinstance(shape, (RectShape, EllipseShape, Highlight, Obscure)):
+    if isinstance(shape, (RectShape, EllipseShape, Highlight, Obscure,
+                          SpeechBubble)):
         x, y, w, h = shape.rect
         return (x, y, w, h)
+    if isinstance(shape, EmojiSticker):
+        x, y = shape.pos
+        s = shape._size()
+        return (x, y, s * max(1, len(shape.char)), s)
     if isinstance(shape, Text):
         return shape.bounds(cr)
     if isinstance(shape, Marker):

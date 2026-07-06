@@ -19,6 +19,9 @@ TOOLS = [
     ("pen", "Pen", "Freehand pen (P)"),
     ("line", "Line", "Straight line (L)"),
     ("arrow", "Arrow", "Arrow (A)"),
+    ("steparrow", "Step", "Numbered step arrow (G)"),
+    ("bubble", "Bubble", "Speech bubble (U)"),
+    ("emoji", "Emoji", "Emoji sticker (J)"),
     ("rect", "Rect", "Rectangle (R)"),
     ("ellipse", "Ellipse", "Ellipse (E)"),
     ("highlight", "High", "Highlighter (H)"),
@@ -35,7 +38,11 @@ TOOL_KEYS = {
     Gdk.KEY_r: "rect", Gdk.KEY_e: "ellipse", Gdk.KEY_h: "highlight",
     Gdk.KEY_t: "text", Gdk.KEY_b: "blur", Gdk.KEY_x: "pixelate",
     Gdk.KEY_m: "marker", Gdk.KEY_c: "crop", Gdk.KEY_v: "select",
+    Gdk.KEY_g: "steparrow", Gdk.KEY_u: "bubble", Gdk.KEY_j: "emoji",
 }
+
+EMOJI_CHOICES = ["✅", "❌", "⭐", "❤️", "👍", "👎", "⚠️", "🔥", "💡", "➡️",
+                 "🎯", "🚀"]
 
 
 class EditorWindow(Gtk.ApplicationWindow):
@@ -56,6 +63,8 @@ class EditorWindow(Gtk.ApplicationWindow):
         if shapes:
             self.canvas.shapes = list(shapes)
         self.canvas.on_request_text = self._open_text_popover
+        self.canvas.on_request_bubble = self._open_bubble_popover
+        self.canvas.on_request_emoji = self._open_emoji_popover
         self.canvas.on_changed = self._on_canvas_changed
 
         self._build_header()
@@ -295,6 +304,55 @@ class EditorWindow(Gtk.ApplicationWindow):
         popover.connect("closed", lambda p: GLib.idle_add(p.unparent))
         popover.popup()
         view.grab_focus()
+
+    def _popover_at(self, wx, wy):
+        popover = Gtk.Popover()
+        popover.set_parent(self.canvas)
+        rect = Gdk.Rectangle()
+        rect.x, rect.y, rect.width, rect.height = int(wx), int(wy), 1, 1
+        popover.set_pointing_to(rect)
+        popover.connect("closed", lambda p: GLib.idle_add(p.unparent))
+        return popover
+
+    def _open_bubble_popover(self, ix, iy, wx, wy):
+        popover = self._popover_at(wx, wy)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        view = Gtk.TextView()
+        view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        view.set_size_request(200, 60)
+        buf = view.get_buffer()
+        box.append(view)
+        add = Gtk.Button(label=_("Add"))
+        add.add_css_class("suggested-action")
+
+        def commit(*_a):
+            start, end = buf.get_bounds()
+            self.canvas.add_bubble(ix, iy, buf.get_text(start, end, False))
+            popover.popdown()
+
+        add.connect("clicked", commit)
+        box.append(add)
+        popover.set_child(box)
+        popover.popup()
+        view.grab_focus()
+
+    def _open_emoji_popover(self, ix, iy, wx, wy):
+        popover = self._popover_at(wx, wy)
+        grid = Gtk.FlowBox()
+        grid.set_max_children_per_line(6)
+        grid.set_selection_mode(Gtk.SelectionMode.NONE)
+        for ch in EMOJI_CHOICES:
+            btn = Gtk.Button(label=ch)
+            btn.add_css_class("flat")
+
+            def pick(_b, c=ch):
+                self.canvas.add_emoji(ix, iy, c)
+                popover.popdown()
+
+            btn.connect("clicked", pick)
+            grid.append(btn)
+        popover.set_child(grid)
+        popover.popup()
 
     # -- actions -------------------------------------------------------------------
 

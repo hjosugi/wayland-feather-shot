@@ -70,6 +70,7 @@ JA = {
     "Move": "移動", "Pen": "ペン", "Line": "直線", "Arrow": "矢印",
     "Rect": "矩形", "Ellipse": "楕円", "High": "蛍光", "Text": "文字",
     "Blur": "ぼかし", "Pixel": "モザイク", "Crop": "切抜", "Select": "選択",
+    "Step": "手順", "Bubble": "吹出", "Emoji": "絵文字",
     # tool tooltips
     "Move / resize selection (V)": "選択範囲の移動・リサイズ (V)",
     "Freehand pen (P)": "フリーハンドペン (P)",

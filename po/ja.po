@@ -66,6 +66,15 @@ msgstr "切抜"
 msgid "Select"
 msgstr "選択"
 
+msgid "Step"
+msgstr "手順"
+
+msgid "Bubble"
+msgstr "吹出"
+
+msgid "Emoji"
+msgstr "絵文字"
+
 msgid "Move / resize selection (V)"
 msgstr "選択範囲の移動・リサイズ (V)"
 
