@@ -114,12 +114,33 @@ prints the saved path. Exit codes: `0` ok, `1` error, `2` bad usage,
 
 ### Default hotkey: Ctrl+Print
 
-- **GNOME**: `./scripts/setup-hotkey.sh` registers it automatically
-  (`Ctrl+Print` → region, `Ctrl+Shift+Print` → scroll).
-- **KDE / GNOME 46+**: the autostarted `wayland-feather-shot daemon` binds it
-  through the GlobalShortcuts portal (approve the dialog once).
-- **Hyprland**: `bind = CTRL, Print, exec, wayland-feather-shot gui`
-- **Sway**: `bindsym Ctrl+Print exec wayland-feather-shot gui`
+On Wayland there is **no** portable way for an app to grab a global key — the
+compositor decides. Two mechanisms cover the field; pick the row for your
+desktop (or just run `wayland-feather-shot diagnose`, which detects your
+desktop and prints the exact command):
+
+| Desktop | Recommended | How |
+| --- | --- | --- |
+| GNOME | native shortcut | `./scripts/setup-hotkey.sh` (gsettings, idempotent) |
+| GNOME 46+ | portal daemon | autostarted `wayland-feather-shot daemon` |
+| KDE Plasma | portal daemon | autostarted `wayland-feather-shot daemon` (approve once) |
+| Hyprland | native shortcut | `bind = CTRL, Print, exec, wayland-feather-shot gui` |
+| Sway / wlroots | native shortcut | `bindsym Ctrl+Print exec wayland-feather-shot gui` |
+| other | native shortcut | bind `wayland-feather-shot gui` in your settings |
+
+**If pressing the key does nothing**, first check the capture itself works:
+
+```console
+$ wayland-feather-shot gui        # if this opens the overlay, capture is fine
+$ wayland-feather-shot diagnose   # detects your desktop + prints the binding
+$ wayland-feather-shot daemon --bind-once   # test the portal binding, then exit
+```
+
+If `gui` works but the key doesn't, it's the binding mechanism — use the table
+above. The daemon logs every activation and the exact command it launches to
+stderr, so `wayland-feather-shot daemon` in a terminal shows what happens when
+you press the key. You can override the trigger with
+`wayland-feather-shot daemon --shortcut SUPER+Print`.
 
 ## Configuration
 

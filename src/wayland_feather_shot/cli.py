@@ -77,6 +77,14 @@ def build_parser() -> argparse.ArgumentParser:
                         help="do not open a window; capture, save, print the "
                              "path, and exit")
 
+    daemon = parser.add_argument_group(
+        "daemon", "options for the GlobalShortcuts hotkey daemon")
+    daemon.add_argument("--shortcut", metavar="TRIGGER",
+                        help="portal trigger for region capture "
+                             "(default CTRL+Print), e.g. CTRL+Print")
+    daemon.add_argument("--bind-once", action="store_true",
+                        help="bind the shortcuts and exit (test the binding)")
+
     parser.add_argument("--version", action="version",
                         version=f"%(prog)s {__version__}")
     return parser
@@ -95,6 +103,14 @@ def _validate(parser: argparse.ArgumentParser, args) -> None:
             parser.error(str(e))
     if args.output:
         args.output = os.path.abspath(os.path.expanduser(args.output))
+
+    if (args.shortcut or args.bind_once) and args.mode != "daemon":
+        parser.error("--shortcut/--bind-once only apply to the 'daemon' mode")
+    if args.shortcut is not None:
+        from .hotkey import valid_trigger
+        if not valid_trigger(args.shortcut):
+            parser.error(f"invalid shortcut trigger: {args.shortcut!r} "
+                         "(expected e.g. CTRL+Print or SHIFT+CTRL+F12)")
 
 
 def main(argv=None) -> int:

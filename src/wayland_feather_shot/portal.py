@@ -221,9 +221,10 @@ class GlobalShortcuts:
         ("capture-scroll", "Scrolling capture (Feather Shot)", "CTRL+SHIFT+Print"),
     ]
 
-    def __init__(self, portal: Portal, on_activated):
+    def __init__(self, portal: Portal, on_activated, shortcuts=None):
         self.portal = portal
         self.on_activated = on_activated
+        self.shortcuts = shortcuts if shortcuts is not None else self.SHORTCUTS
         self.session_handle = None
 
     def bind(self, callback) -> None:
@@ -241,7 +242,7 @@ class GlobalShortcuts:
                 [(sid, {
                     "description": GLib.Variant("s", desc),
                     "preferred_trigger": GLib.Variant("s", trig),
-                }) for sid, desc, trig in self.SHORTCUTS])
+                }) for sid, desc, trig in self.shortcuts])
             self.portal.request(
                 IFACE_SHORTCUTS, "BindShortcuts",
                 lambda opts: GLib.Variant.new_tuple(

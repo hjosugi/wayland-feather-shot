@@ -106,6 +106,18 @@ def print_diagnostics() -> int:
         else:
             mark = "warn"
         print(f"[{mark}] {check.name}: {check.detail}")
+
+    # Hotkey setup guidance for this desktop (the "nothing happens when I press
+    # the key" case is almost always the wrong binding mechanism).
+    from . import hotkey
+    desktop = hotkey.detect_desktop()
+    support = hotkey.portal_support(desktop)
+    print(f"\n[info] desktop: {desktop} "
+          f"(GlobalShortcuts portal daemon: {support})")
+    print("Hotkey setup (Ctrl+Print → region capture):")
+    for line in hotkey.setup_hint(desktop).splitlines():
+        print("  " + line)
+
     if failed_required:
         print("\nRequired components are missing — see README.md "
               "'Install' for your distro's package names.")

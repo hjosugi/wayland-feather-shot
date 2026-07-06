@@ -225,9 +225,21 @@ class FeatherShotApp(Gtk.Application):
 
     # -- global shortcut daemon --------------------------------------------------
 
-    def run_daemon(self) -> int:
-        """Blocking daemon using the GlobalShortcuts portal (no GTK window)."""
+    def run_daemon(self, shortcut: str | None = None,
+                   bind_once: bool = False) -> int:
+        """Blocking daemon using the GlobalShortcuts portal (no GTK window).
+
+        *shortcut* overrides the region trigger (default Ctrl+Print).
+        *bind_once* binds the shortcuts and exits, for testing the binding.
+        """
+        from . import hotkey
         from .portal import GlobalShortcuts
+
+        desktop = hotkey.detect_desktop()
+        support = hotkey.portal_support(desktop)
+        print(f"feather-shot daemon: desktop={desktop}, "
+              f"GlobalShortcuts portal support={support}", file=sys.stderr)
+
         try:
             portal = Portal()
         except PortalError as e:
@@ -237,24 +249,38 @@ class FeatherShotApp(Gtk.Application):
         mode_by_id = {"capture-region": "gui", "capture-full": "full",
                       "capture-scroll": "scroll"}
 
+        # Build the shortcut set, applying the --shortcut override to region.
+        defs = []
+        for sid, trigger, desc in hotkey.DAEMON_SHORTCUTS:
+            if sid == "capture-region" and shortcut:
+                trigger = shortcut
+            defs.append((sid, desc, trigger))
+
         def activated(shortcut_id):
             mode = mode_by_id.get(shortcut_id)
+            print(f"feather-shot daemon: activated {shortcut_id} -> {mode}",
+                  file=sys.stderr)
             if mode:
                 spawn_capture(mode)
 
-        shortcuts = GlobalShortcuts(portal, activated)
+        shortcuts = GlobalShortcuts(portal, activated, shortcuts=defs)
+
+        exit_code = {"value": 0}
 
         def bound(ok, error):
             if ok:
-                print("feather-shot daemon: shortcuts bound via the "
-                      "GlobalShortcuts portal (default: Ctrl+Print).")
+                triggers = ", ".join(f"{t}={s}" for s, _d, t in defs)
+                print(f"feather-shot daemon: shortcuts bound via the "
+                      f"GlobalShortcuts portal ({triggers}).", file=sys.stderr)
+                if bind_once:
+                    loop.quit()
             else:
-                print(f"feather-shot daemon: {error}\n"
+                exit_code["value"] = 2
+                print(f"feather-shot daemon: could not bind shortcuts "
+                      f"({error}).\n"
                       "Your desktop probably does not implement the "
-                      "GlobalShortcuts portal. Register a keyboard shortcut "
-                      "for 'wayland-feather-shot gui' in your desktop "
-                      "settings instead (see scripts/setup-hotkey.sh).",
-                      file=sys.stderr)
+                      "GlobalShortcuts portal. Bind the key natively instead:\n"
+                      + hotkey.setup_hint(desktop), file=sys.stderr)
                 loop.quit()
 
         shortcuts.bind(bound)
@@ -262,17 +288,36 @@ class FeatherShotApp(Gtk.Application):
             loop.run()
         except KeyboardInterrupt:
             pass
-        return 0
+        return exit_code["value"]
 
 
-def spawn_capture(mode: str):
-    """Re-exec ourselves in a fresh process for one capture."""
-    argv0 = os.path.realpath(sys.argv[0])
-    if os.access(argv0, os.X_OK) and not argv0.endswith((".py",)):
-        cmd = [argv0, mode]
-    else:
-        cmd = [sys.executable, "-m", "wayland_feather_shot", mode]
-    subprocess.Popen(cmd, start_new_session=True)
+def spawn_capture(mode: str) -> bool:
+    """Launch one capture in a fresh, detached process.
+
+    Inherits the full session environment (WAYLAND_DISPLAY, DBUS_*, XDG_*) so
+    the child can reach the portal, and extends PYTHONPATH when falling back to
+    ``python -m`` so the import resolves regardless of install layout. Logs the
+    command and any failure — a silent spawn is exactly the "I pressed the key
+    and nothing happened" bug.
+    """
+    from . import hotkey
+    src_dir = os.path.dirname(os.path.abspath(__file__))
+    src_dir = os.path.dirname(src_dir)  # .../src
+    cmd, extra = hotkey.capture_command(
+        mode, argv0=sys.argv[0], executable=sys.executable, src_dir=src_dir)
+    env = dict(os.environ)
+    if extra.get("PYTHONPATH"):
+        existing = env.get("PYTHONPATH")
+        env["PYTHONPATH"] = (extra["PYTHONPATH"] if not existing
+                             else extra["PYTHONPATH"] + os.pathsep + existing)
+    try:
+        subprocess.Popen(cmd, env=env, start_new_session=True)
+        print(f"feather-shot daemon: launched {' '.join(cmd)}", file=sys.stderr)
+        return True
+    except OSError as e:
+        print(f"feather-shot daemon: failed to launch capture ({mode}): {e}",
+              file=sys.stderr)
+        return False
 
 
 def run(args) -> int:
@@ -280,7 +325,9 @@ def run(args) -> int:
     Settings().write_default_config_if_missing()
 
     if args.mode == "daemon":
-        return FeatherShotApp(args.mode, 0).run_daemon()
+        return FeatherShotApp(args.mode, 0).run_daemon(
+            shortcut=getattr(args, "shortcut", None),
+            bind_once=getattr(args, "bind_once", False))
 
     app = FeatherShotApp(
         args.mode, args.delay,

@@ -3,23 +3,44 @@
 #   Ctrl+Print        -> region capture (gui)
 #   Ctrl+Shift+Print  -> scrolling capture
 #
-# GNOME is configured automatically (gsettings). Other desktops get either
-# the GlobalShortcuts-portal daemon or a config snippet printed for you.
+# GNOME is configured automatically (gsettings, idempotent). Other desktops
+# get either the GlobalShortcuts-portal daemon or a config snippet printed.
 set -u
 
 CMD="wayland-feather-shot"
 command -v "$CMD" >/dev/null 2>&1 || CMD="$(cd "$(dirname "$0")/.." && pwd)/bin/wayland-feather-shot"
 
-desktop="${XDG_CURRENT_DESKTOP:-unknown}"
+# Detect the desktop the same way the app does (compositor env vars first).
+if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+    desktop="Hyprland"
+elif [ -n "${SWAYSOCK:-}" ]; then
+    desktop="sway"
+else
+    desktop="${XDG_CURRENT_DESKTOP:-unknown}"
+fi
 echo "Detected desktop: $desktop"
 
 setup_gnome() {
     local base="org.gnome.settings-daemon.plugins.media-keys"
     local dir="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
-    local list slot0 slot1
+    local list
     list=$(gsettings get $base custom-keybindings 2>/dev/null) || return 1
 
+    already_bound() {  # $1 command — true if some slot already runs it
+        local slot cur
+        for slot in $(printf '%s\n' "$list" | grep -oE "custom[0-9]+"); do
+            cur=$(gsettings get \
+                "$base.custom-keybinding:$dir/$slot/" command 2>/dev/null)
+            [ "$cur" = "'$1'" ] && return 0
+        done
+        return 1
+    }
+
     add_binding() {  # $1 name  $2 command  $3 binding
+        if already_bound "$2"; then
+            echo "  already bound: $2"
+            return
+        fi
         local i=0 slot
         while :; do
             slot="$dir/custom$i/"
@@ -46,15 +67,17 @@ setup_gnome() {
 case "$desktop" in
     *GNOME*)
         if setup_gnome; then
-            echo "GNOME shortcuts installed: Ctrl+Print / Ctrl+Shift+Print"
+            echo "GNOME shortcuts ready: Ctrl+Print / Ctrl+Shift+Print"
         else
             echo "Could not configure gsettings automatically." >&2
+            echo "Bind manually: Settings → Keyboard → Custom Shortcuts:" >&2
+            echo "    $CMD gui      Ctrl+Print" >&2
         fi
         ;;
     *KDE*)
         echo "KDE Plasma implements the GlobalShortcuts portal — start the daemon:"
         echo "    $CMD daemon"
-        echo "(installed autostart entry does this at login), then approve the"
+        echo "(the installed autostart entry does this at login), then approve the"
         echo "shortcut dialog. Default trigger requested: Ctrl+Print."
         echo "Or add it manually: System Settings → Shortcuts → Custom:"
         echo "    command:  $CMD gui      key: Ctrl+Print"
@@ -77,3 +100,7 @@ case "$desktop" in
         echo "instead run:  $CMD daemon"
         ;;
 esac
+
+echo
+echo "Test the capture itself now (no hotkey needed):  $CMD gui"
+echo "Check your setup any time with:                  $CMD diagnose"
