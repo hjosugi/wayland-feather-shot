@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.3.0 (2026-07-06)
+
+Issue backlog work (GitHub issues #4, #7, #8, #9, #10, #12, #13, #14; part
+of #16).
+
+Editor
+- **Select tool (V)**: click to select the topmost shape, drag to move it,
+  Delete/Backspace to remove it, and change colour/width/font to restyle the
+  selection — committed shapes are no longer immutable (#10).
+- **Multi-line text** with a contrasting readability outline and an optional
+  background chip, plus a font-family/size picker in the header (#9).
+- **Flatten & blur** toggle: blur/pixelate can cover annotations, not just the
+  photo, by flattening the stack first (#8).
+- **Pin to screen** (Ctrl+P / toolbar): float the capture in a frameless,
+  draggable window; Esc or middle-click closes, Ctrl+C re-copies (#13).
+
+Capture / scripting
+- **Scriptable capture**: `--region X,Y,W,H`, `--output/-o PATH`,
+  `--no-editor`, and stable exit codes (0/1/2/130) for `gui`/`full` (part of
+  #16).
+
+Scrolling capture
+- **Faster stitching**: coarse-to-fine shift search speeds up the pure-Python
+  (no-numpy) path on large captures (#14).
+- **More robust stitching**: overshoot / scroll-back and horizontal-scroll
+  frames are dropped instead of duplicating a strip, and the editor shows a
+  warning listing skipped frames (#4).
+
+Clipboard
+- **Bundled clipboard holder** so Ctrl+C survives closing the window without
+  wl-clipboard installed (#7).
+
+Packaging
+- Flatpak manifest (no network permission), AppStream metainfo, AUR PKGBUILD
+  (#12).
+
 ## 0.2.0 (2026-07-05)
 
 Merged the two development lines of the project into one app: the richer

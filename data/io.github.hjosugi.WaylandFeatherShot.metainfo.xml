@@ -52,16 +52,24 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
-    <release version="0.2.0" date="2026-07-06">
+    <release version="0.3.0" date="2026-07-06">
       <description>
         <p>
-          Unified app: added edit and diagnose modes, scriptable
-          capture flags, a bundled clipboard holder, a faster and more
-          robust scroll stitcher, and packaging.
+          Editor gains a select tool (move/delete/restyle shapes), multi-line
+          text with outline, flatten-and-blur, and pin-to-screen. Scriptable
+          capture flags, faster and more robust scroll stitching, a bundled
+          clipboard holder, and packaging.
         </p>
       </description>
     </release>
-    <release version="0.1.0" date="2026-07-06">
+    <release version="0.2.0" date="2026-07-05">
+      <description>
+        <p>
+          Unified app: added edit and diagnose modes and reverse-DNS app id.
+        </p>
+      </description>
+    </release>
+    <release version="0.1.0" date="2026-07-05">
       <description>
         <p>First release.</p>
       </description>
