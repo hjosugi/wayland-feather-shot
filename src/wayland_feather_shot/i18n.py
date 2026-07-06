@@ -69,6 +69,11 @@ JA = {
         "クリップボード(エディタを開いている間有効)",
     "holder process": "保持プロセス",
     "Text… (Enter to add)": "テキスト…(Enterで追加)",
+    "Outline": "縁取り",
+    "Background": "背景",
+    "Add": "追加",
+    "Enter: newline · Ctrl+Enter: add": "Enter: 改行 · Ctrl+Enter: 追加",
+    "Text font": "テキストのフォント",
     # selector hint
     "Drag: select area   •   Click / Enter: full screen   •   Esc: cancel":
         "ドラッグ: 範囲選択   •   クリック / Enter: 全画面   •   Esc: キャンセル",

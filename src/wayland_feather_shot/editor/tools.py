@@ -24,6 +24,7 @@ class Style:
     rgba: Tuple[float, float, float, float] = (1.0, 0.23, 0.19, 1.0)
     width: float = 3.0
     font_size: float = 22.0
+    font_family: str = "Sans"
 
 
 def _set_color(cr, style: Style):
@@ -179,23 +180,74 @@ class Highlight(Shape):
 
 @dataclass(frozen=True)
 class Text(Shape):
-    pos: Tuple[float, float]
+    pos: Tuple[float, float]   # top-left of the first line's cap height
     text: str
     style: Style
+    outline: bool = True       # contrasting outline for readability
+    background: bool = False    # translucent chip behind the text
 
-    def draw(self, cr, base_pixbuf):
-        _set_color(cr, self.style)
-        cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL,
+    def _lines(self):
+        return self.text.split("\n") or [""]
+
+    def _metrics(self, cr):
+        """Return (line_height, [(line, width)], max_width, ascent)."""
+        cr.select_font_face(self.style.font_family, cairo.FONT_SLANT_NORMAL,
                             cairo.FONT_WEIGHT_BOLD)
         cr.set_font_size(self.style.font_size)
+        fe = cr.font_extents()
+        ascent, line_h = fe[0], fe[2]
+        line_h = max(line_h, self.style.font_size * 1.25)
+        sized = [(ln, cr.text_extents(ln).width) for ln in self._lines()]
+        max_w = max((w for _, w in sized), default=0.0)
+        return line_h, sized, max_w, ascent
+
+    def bounds(self, cr):
+        """Bounding box (x, y, w, h) in image coordinates."""
+        line_h, sized, max_w, ascent = self._metrics(cr)
         x, y = self.pos
-        line_h = self.style.font_size * 1.25
-        for i, line in enumerate(self.text.splitlines() or [""]):
-            cr.move_to(x, y + i * line_h)
+        pad = self.style.font_size * 0.3
+        h = line_h * len(sized)
+        return (x - pad, y - pad, max_w + 2 * pad, h + 2 * pad)
+
+    def draw(self, cr, base_pixbuf):
+        line_h, sized, max_w, ascent = self._metrics(cr)
+        x, y = self.pos
+
+        if self.background:
+            bx, by, bw, bh = self.bounds(cr)
+            cr.set_source_rgba(0, 0, 0, 0.45)
+            _rounded_rect(cr, bx, by, bw, bh, self.style.font_size * 0.25)
+            cr.fill()
+
+        r, g, b, a = self.style.rgba
+        # Outline in the colour that contrasts with the fill (luminance test).
+        luminance = 0.299 * r + 0.587 * g + 0.114 * b
+        oc = 0.0 if luminance > 0.5 else 1.0
+        for i, (line, _w) in enumerate(sized):
+            baseline = y + ascent + i * line_h
+            if self.outline:
+                cr.move_to(x, baseline)
+                cr.text_path(line)
+                cr.set_source_rgba(oc, oc, oc, a)
+                cr.set_line_width(max(2.0, self.style.font_size * 0.12))
+                cr.set_line_join(cairo.LINE_JOIN_ROUND)
+                cr.stroke()
+            cr.move_to(x, baseline)
+            cr.set_source_rgba(r, g, b, a)
             cr.show_text(line)
 
     def translate(self, dx, dy):
         return replace(self, pos=(self.pos[0] + dx, self.pos[1] + dy))
+
+
+def _rounded_rect(cr, x, y, w, h, r):
+    r = max(0.0, min(r, w / 2, h / 2))
+    cr.new_sub_path()
+    cr.arc(x + w - r, y + r, r, -math.pi / 2, 0)
+    cr.arc(x + w - r, y + h - r, r, 0, math.pi / 2)
+    cr.arc(x + r, y + h - r, r, math.pi / 2, math.pi)
+    cr.arc(x + r, y + r, r, math.pi, 1.5 * math.pi)
+    cr.close_path()
 
 
 @dataclass(frozen=True)

@@ -7,7 +7,7 @@ import os
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
+from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango  # noqa: E402
 
 from .. import save as save_mod
 from ..i18n import _, tr
@@ -119,6 +119,15 @@ class EditorWindow(Gtk.ApplicationWindow):
         width.connect("value-changed", self._on_width_changed)
         header.pack_start(width)
 
+        font_btn = Gtk.FontDialogButton(dialog=Gtk.FontDialog())
+        desc = Pango.FontDescription()
+        desc.set_family("Sans")
+        desc.set_size(int(float(self.settings.font_size) * Pango.SCALE))
+        font_btn.set_font_desc(desc)
+        font_btn.set_tooltip_text(_("Text font"))
+        font_btn.connect("notify::font-desc", self._on_font_changed)
+        header.pack_start(font_btn)
+
         undo = Gtk.Button.new_from_icon_name("edit-undo-symbolic")
         undo.set_tooltip_text(_("Undo (Ctrl+Z)"))
         undo.connect("clicked", lambda *_: self.canvas.undo())
@@ -178,15 +187,28 @@ class EditorWindow(Gtk.ApplicationWindow):
 
     def _on_color_changed(self, button, _pspec):
         rgba = button.get_rgba()
+        s = self.canvas.style
         self.canvas.style = Style(
             rgba=(rgba.red, rgba.green, rgba.blue, rgba.alpha),
-            width=self.canvas.style.width,
-            font_size=self.canvas.style.font_size)
+            width=s.width, font_size=s.font_size, font_family=s.font_family)
 
     def _on_width_changed(self, spin):
         s = self.canvas.style
         self.canvas.style = Style(rgba=s.rgba, width=spin.get_value(),
-                                  font_size=s.font_size)
+                                  font_size=s.font_size,
+                                  font_family=s.font_family)
+
+    def _on_font_changed(self, button, _pspec):
+        desc = button.get_font_desc()
+        if desc is None:
+            return
+        family = desc.get_family() or "Sans"
+        size = desc.get_size() / Pango.SCALE
+        s = self.canvas.style
+        self.canvas.style = Style(
+            rgba=s.rgba, width=s.width,
+            font_size=size if size > 0 else s.font_size,
+            font_family=family)
 
     # -- text tool ---------------------------------------------------------------
 
@@ -196,19 +218,61 @@ class EditorWindow(Gtk.ApplicationWindow):
         rect = Gdk.Rectangle()
         rect.x, rect.y, rect.width, rect.height = int(wx), int(wy), 1, 1
         popover.set_pointing_to(rect)
-        entry = Gtk.Entry()
-        entry.set_placeholder_text(_("Text… (Enter to add)"))
-        entry.set_width_chars(28)
 
-        def commit(_entry):
-            self.canvas.add_text(ix, iy, entry.get_text())
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+
+        view = Gtk.TextView()
+        view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        view.set_size_request(240, 72)
+        view.add_css_class("wfs-text-entry")
+        buf = view.get_buffer()
+        scroller = Gtk.ScrolledWindow()
+        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroller.set_child(view)
+        scroller.set_size_request(240, 72)
+        box.append(scroller)
+
+        opts = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        outline_chk = Gtk.CheckButton(label=_("Outline"))
+        outline_chk.set_active(True)
+        bg_chk = Gtk.CheckButton(label=_("Background"))
+        opts.append(outline_chk)
+        opts.append(bg_chk)
+        opts.append(Gtk.Box(hexpand=True))  # spacer
+        add_btn = Gtk.Button(label=_("Add"))
+        add_btn.add_css_class("suggested-action")
+        opts.append(add_btn)
+        box.append(opts)
+        box.append(Gtk.Label(
+            label=_("Enter: newline · Ctrl+Enter: add"),
+            css_classes=["dim-label"]))
+
+        def commit(*_a):
+            start, end = buf.get_bounds()
+            text = buf.get_text(start, end, False)
+            self.canvas.add_text(ix, iy, text,
+                                 outline=outline_chk.get_active(),
+                                 background=bg_chk.get_active())
             popover.popdown()
 
-        entry.connect("activate", commit)
-        popover.set_child(entry)
+        add_btn.connect("clicked", commit)
+
+        keys = Gtk.EventControllerKey()
+
+        def on_key(_c, keyval, _kc, state):
+            if (keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter)
+                    and state & Gdk.ModifierType.CONTROL_MASK):
+                commit()
+                return True
+            return False
+
+        keys.connect("key-pressed", on_key)
+        view.add_controller(keys)
+
+        popover.set_child(box)
         popover.connect("closed", lambda p: GLib.idle_add(p.unparent))
         popover.popup()
-        entry.grab_focus()
+        view.grab_focus()
 
     # -- actions -------------------------------------------------------------------
 

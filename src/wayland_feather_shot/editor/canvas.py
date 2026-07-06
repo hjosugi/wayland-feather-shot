@@ -189,11 +189,13 @@ class EditorCanvas(Gtk.DrawingArea):
         elif self.tool == "text" and self.on_request_text:
             self.on_request_text(ix, iy, x, y)
 
-    def add_text(self, ix: float, iy: float, text: str):
+    def add_text(self, ix: float, iy: float, text: str,
+                 outline: bool = True, background: bool = False):
         if not text.strip():
             return
         self._push_history()
-        self.shapes.append(Text((ix, iy), text, self.style))
+        self.shapes.append(Text((ix, iy), text, self.style,
+                                outline=outline, background=background))
         self._notify()
 
     # -- crop --------------------------------------------------------------------
