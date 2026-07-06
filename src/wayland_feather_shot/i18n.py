@@ -59,6 +59,8 @@ JA = {
     "Copy to clipboard (Ctrl+C / Enter)":
         "クリップボードへコピー (Ctrl+C / Enter)",
     "Open in editor window (W)": "エディタウィンドウで開く (W)",
+    "Pin to screen (frameless window)": "画面にピン留め(枠なしウィンドウ)",
+    "Pin to screen (Ctrl+P)": "画面にピン留め (Ctrl+P)",
     "Cancel (Esc)": "キャンセル (Esc)",
     # toasts / messages
     "Saved  {path}": "保存しました  {path}",

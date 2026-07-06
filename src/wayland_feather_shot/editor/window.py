@@ -154,9 +154,13 @@ class EditorWindow(Gtk.ApplicationWindow):
         save_as_btn = Gtk.Button.new_from_icon_name("document-save-as-symbolic")
         save_as_btn.set_tooltip_text(_("Save as… (Ctrl+Shift+S)"))
         save_as_btn.connect("clicked", lambda *_: self.save_as())
+        pin_btn = Gtk.Button.new_from_icon_name("view-pin-symbolic")
+        pin_btn.set_tooltip_text(_("Pin to screen (Ctrl+P)"))
+        pin_btn.connect("clicked", lambda *_: self.pin_to_screen())
         header.pack_end(save_btn)
         header.pack_end(save_as_btn)
         header.pack_end(copy_btn)
+        header.pack_end(pin_btn)
 
     def _install_css(self):
         css = b"""
@@ -336,6 +340,11 @@ class EditorWindow(Gtk.ApplicationWindow):
         self._dirty = False
         self.toast(tr("Copied to clipboard via {how}", how=_(how)))
 
+    def pin_to_screen(self):
+        from .pin import PinWindow
+        PinWindow(self.get_application(),
+                  self.canvas.export_pixbuf()).present()
+
     # -- keys / close ----------------------------------------------------------------
 
     def _on_key(self, _ctrl, keyval, _keycode, state):
@@ -348,6 +357,9 @@ class EditorWindow(Gtk.ApplicationWindow):
             return True
         if ctrl and key == Gdk.KEY_c:
             self.copy_to_clipboard()
+            return True
+        if ctrl and key == Gdk.KEY_p:
+            self.pin_to_screen()
             return True
         if ctrl and key == Gdk.KEY_z:
             self.canvas.redo() if shift else self.canvas.undo()

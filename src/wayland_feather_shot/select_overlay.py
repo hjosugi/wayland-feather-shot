@@ -204,6 +204,8 @@ class OverlayWindow(Gtk.ApplicationWindow):
         if self.open_editor:
             button("window-new-symbolic", "Open in editor window (W)",
                    self._to_editor)
+        button("view-pin-symbolic", "Pin to screen (frameless window)",
+               self.pin_to_screen)
         button("window-close-symbolic", "Cancel (Esc)", self.close)
         return bar
 
@@ -615,10 +617,14 @@ class OverlayWindow(Gtk.ApplicationWindow):
         except Exception as e:
             self.toast(tr("Copy failed: {error}", error=e))
             return
-        if how == "wl-copy":
-            self.close()  # wl-copy keeps owning the clipboard after we exit
+        if how in ("wl-copy", "holder process"):
+            self.close()  # a holder keeps owning the clipboard after we exit
         else:
             self.toast(_("Copied — keep this window open while pasting (install wl-clipboard to copy & close)"))
+
+    def pin_to_screen(self):
+        from .editor.pin import PinWindow
+        PinWindow(self.get_application(), self._export_cropped()).present()
 
     def _to_editor(self):
         if not self.open_editor:
