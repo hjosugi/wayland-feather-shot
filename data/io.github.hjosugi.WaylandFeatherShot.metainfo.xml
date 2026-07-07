@@ -52,6 +52,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.7.5" date="2026-07-08">
+      <description>
+        <p>
+          Improves light/dark theme handling by syncing GTK with the desktop
+          portal appearance setting, strengthening custom overlay contrast and
+          reducing the region-selection dim layer for better readability.
+        </p>
+      </description>
+    </release>
     <release version="0.7.4" date="2026-07-06">
       <description>
         <p>

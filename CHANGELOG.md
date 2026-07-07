@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.7.5 (2026-07-08)
+
+Theme and release cleanup:
+
+- Synced GTK's dark-theme preference with the desktop portal appearance
+  setting so app windows and file dialogs follow the same light/dark mode.
+- Centralized Feather Shot's custom CSS and strengthened overlay, toast and
+  pin-window contrast so toolbar text stays readable across themes.
+- Reduced the region-selection dim layer so light-theme content remains easier
+  to inspect while choosing a capture area.
+- Removed the stale `claude/merge-implementation-versions-20trmn` remote
+  branch after confirming its commits were already included in `main`.
+
 ## 0.7.4 (2026-07-06)
 
 Release and packaging completion pass for the on-device verification issue
