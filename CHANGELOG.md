@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.6 (2026-07-08)
+
+Overlay toolbar readability fix:
+
+- Made the region-overlay annotation toolbar theme-independent. Under
+  Adwaita-dark and some third-party GTK themes the tool-button labels
+  (Pen, Line, Arrow, …) rendered as white text on white pills and the
+  buttons collapsed into ovals, because the theme's button `background-image`
+  and label colour overrode the low-specificity custom CSS. The styling now
+  uses higher-specificity selectors installed at user priority, neutralizes
+  the theme background layers and pins the label colour, so the buttons stay
+  high-contrast rounded pills in every theme.
+- Restored the intended blue highlight for the active tool and gave the
+  line-width spin button a matching high-contrast style on the toolbar.
+
 ## 0.7.5 (2026-07-08)
 
 Theme and release cleanup:

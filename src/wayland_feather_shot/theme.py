@@ -67,33 +67,81 @@ def install_custom_css() -> None:
     if display_id in _STYLE_DISPLAY_IDS:
         return
 
+    # These selectors are deliberately specific (.wfs-bar button.wfs-round) and
+    # installed at USER priority so the frozen-overlay toolbar keeps a fixed,
+    # high-contrast look no matter which GTK theme the user runs. Adwaita-dark
+    # and many third-party themes paint buttons with a background *image*/gradient
+    # and set the label colour on the label node, which silently overrode the old
+    # low-specificity `.wfs-round` rules — leaving white labels on white pills.
+    # Neutralising background-image and pinning both the button and its label
+    # colour makes the styling theme-independent.
     css = b"""
     .wfs-bar {
-        padding: 4px;
-        border-radius: 22px;
-        background-color: rgba(17, 24, 39, 0.88);
-        border: 1px solid rgba(255, 255, 255, 0.30);
+        padding: 5px;
+        border-radius: 14px;
+        background-color: rgba(17, 24, 39, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.28);
     }
-    .wfs-round {
-        border-radius: 999px;
-        padding: 6px 10px;
-        background-color: #f8fafc;
+    .wfs-bar button.wfs-round {
+        min-width: 0;
+        min-height: 30px;
+        margin: 0;
+        padding: 4px 12px;
+        border-radius: 8px;
+        background-image: none;
+        background-color: #f1f5f9;
         color: #111827;
-        border: 1px solid rgba(15, 23, 42, 0.28);
+        border: 1px solid rgba(15, 23, 42, 0.22);
+        box-shadow: none;
+        text-shadow: none;
         font-weight: bold;
     }
-    .wfs-round:hover {
-        background-color: #ffffff;
-        color: #111827;
+    .wfs-bar button.wfs-round label {
+        color: inherit;
     }
-    .wfs-round:checked {
+    .wfs-bar button.wfs-round:hover {
+        background-image: none;
+        background-color: #ffffff;
+        color: #0b1220;
+    }
+    .wfs-bar button.wfs-round:checked,
+    .wfs-bar button.wfs-round:checked:hover {
+        background-image: none;
         background-color: #2563eb;
         color: #ffffff;
-        border-color: rgba(191, 219, 254, 0.95);
+        border-color: #1d4ed8;
     }
-    .wfs-round:disabled {
-        background-color: #e5e7eb;
-        color: #6b7280;
+    .wfs-bar button.wfs-round:checked label {
+        color: #ffffff;
+    }
+    .wfs-bar button.wfs-round:disabled {
+        background-image: none;
+        background-color: #d7dbe0;
+        color: #7b828c;
+    }
+    .wfs-bar spinbutton {
+        background-image: none;
+        background-color: #f1f5f9;
+        color: #111827;
+        border-radius: 8px;
+        border: 1px solid rgba(15, 23, 42, 0.22);
+        box-shadow: none;
+        min-height: 30px;
+    }
+    .wfs-bar spinbutton text {
+        color: #111827;
+        background-color: transparent;
+        caret-color: #111827;
+    }
+    .wfs-bar spinbutton button {
+        color: #111827;
+        background-image: none;
+        background-color: transparent;
+        box-shadow: none;
+        border: none;
+    }
+    .wfs-bar spinbutton button:hover {
+        background-color: rgba(15, 23, 42, 0.10);
     }
     .wfs-toast {
         background-color: rgba(17, 24, 39, 0.96);
@@ -109,7 +157,7 @@ def install_custom_css() -> None:
     provider = Gtk.CssProvider()
     provider.load_from_data(css)
     Gtk.StyleContext.add_provider_for_display(
-        display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        display, provider, Gtk.STYLE_PROVIDER_PRIORITY_USER
     )
     _STYLE_PROVIDERS.append(provider)
     _STYLE_DISPLAY_IDS.add(display_id)

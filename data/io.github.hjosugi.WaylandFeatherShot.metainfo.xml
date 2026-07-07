@@ -52,6 +52,17 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.7.6" date="2026-07-08">
+      <description>
+        <p>
+          Makes the region-overlay annotation toolbar theme-independent so the
+          tool buttons stay high-contrast and readable — previously their labels
+          rendered white-on-white and the buttons collapsed into ovals under
+          dark or third-party GTK themes — and restores the blue active-tool
+          highlight.
+        </p>
+      </description>
+    </release>
     <release version="0.7.5" date="2026-07-08">
       <description>
         <p>
