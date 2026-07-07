@@ -14,6 +14,7 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango  # noqa: E402
 
 from .. import save as save_mod
 from ..i18n import _, tr
+from ..theme import install_custom_css
 from .canvas import EditorCanvas
 from .tools import Style
 
@@ -305,19 +306,7 @@ class EditorWindow(Gtk.ApplicationWindow):
         return btn
 
     def _install_css(self):
-        css = b"""
-        .wfs-toast {
-            background-color: rgba(20, 20, 24, 0.92);
-            color: #ffffff;
-            border-radius: 9px;
-            padding: 8px 18px;
-        }
-        """
-        provider = Gtk.CssProvider()
-        provider.load_from_data(css)
-        Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(), provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        install_custom_css()
 
     def toast(self, message: str, seconds: float = 2.5):
         self._toast.set_text(message)

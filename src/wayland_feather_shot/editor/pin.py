@@ -18,6 +18,7 @@ gi.require_version("Gdk", "4.0")
 from gi.repository import Gdk, Gtk  # noqa: E402
 
 from .. import save as save_mod
+from ..theme import install_custom_css
 
 MAX_W, MAX_H = 1000, 800
 
@@ -53,12 +54,7 @@ class PinWindow(Gtk.ApplicationWindow):
         handle.add_controller(middle)
 
     def _install_css(self):
-        provider = Gtk.CssProvider()
-        provider.load_from_data(b".wfs-pin { border: 1px solid "
-                                b"rgba(0,0,0,0.5); }")
-        Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(), provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        install_custom_css()
 
     def _on_key(self, _ctrl, keyval, _keycode, state):
         if keyval == Gdk.KEY_Escape:

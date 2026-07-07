@@ -26,11 +26,13 @@ from .editor import tools
 from .editor.tools import (Arrow, EllipseShape, Highlight, Line, Marker,
                            Obscure, Pen, RectShape, Style, Text)
 from .i18n import _, tr
+from .theme import install_custom_css
 
 Rect = Tuple[int, int, int, int]
 
 HANDLE_R = 6.0        # visual radius of resize handles (widget px)
 HANDLE_HIT = 14.0     # hit-test radius
+OVERLAY_DIM_ALPHA = 0.32
 
 OVERLAY_TOOLS = [
     ("move", "Move", "Move / resize selection (V)"),
@@ -219,22 +221,7 @@ class OverlayWindow(Gtk.ApplicationWindow):
         return bar
 
     def _install_css(self):
-        css = b"""
-        .wfs-bar { padding: 4px; border-radius: 22px;
-                   background-color: rgba(24, 22, 28, 0.55); }
-        .wfs-round { border-radius: 999px; padding: 6px 10px;
-                     background-color: #8b12ae; color: #ffffff;
-                     border: none; font-weight: bold; }
-        .wfs-round:hover { background-color: #a63cc7; }
-        .wfs-round:checked { background-color: #22c55e; color: #10331d; }
-        .wfs-toast { background-color: rgba(20, 20, 24, 0.92); color: #fff;
-                     border-radius: 9px; padding: 8px 18px; }
-        """
-        provider = Gtk.CssProvider()
-        provider.load_from_data(css)
-        Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(), provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        install_custom_css()
 
     def toast(self, message: str, seconds: float = 2.2):
         self._toast.set_text(message)
@@ -764,7 +751,7 @@ class OverlayWindow(Gtk.ApplicationWindow):
             cr.restore()
 
         paint_content()
-        cr.set_source_rgba(0, 0, 0, 0.45)
+        cr.set_source_rgba(0, 0, 0, OVERLAY_DIM_ALPHA)
         cr.paint()
 
         if self.sel:
