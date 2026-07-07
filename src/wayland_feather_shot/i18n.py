@@ -163,6 +163,16 @@ JA = {
         "自動スクロールは使えません — 手動でスクロールしてください。",
     "Auto-scrolling…  it stops at the bottom.":
         "自動スクロール中…  最下部で停止します。",
+    "Auto-scroll (experimental)": "自動スクロール(実験的)",
+    "Checking for the RemoteDesktop portal…":
+        "RemoteDesktop ポータルを確認中…",
+    "Drive scrolling automatically via the RemoteDesktop portal.  Hover the pointer over the scrollable content first.":
+        "RemoteDesktop ポータル経由で自動スクロールします。"
+        "先にスクロールする内容の上にポインタを置いてください。",
+    "RemoteDesktop portal not available on this desktop — scroll manually.":
+        "この環境では RemoteDesktop ポータルが使えません — 手動でスクロールしてください。",
+    "Manual scroll — scroll the content yourself.":
+        "手動スクロール — 自分でスクロールしてください。",
     "Preparing…": "準備中…",
     "Choose the area to capture…": "キャプチャする範囲を選んでください…",
     "Drag to select the scrolling area, then press Enter.":

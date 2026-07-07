@@ -126,6 +126,33 @@ prints the saved path. Exit codes: `0` ok, `1` error, `2` bad usage,
 フッターは自動検出されて重複除去されます(`~/.config/wayland-feather-shot/config.json`
 の `scroll_top_margin` / `scroll_bottom_margin` で手動指定も可能)。
 
+#### Optional auto-scroll (experimental) / 自動スクロール
+
+`wayland-feather-shot scroll --auto` — or the **Auto-scroll** checkbox in the
+recording window — drives the scrolling for you through the
+`org.freedesktop.portal.RemoteDesktop` portal instead of you scrolling by hand.
+It is **opt-in and never the default**: injecting synthetic input needs a
+per-session permission dialog, so manual scrolling stays the safe, portable
+path. Hover the pointer over the scrollable content first — the portal delivers
+the scroll wheel wherever the pointer sits. Auto-scroll stops on its own at the
+bottom of the page (no new frames) or after `scroll_auto_steps` steps; tune
+`scroll_auto_delta` / `scroll_auto_interval` / `scroll_auto_steps` in
+`config.json`. It needs the GStreamer/PipeWire recorder too — the
+GStreamer-free fallback cannot be auto-driven.
+
+Portal support varies by desktop; run `wayland-feather-shot diagnose` to see
+whether `scroll --auto` will work on your machine:
+
+| Desktop | RemoteDesktop portal | Notes |
+| --- | --- | --- |
+| GNOME (Mutter) | yes | permission dialog once per session |
+| KDE Plasma | yes | permission dialog once per session |
+| Hyprland / wlroots (`xdg-desktop-portal-wlr`) | usually no | the checkbox stays disabled — scroll manually |
+| Sway | usually no | scroll manually |
+
+`--auto` はオプションです。RemoteDesktop ポータルが必要で、対応していない環境では
+チェックボックスが無効のまま(手動スクロール)になります。
+
 ### Default hotkey: Ctrl+PrtSc
 
 On Wayland there is **no** portable way for an app to grab a global key — the

@@ -291,6 +291,21 @@ msgstr ""
 msgid "Auto-scrolling…  it stops at the bottom."
 msgstr ""
 
+msgid "Auto-scroll (experimental)"
+msgstr ""
+
+msgid "Checking for the RemoteDesktop portal…"
+msgstr ""
+
+msgid "Drive scrolling automatically via the RemoteDesktop portal.  Hover the pointer over the scrollable content first."
+msgstr ""
+
+msgid "RemoteDesktop portal not available on this desktop — scroll manually."
+msgstr ""
+
+msgid "Manual scroll — scroll the content yourself."
+msgstr ""
+
 msgid "Preparing…"
 msgstr ""
 

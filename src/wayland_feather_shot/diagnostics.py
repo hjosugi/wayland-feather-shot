@@ -69,7 +69,8 @@ def _portal_interfaces() -> list[Check]:
     for iface, required in [
             ("org.freedesktop.portal.Screenshot", True),
             ("org.freedesktop.portal.ScreenCast", False),
-            ("org.freedesktop.portal.GlobalShortcuts", False)]:
+            ("org.freedesktop.portal.GlobalShortcuts", False),
+            ("org.freedesktop.portal.RemoteDesktop", False)]:
         found = iface in stdout
         detail = "available" if found else \
             (stderr or "not found in portal introspection")
@@ -97,7 +98,9 @@ def run_checks() -> list[Check]:
 def print_diagnostics() -> int:
     checks = run_checks()
     failed_required = False
+    ok_by_name = {}
     for check in checks:
+        ok_by_name[check.name] = check.ok
         if check.ok:
             mark = "OK  "
         elif check.required:
@@ -106,6 +109,15 @@ def print_diagnostics() -> int:
         else:
             mark = "warn"
         print(f"[{mark}] {check.name}: {check.detail}")
+
+    # Optional auto-scroll (scroll --auto) needs both the RemoteDesktop portal
+    # and the GStreamer/PipeWire recorder — spell it out so users know whether
+    # the flag will do anything before they try it (#3).
+    from .scrollcap.autoscroll import auto_scroll_availability
+    usable, reason = auto_scroll_availability(
+        ok_by_name.get("org.freedesktop.portal.RemoteDesktop", False),
+        ok_by_name.get("GStreamer + PipeWire", False))
+    print(f"[{'OK  ' if usable else 'warn'}] scroll --auto: {reason}")
 
     # Hotkey setup guidance for this desktop (the "nothing happens when I press
     # the key" case is almost always the wrong binding mechanism).

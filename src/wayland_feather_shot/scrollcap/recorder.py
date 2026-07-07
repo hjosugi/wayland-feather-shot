@@ -196,11 +196,10 @@ class ScrollCaptureWindow(Gtk.ApplicationWindow):
         self.settings = settings
         self.on_result = on_result
         self.auto = auto
+        self._portal: Optional[Portal] = None
         self._remote = None
         self._auto_id = 0
-        self._auto_count = 0
-        self._auto_stall = 0
-        self._last_kept = 0
+        self._auto_ctl = None       # AutoScrollController while auto-scrolling
         self._recorder: Optional[ScrollRecorder] = None
         self._done = False
 
@@ -218,6 +217,16 @@ class ScrollCaptureWindow(Gtk.ApplicationWindow):
 
         self._count = Gtk.Label(label=tr("frames kept: {n}", n=0))
         box.append(self._count)
+
+        # Auto-scroll toggle — disabled until we know the RemoteDesktop portal
+        # is present (decided in begin(); manual scrolling is the safe default).
+        self._auto_check = Gtk.CheckButton(label=_("Auto-scroll (experimental)"))
+        self._auto_check.set_halign(Gtk.Align.CENTER)
+        self._auto_check.set_sensitive(False)
+        self._auto_check.set_tooltip_text(
+            _("Checking for the RemoteDesktop portal…"))
+        self._auto_check.connect("toggled", self._on_auto_toggled)
+        box.append(self._auto_check)
 
         btns = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         btns.set_halign(Gtk.Align.CENTER)
@@ -237,6 +246,7 @@ class ScrollCaptureWindow(Gtk.ApplicationWindow):
         self.set_default_size(360, -1)
 
     def begin(self, portal: Portal):
+        self._portal = portal
         self._recorder = ScrollRecorder(portal, self.settings)
         self._recorder.on_kept = lambda n: self._count.set_text(
             tr("frames kept: {n}", n=n))
@@ -250,25 +260,67 @@ class ScrollCaptureWindow(Gtk.ApplicationWindow):
                 "Recording.  Scroll the content slowly, top to bottom,\n"
                 "pausing briefly after each scroll.\n"
                 "Then press “Finish & stitch”  (or Enter)."))
-            if self.auto:
-                self._begin_auto_scroll(portal)
+            self._offer_auto_scroll(portal)
 
         self._recorder.start(started)
 
+    def _offer_auto_scroll(self, portal):
+        """Enable the auto-scroll toggle only when the portal can inject input.
+
+        Satisfies the #3 acceptance criterion "auto mode is offered only when
+        the portal is actually available".  If the CLI asked for --auto and the
+        portal is present, tick the box (which starts auto-scroll); otherwise
+        leave it disabled and stay in manual mode.
+        """
+        from ..portal import RemoteDesktop
+        if RemoteDesktop.available(portal):
+            self._auto_check.set_sensitive(True)
+            self._auto_check.set_tooltip_text(_(
+                "Drive scrolling automatically via the RemoteDesktop portal.  "
+                "Hover the pointer over the scrollable content first."))
+            if self.auto and not self._auto_check.get_active():
+                self._auto_check.set_active(True)   # -> _on_auto_toggled starts
+        else:
+            self.auto = False
+            self._auto_check.set_active(False)
+            self._auto_check.set_sensitive(False)
+            self._auto_check.set_tooltip_text(_(
+                "RemoteDesktop portal not available on this desktop — "
+                "scroll manually."))
+
     # -- optional auto-scroll (RemoteDesktop portal, experimental) ----------
+
+    def _on_auto_toggled(self, check):
+        active = check.get_active()
+        self.auto = active
+        if active:
+            if self._recorder is not None and self._remote is None:
+                self._begin_auto_scroll(self._portal)
+        else:
+            self._stop_auto()
+            if self._recorder is not None and not self._done:
+                self._status.set_text(
+                    _("Manual scroll — scroll the content yourself."))
 
     def _begin_auto_scroll(self, portal):
         from ..portal import RemoteDesktop
-        if not RemoteDesktop.available(portal):
+        from .autoscroll import AutoScrollController
+        if portal is None or not RemoteDesktop.available(portal):
             self._status.set_text(_("Auto-scroll unavailable — scroll manually."))
+            self._auto_check.set_active(False)
             return
         self._remote = RemoteDesktop(portal)
+        self._auto_ctl = AutoScrollController(
+            max_steps=self.settings.scroll_auto_steps,
+            delta=self.settings.scroll_auto_delta)
 
         def ready(ok, error):
             if not ok:
                 self._status.set_text(
                     _("Auto-scroll unavailable — scroll manually."))
                 self._remote = None
+                self._auto_ctl = None
+                self._auto_check.set_active(False)
                 return
             self._status.set_text(_("Auto-scrolling…  it stops at the bottom."))
             interval = int(float(self.settings.scroll_auto_interval) * 1000)
@@ -277,29 +329,24 @@ class ScrollCaptureWindow(Gtk.ApplicationWindow):
         self._remote.start(ready)
 
     def _auto_tick(self):
-        if self._done or self._remote is None:
+        if self._done or self._remote is None or self._auto_ctl is None:
             return False
-        max_steps = int(self.settings.scroll_auto_steps)
         kept = len(self._recorder.selector.kept) if self._recorder else 0
-        # Stop if we've hit the step cap or the page stopped producing new
-        # frames (reached the bottom / nothing scrolling).
-        if kept == self._last_kept:
-            self._auto_stall += 1
-        else:
-            self._auto_stall = 0
-        self._last_kept = kept
-        if self._auto_count >= max_steps or self._auto_stall >= 3:
+        decision = self._auto_ctl.tick(kept)
+        if not decision.scroll:
+            # Reached the step cap or the bottom of the page — stitch what we
+            # have.  finish() calls _stop_auto(), so clear our timer id first.
             self._auto_id = 0
             self.finish()
             return False
-        self._remote.scroll(float(self.settings.scroll_auto_delta))
-        self._auto_count += 1
+        self._remote.scroll(decision.delta)
         return True
 
     def _stop_auto(self):
         if self._auto_id:
             GLib.source_remove(self._auto_id)
             self._auto_id = 0
+        self._auto_ctl = None
         if self._remote is not None:
             self._remote.close()
             self._remote = None

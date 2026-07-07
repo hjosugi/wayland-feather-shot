@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+Auto-scroll follow-up (#3):
+
+- Made optional auto-scroll discoverable from the UI: the scrolling-capture
+  window now has an **Auto-scroll (experimental)** checkbox that is enabled
+  only when the `org.freedesktop.portal.RemoteDesktop` portal is actually
+  present, so the feature is offered exactly where it can work. Manual
+  scrolling stays the default everywhere; `scroll --auto` still pre-ticks the
+  box from the command line.
+- Extracted the auto-scroll stop/stall policy into a pure, unit-tested
+  `AutoScrollController` (no GTK), fixing untestable inline logic and clamping
+  bad `scroll_auto_delta` / `scroll_auto_steps` config values so a typo can
+  never cause a runaway or zero-distance scroll loop.
+- `wayland-feather-shot diagnose` now reports the RemoteDesktop portal and a
+  derived `scroll --auto` line telling you whether auto-scroll can run
+  (needs the RemoteDesktop portal **and** the GStreamer/PipeWire recorder).
+- Documented per-desktop auto-scroll behavior in the README.
+
 ## 0.7.6 (2026-07-08)
 
 Overlay toolbar readability fix:
