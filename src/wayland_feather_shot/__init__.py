@@ -3,7 +3,7 @@
 Local only: no upload, no accounts, no telemetry, no network code.
 """
 
-__version__ = "0.7.6"
+__version__ = "0.7.7"
 
 APP_ID = "io.github.hjosugi.WaylandFeatherShot"
 APP_NAME = "Feather Shot"

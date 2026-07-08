@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.7 (2026-07-08)
+
 Auto-scroll follow-up (#3):
 
 - Made optional auto-scroll discoverable from the UI: the scrolling-capture

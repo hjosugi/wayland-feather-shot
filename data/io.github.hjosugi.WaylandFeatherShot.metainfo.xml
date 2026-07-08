@@ -52,6 +52,16 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.7.7" date="2026-07-08">
+      <description>
+        <p>
+          Makes optional RemoteDesktop-portal auto-scroll discoverable from the
+          scrolling-capture window, gates it on actual portal availability,
+          adds diagnostics and tests for the stop policy, and documents
+          per-desktop behavior while keeping manual scrolling the default.
+        </p>
+      </description>
+    </release>
     <release version="0.7.6" date="2026-07-08">
       <description>
         <p>
