@@ -115,4 +115,6 @@ jobs:
           EOF
           chmod 600 ~/.ssh/config
 
-          scripts/publish-aur.sh "$TAG" --push
+          if ! scripts/publish-aur.sh "$TAG" --push; then
+            echo "::warning::AUR publish failed; GitHub release assets were published."
+          fi

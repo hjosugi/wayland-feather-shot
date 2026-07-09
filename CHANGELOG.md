@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.7.9 (2026-07-09)
+
+- Kept the `wayland-feather-shot updater remove` release green by making the
+  optional AUR publish step warn instead of failing the GitHub release when
+  AUR SSH credentials are missing or rejected.
+
 ## 0.7.8 (2026-07-09)
 
 - Added `wayland-feather-shot updater remove`, a GTK-free maintenance command
