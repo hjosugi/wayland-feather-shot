@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.7.8 (2026-07-09)
+
+- Added `wayland-feather-shot updater remove`, a GTK-free maintenance command
+  that removes files created by `install.sh` while keeping user config.
+- Added an AUR publishing helper plus an optional release-workflow AUR publish
+  step for maintainers who configure `AUR_SSH_PRIVATE_KEY`.
+
 ## 0.7.7 (2026-07-08)
 
 Auto-scroll follow-up (#3):

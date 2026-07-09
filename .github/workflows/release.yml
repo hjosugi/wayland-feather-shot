@@ -92,3 +92,27 @@ jobs:
               --title "wayland-feather-shot $TAG" \
               --notes-file /tmp/notes.md
           fi
+
+      - name: Publish AUR package
+        env:
+          TAG: ${{ inputs.tag }}
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          if [ -z "${AUR_SSH_PRIVATE_KEY:-}" ]; then
+            echo "AUR_SSH_PRIVATE_KEY is not set; skipping AUR publish"
+            exit 0
+          fi
+
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          ssh-keyscan -t ed25519 aur.archlinux.org >> ~/.ssh/known_hosts
+          cat >> ~/.ssh/config <<'EOF'
+          Host aur.archlinux.org
+            User aur
+            IdentityFile ~/.ssh/aur
+            IdentitiesOnly yes
+          EOF
+          chmod 600 ~/.ssh/config
+
+          scripts/publish-aur.sh "$TAG" --push

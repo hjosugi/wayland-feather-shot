@@ -78,6 +78,16 @@ class ArgParsingTests(unittest.TestCase):
         args = self.parse(["full", "--no-editor"])
         self.assertTrue(args.no_editor)
 
+    def test_updater_remove_command(self):
+        args = self.parse(["updater", "remove"])
+        self.assertEqual(args.mode, "updater")
+        self.assertEqual(args.file, "remove")
+
+    def test_updater_rejects_missing_or_unknown_command(self):
+        for argv in (["updater"], ["updater", "install"]):
+            with self.assertRaises(SystemExit):
+                self.parse(argv)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

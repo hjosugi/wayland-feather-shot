@@ -15,7 +15,7 @@ import sys
 from . import __version__
 
 MODES = ["gui", "full", "window", "scroll", "gif", "edit", "history",
-         "settings", "daemon", "diagnose"]
+         "settings", "daemon", "diagnose", "updater"]
 
 # Stable exit codes, so `wayland-feather-shot` can be used in scripts.
 EXIT_OK = 0
@@ -61,9 +61,10 @@ def build_parser() -> argparse.ArgumentParser:
                              "picker / scroll: scrolling capture / edit: "
                              "open an existing image in the editor / "
                              "daemon: GlobalShortcuts-portal hotkey daemon "
-                             "/ diagnose: print runtime environment checks")
-    parser.add_argument("file", nargs="?", metavar="FILE",
-                        help="image to open (edit mode only)")
+                             "/ diagnose: print runtime environment checks / "
+                             "updater: maintenance commands")
+    parser.add_argument("file", nargs="?", metavar="FILE|COMMAND",
+                        help="image to open (edit mode) or updater command")
     parser.add_argument("-d", "--delay", type=float, default=0.0,
                         metavar="SEC", help="delay before capturing")
 
@@ -123,6 +124,10 @@ def _validate(parser: argparse.ArgumentParser, args) -> None:
             parser.error(f"invalid shortcut trigger: {args.shortcut!r} "
                          "(expected e.g. CTRL+Print or SHIFT+CTRL+F12)")
 
+    if args.mode == "updater" and args.file != "remove":
+        parser.error("updater mode needs a command: "
+                     "wayland-feather-shot updater remove")
+
 
 def main(argv=None) -> int:
     parser = build_parser()
@@ -131,6 +136,11 @@ def main(argv=None) -> int:
     if args.mode == "diagnose":
         from .diagnostics import print_diagnostics
         return print_diagnostics()
+
+    if args.mode == "updater":
+        _validate(parser, args)
+        from .updater import run_updater
+        return run_updater(args.file)
 
     if args.mode == "edit":
         if not args.file:

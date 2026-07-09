@@ -29,6 +29,30 @@ builder does this automatically in `wayland-feather-shot-$version-aur.tar.gz`.
 $ cd packaging/aur && makepkg -si
 ```
 
+To publish or update the AUR package, create the GitHub release tag first, then
+sync the AUR git repository:
+
+```console
+$ scripts/publish-aur.sh vX.Y.Z
+$ git -C dist/aur-vX.Y.Z push origin HEAD:master
+```
+
+Use `scripts/publish-aur.sh vX.Y.Z --push` to commit and push in one command.
+The script downloads the GitHub tag tarball, writes the real checksum, generates
+`.SRCINFO`, and commits the AUR update. It requires an AUR account with SSH
+access to `aur.archlinux.org`.
+
+Without AUR SSH access on the current machine, export the files for inspection:
+
+```console
+$ scripts/publish-aur.sh vX.Y.Z --export-dir dist/aur-vX.Y.Z-files
+```
+
+The release workflow also publishes to AUR automatically when the repository
+secret `AUR_SSH_PRIVATE_KEY` is set to a private SSH key whose public key is
+registered on the maintainer's AUR account. If the secret is absent, the
+workflow skips AUR publishing and still creates the GitHub release.
+
 ## AppImage
 
 The AppImage is intentionally a host-runtime wrapper. It carries the app code,
