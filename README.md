@@ -1,3 +1,6 @@
+<!-- i18n: language-switcher -->
+[English](README.md) | [日本語](README.ja.md)
+
 # wayland-feather-shot
 
 **Flameshot-style screenshot tool, built Wayland-first. 100% local — no

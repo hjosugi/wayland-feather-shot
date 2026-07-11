@@ -1,3 +1,6 @@
+<!-- i18n: language-switcher -->
+[English](README.md) | [日本語](README.ja.md)
+
 # Packaging
 
 Distribution packaging for wayland-feather-shot. Every format keeps the
