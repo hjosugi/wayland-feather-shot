@@ -1,3 +1,6 @@
+<!-- i18n: language-switcher -->
+[English](ARCHITECTURE.md) | [日本語](ARCHITECTURE.ja.md)
+
 # Architecture
 
 One GTK 4 / PyGObject / cairo application. Everything screen-related goes

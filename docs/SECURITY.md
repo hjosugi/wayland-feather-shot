@@ -1,3 +1,6 @@
+<!-- i18n: language-switcher -->
+[English](SECURITY.md) | [日本語](SECURITY.ja.md)
+
 # Security / Privacy
 
 wayland-feather-shot is local-only.

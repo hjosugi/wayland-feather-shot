@@ -1,26 +1,25 @@
+<!-- i18n: language-switcher -->
+[English](README.md) | [日本語](README.ja.md)
+
 # wayland-feather-shot
 
 **Flameshot-style screenshot tool, built Wayland-first. 100% local — no
 upload button, no accounts, no telemetry, no network code at all.**
 
-Flameshot風のWayland専用スクリーンショットツール。クラウドアップロード機能は
-存在しません(ネットワークコード自体がありません)。UIは日本語/英語自動切替。
-
 ![tools](data/icons/io.github.hjosugi.WaylandFeatherShot.svg)
 
-## Features / 機能
+## Features
 
 - **Region capture with in-place annotation** — the screen is frozen via the
   xdg-desktop-portal, you drag a selection (with resize handles), and a
   Flameshot-style floating toolbar appears under it.
-  範囲選択+その場で注釈(Flameshot風フローティングツールバー)。
 - **Tools**: pen, line, arrow, rectangle, ellipse, highlighter, text,
-  **blur / ぼかし**, pixelate / モザイク, auto-numbered markers (①②③),
+  **blur**, pixelate, auto-numbered markers (①②③),
   crop, undo/redo, color & line-width pickers.
 - **Ctrl+S** saves instantly to `~/Pictures/Screenshots/`,
   **Ctrl+C** copies to the clipboard, **Ctrl+Shift+S** = save-as,
   **Ctrl+O** opens the save folder, **Esc** cancels, **Enter** = copy & close.
-- **Scrolling capture / スクロールキャプチャ** — records the screen while
+- **Scrolling capture** — records the screen while
   *you* scroll (ScreenCast portal + PipeWire), automatically keeps one frame
   per pause, and stitches them into one tall image. Sticky headers/footers
   are auto-detected and de-duplicated.
@@ -32,7 +31,7 @@ Flameshot風のWayland専用スクリーンショットツール。クラウド�
 - English / Japanese UI out of the box (follows `LANG`; override with
   `WFS_LANG`). More languages via gettext catalogs — see [po/](po/README.md).
 
-## Install / インストール
+## Install
 
 On Arch / CachyOS, install the packaged release from the AUR once published:
 
@@ -79,7 +78,7 @@ Not sure what's missing? Run the built-in environment check:
 $ wayland-feather-shot diagnose
 ```
 
-## Usage / 使い方
+## Usage
 
 ```console
 $ wayland-feather-shot            # region capture (default)
@@ -104,7 +103,7 @@ copies recognized text to the clipboard. `Ctrl+Shift+C` copies the saved file
 path; `Ctrl+O` opens the save folder; images save as PNG/JPEG/WebP/AVIF by
 extension.
 
-### Scripting / スクリプト
+### Scripting
 
 `gui` and `full` take non-interactive options so captures can be automated:
 
@@ -119,7 +118,7 @@ chooses the file (PNG/JPEG/WebP by extension), `--no-editor` skips the UI and
 prints the saved path. Exit codes: `0` ok, `1` error, `2` bad usage,
 `130` cancelled — suitable for shell scripts.
 
-### Region capture / 範囲キャプチャ
+### Region capture
 
 1. The screen freezes. Drag to select (click or Enter = full screen).
 2. Annotate right on the selection — toolbar keys:
@@ -129,7 +128,7 @@ prints the saved path. Exit codes: `0` ok, `1` error, `2` bad usage,
 3. `Ctrl+S` save • `Ctrl+O` open save folder • `Ctrl+C` / `Enter` copy •
    `Ctrl+Z` undo • `Esc` cancel.
 
-### Scrolling capture / スクロールキャプチャ
+### Scrolling capture
 
 1. `wayland-feather-shot scroll` — pick the window/screen in the portal dialog.
 2. Scroll the content slowly top→bottom, pausing briefly after each scroll
@@ -137,11 +136,12 @@ prints the saved path. Exit codes: `0` ok, `1` error, `2` bad usage,
 3. Press **Finish & stitch**. The stitched tall image opens in the editor;
    `Ctrl+S` / `Ctrl+C` as usual.
 
-ゆっくりスクロールして、スクロールごとに一瞬止めるのがコツです。固定ヘッダー/
-フッターは自動検出されて重複除去されます(`~/.config/wayland-feather-shot/config.json`
-の `scroll_top_margin` / `scroll_bottom_margin` で手動指定も可能)。
+The trick is to scroll slowly and pause for a moment after each scroll. Sticky
+headers and footers are detected and de-duplicated automatically; to pin them by
+hand instead, set `scroll_top_margin` / `scroll_bottom_margin` in
+`~/.config/wayland-feather-shot/config.json`.
 
-#### Optional auto-scroll (experimental) / 自動スクロール
+#### Optional auto-scroll (experimental)
 
 `wayland-feather-shot scroll --auto` — or the **Auto-scroll** checkbox in the
 recording window — drives the scrolling for you through the
@@ -164,9 +164,6 @@ whether `scroll --auto` will work on your machine:
 | KDE Plasma | yes | permission dialog once per session |
 | Hyprland / wlroots (`xdg-desktop-portal-wlr`) | usually no | the checkbox stays disabled — scroll manually |
 | Sway | usually no | scroll manually |
-
-`--auto` はオプションです。RemoteDesktop ポータルが必要で、対応していない環境では
-チェックボックスが無効のまま(手動スクロール)になります。
 
 ### Default hotkey: Ctrl+PrtSc
 
