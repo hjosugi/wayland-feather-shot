@@ -4,3 +4,9 @@ __pycache__/
 dist/
 build/
 .venv/
+.claude/skills/graphify/
+.claude/settings.local.json
+.copilot/skills/graphify/
+.codex/skills/graphify/
+.codex/hooks.json
+graphify-out/
