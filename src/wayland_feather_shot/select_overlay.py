@@ -629,9 +629,18 @@ class OverlayWindow(Gtk.ApplicationWindow):
         x, y, w, h = self.sel
         wx0, wy0 = self._to_widget(x, y)
         wx1, wy1 = self._to_widget(x + w, y + h)
-
-        tb_w = self._toolbar.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
-        tb_h = self._toolbar.measure(Gtk.Orientation.VERTICAL, -1)[1]
+        tb_w = max(
+            1,
+            self._toolbar.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
+            - self._toolbar.get_margin_start()
+            - self._toolbar.get_margin_end(),
+        )
+        tb_h = max(
+            1,
+            self._toolbar.measure(Gtk.Orientation.VERTICAL, -1)[1]
+            - self._toolbar.get_margin_top()
+            - self._toolbar.get_margin_bottom(),
+        )
         tx = (wx0 + wx1) / 2 - tb_w / 2
         tx = max(8, min(tx, win_w - tb_w - 8))
         ty = wy1 + 12
@@ -639,9 +648,18 @@ class OverlayWindow(Gtk.ApplicationWindow):
             ty = max(8, wy0 - tb_h - 12)
         self._toolbar.set_margin_start(int(tx))
         self._toolbar.set_margin_top(int(ty))
-
-        sb_w = self._sidebar.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
-        sb_h = self._sidebar.measure(Gtk.Orientation.VERTICAL, -1)[1]
+        sb_w = max(
+            1,
+            self._sidebar.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
+            - self._sidebar.get_margin_start()
+            - self._sidebar.get_margin_end(),
+        )
+        sb_h = max(
+            1,
+            self._sidebar.measure(Gtk.Orientation.VERTICAL, -1)[1]
+            - self._sidebar.get_margin_top()
+            - self._sidebar.get_margin_bottom(),
+        )
         sx = wx1 + 12
         if sx + sb_w > win_w - 8:      # no room right -> left of the selection
             sx = max(8, wx0 - sb_w - 12)
