@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **The editor remembers where you left off** (#37). Tool, colour, stroke
+  width, font, text alignment, arrowheads, redaction strength and spotlight dim
+  all come back the way you last had them, instead of resetting to the
+  configured defaults on every capture. Kept in its own
+  `editor-preset.json`, deliberately not in `config.json`: those are the
+  defaults you chose, and overwriting them with wherever the last session ended
+  would make "reset to defaults" meaningless. A preset that cannot be read
+  falls back field by field, so a version change or a hand-edit typo costs at
+  most one setting rather than all of them, and failing to save one never
+  surfaces in front of someone who just wanted to save a screenshot.
+
 - **Spotlight tool** (`S`) (#34). Drag a region and everything outside it is
   dimmed, so the eye lands where you are pointing — the common need when
   explaining a screenshot, and the opposite of what the highlighter does.

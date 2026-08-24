@@ -17,6 +17,7 @@ from ..i18n import _, tr
 from ..theme import install_custom_css
 from . import arrows as arrow_mod
 from . import crop as crop_mod
+from . import preset as preset_mod
 from . import sidecar
 from .canvas import EditorCanvas
 from .shapes import Style
@@ -73,12 +74,24 @@ class EditorWindow(Gtk.ApplicationWindow):
         self._dirty = False
         self._force_close = False
 
-        rgba = Gdk.RGBA()
-        rgba.parse(settings.pen_color)
-        style = Style(rgba=(rgba.red, rgba.green, rgba.blue, rgba.alpha),
-                      width=float(settings.pen_width),
-                      font_size=float(settings.font_size))
+        # Where the editor left off last time, falling back to the configured
+        # defaults on a machine that has never opened it.
+        self._preset = preset_mod.load()
+        if not os.path.exists(preset_mod.PRESET_PATH):
+            rgba = Gdk.RGBA()
+            rgba.parse(settings.pen_color)
+            self._preset = preset_mod.from_settings(settings)
+            self._preset.rgba = (rgba.red, rgba.green, rgba.blue, rgba.alpha)
+
+        style = Style(rgba=self._preset.rgba, width=self._preset.width,
+                      font_size=self._preset.font_size,
+                      font_family=self._preset.font_family)
         self.canvas = EditorCanvas(pixbuf, style, int(settings.blur_factor))
+        self.canvas.editor.redaction_density = self._preset.redaction_density
+        self.canvas.editor.spotlight_scrim = self._preset.spotlight_scrim
+        self.canvas.editor.text_align = self._preset.text_align
+        self.canvas.editor.head_start = self._preset.head_start
+        self.canvas.editor.head_end = self._preset.head_end
         if crop is not None:
             self.canvas.set_source(pixbuf, crop)
         if shapes:
@@ -111,6 +124,8 @@ class EditorWindow(Gtk.ApplicationWindow):
         self.add_controller(keys)
         self.connect("close-request", self._on_close_request)
 
+        self.select_tool(self._preset.tool)
+
         iw, ih = pixbuf.get_width(), pixbuf.get_height()
         self.set_default_size(min(iw + 40, 1500), min(ih + 110, 950))
 
@@ -142,22 +157,22 @@ class EditorWindow(Gtk.ApplicationWindow):
 
         color = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog())
         rgba = Gdk.RGBA()
-        rgba.parse(self.settings.pen_color)
+        (rgba.red, rgba.green, rgba.blue, rgba.alpha) = self._preset.rgba
         color.set_rgba(rgba)
         color.set_tooltip_text(_("Annotation color"))
         color.connect("notify::rgba", self._on_color_changed)
         header.pack_start(color)
 
         width = Gtk.SpinButton.new_with_range(1, 24, 1)
-        width.set_value(float(self.settings.pen_width))
+        width.set_value(self._preset.width)
         width.set_tooltip_text(_("Line width"))
         width.connect("value-changed", self._on_width_changed)
         header.pack_start(width)
 
         font_btn = Gtk.FontDialogButton(dialog=Gtk.FontDialog())
         desc = Pango.FontDescription()
-        desc.set_family("Sans")
-        desc.set_size(int(float(self.settings.font_size) * Pango.SCALE))
+        desc.set_family(self._preset.font_family)
+        desc.set_size(int(self._preset.font_size * Pango.SCALE))
         font_btn.set_font_desc(desc)
         font_btn.set_tooltip_text(_("Text font"))
         font_btn.connect("notify::font-desc", self._on_font_changed)
@@ -422,7 +437,7 @@ class EditorWindow(Gtk.ApplicationWindow):
         dim_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         dim_row.append(Gtk.Label(label=_("Spotlight dim"), xalign=0.0))
         dim = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.1, 0.9, 0.05)
-        dim.set_value(0.55)
+        dim.set_value(self._preset.spotlight_scrim)
         dim.set_hexpand(True)
         dim.set_draw_value(False)
         dim.set_tooltip_text(_("How dark the area outside a spotlight goes"))
@@ -873,7 +888,25 @@ class EditorWindow(Gtk.ApplicationWindow):
             return True
         return False
 
+    def _remember_style(self):
+        """Persist where the editor got to.  Best effort, and never in the way
+        of closing the window."""
+        editor = self.canvas.editor
+        style = editor.style
+        self._preset.tool = editor.tool
+        self._preset.rgba = tuple(style.rgba)
+        self._preset.width = style.width
+        self._preset.font_size = style.font_size
+        self._preset.font_family = style.font_family
+        self._preset.redaction_density = editor.redaction_density
+        self._preset.spotlight_scrim = editor.spotlight_scrim
+        self._preset.text_align = editor.text_align
+        self._preset.head_start = editor.head_start
+        self._preset.head_end = editor.head_end
+        preset_mod.save(self._preset)
+
     def _on_close_request(self, _win):
+        self._remember_style()
         if not self._dirty or self._force_close:
             return False
         alert = Gtk.AlertDialog()
