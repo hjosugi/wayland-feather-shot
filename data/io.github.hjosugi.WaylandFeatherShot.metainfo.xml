@@ -52,6 +52,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.8.1" date="2026-08-24">
+      <description>
+        <p>
+          Fixes the region-overlay toolbar and sidebar jumping while a
+          selection is moved or resized.
+        </p>
+      </description>
+    </release>
     <release version="0.8.0" date="2026-08-24">
       <description>
         <p>

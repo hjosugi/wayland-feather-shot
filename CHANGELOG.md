@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.8.1 (2026-08-24)
+
+- Fixed the region-overlay toolbar and sidebar jumping while a selection was
+  moved or resized. The floating controls are positioned with widget margins,
+  but `Gtk.Widget.measure()` reports a widget's size *including* its own
+  margins — so every reposition fed the previous position back into the next
+  size calculation and the controls oscillated. The measurement now subtracts
+  the margins back out.
+  Thanks to [@Vssblt](https://github.com/Vssblt) for the diagnosis and the fix
+  (#19).
+
 ## 0.8.0 (2026-08-24)
 
 Annotation editor rebuild, informed by a close read of
