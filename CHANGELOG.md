@@ -2,6 +2,50 @@
 
 ## Unreleased
 
+Annotation editor rebuild, informed by a close read of
+[screendrop](https://github.com/fayazara/screendrop) (#38):
+
+- **Fixed: Japanese text and emoji stickers rendered as tofu boxes** (#20).
+  Every text-bearing shape drew through cairo's toy font API, which selects a
+  single face and does no fallback, so all CJK and every emoji collapsed to the
+  same `.notdef` box. All text now goes through Pango, which does script
+  itemization and font fallback — Japanese annotations are readable and the
+  emoji palette works (in colour where `Noto Color Emoji` is installed).
+- **Fixed: numbered markers and step arrows reused a number** after a delete or
+  an undo (#21). Numbering counted existing badges instead of taking the
+  maximum, so removing ① and adding a badge produced a second ③. Markers and
+  step arrows now share one sequence and never collide.
+- **Redaction strength is a property of each region** (#22, partial). Blur and
+  pixelate take a 0…1 density that drives the radius and the mosaic block size,
+  and blur runs two resample passes instead of one — a single pass left large
+  text legible, which is the one thing a redaction must not do.
+- **Shapes carry a transform** — position, rotation, opacity — with their
+  payload in their own local space, over page space that is the capture's own
+  pixel space (#23). This is what makes the rest of the list possible, and it
+  keeps export a 1:1 draw.
+- **Precise hit-testing** through a real geometry layer (#24). Clicking inside
+  a hollow rectangle, or in the empty corner of a diagonal arrow's bounding
+  box, now reaches whatever is actually there. Shift-click extends the
+  selection and dragging on empty canvas rubber-band selects.
+- **Resize and rotate** committed shapes (#25): eight handles plus rotate
+  handles outside the corners, hit-tested in widget space so they stay the same
+  size to grab at any zoom. <kbd>Shift</kbd> locks a corner resize to the
+  aspect ratio and snaps rotation to 15°. Arrow keys nudge, `Ctrl+↑`/`Ctrl+↓`
+  reorder, `Ctrl+A` selects all.
+- **Zoom and pan** (#28): 10 %…1600 % with `Ctrl`+scroll or `Ctrl`+`+`/`-`,
+  `Ctrl+1` to fit, `Ctrl+0` for actual size, scroll and middle-drag to pan.
+  The canvas could previously only shrink an image, so a 4K capture was
+  annotated at ~35 % and by eye.
+- **Resolution-independent sizing** (#29): stroke widths, font sizes and badge
+  diameters are authored against a reference edge and converted to page units,
+  so the same settings look the same on a 1080p and a 4K capture, and resizing
+  a shape no longer changes its stroke weight.
+- **Refactor**: the editor is now a pure model (`shapes`, `geometry`,
+  `document`, `interaction`) with a thin GTK layer (`canvas`, `render`) on top.
+  The pointer handling is an explicit state machine instead of a tool-keyed
+  cascade over five nullable fields, and 106 new unit tests cover it — the
+  editor had none before.
+
 ## 0.7.9 (2026-07-09)
 
 - Kept the `wayland-feather-shot updater remove` release green by making the

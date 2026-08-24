@@ -103,6 +103,23 @@ copies recognized text to the clipboard. `Ctrl+Shift+C` copies the saved file
 path; `Ctrl+O` opens the save folder; images save as PNG/JPEG/WebP/AVIF by
 extension.
 
+Annotations stay editable after they are drawn. With the **select** tool (`V`)
+you can click a shape — precisely: a click inside a hollow rectangle or beside
+a diagonal arrow goes through to whatever is really there — then **resize** it
+from eight handles, **rotate** it from the handles just outside the corners,
+shift-click or rubber-band to select several at once, nudge with the arrow keys
+and reorder with `Ctrl+↑` / `Ctrl+↓`. Holding <kbd>Shift</kbd> keeps a corner
+resize proportional, snaps a rotation to 15°, squares off a new rectangle and
+locks a move to one axis.
+
+The canvas has a camera: **`Ctrl`+scroll** or **`Ctrl` + `+` / `-`** to zoom
+(10 %…1600 %), scroll or middle-drag to pan, **`Ctrl+1`** to fit and
+**`Ctrl+0`** for actual size — so a 4K capture can be annotated at the pixel
+rather than guessed at while shrunk to fit.
+
+Stroke widths, font sizes and badge diameters are authored against a reference
+image size, so the same settings look the same on a 1080p and a 4K capture.
+
 ### Scripting
 
 `gui` and `full` take non-interactive options so captures can be automated:
