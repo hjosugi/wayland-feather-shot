@@ -24,6 +24,10 @@ DEFAULTS = {
     "font_size": 22.0,
     # Blur strength (higher = stronger). Pixelate block size derives from it.
     "blur_factor": 8,
+    # Write an editable <image>.wfs.json next to saved screenshots that have
+    # annotations, so `edit` can reopen and change them. Costs one extra file
+    # (it carries the untouched base image); turn off to keep the folder tidy.
+    "save_sidecar": True,
     # Scroll capture: rows to exclude from every frame (-1 = auto-detect
     # sticky headers/footers).
     "scroll_top_margin": -1,

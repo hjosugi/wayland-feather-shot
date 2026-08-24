@@ -15,6 +15,7 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango  # noqa: E402
 from .. import save as save_mod
 from ..i18n import _, tr
 from ..theme import install_custom_css
+from . import sidecar
 from .canvas import EditorCanvas
 from .shapes import Style
 
@@ -528,7 +529,29 @@ class EditorWindow(Gtk.ApplicationWindow):
             self.toast(tr("Save failed: {error}", error=e))
             return
         self._dirty = False
+        self._write_sidecar(path)
         self.toast(tr("Saved  {path}", path=path))
+
+    def _write_sidecar(self, image_path: str) -> None:
+        """Keep the annotations editable next to the saved image.
+
+        The saved file has them burned in, so the sidecar carries the untouched
+        base as well; without it `edit` could only ever reopen flat pixels.
+        Best effort — a screenshot that saved is saved, and failing to write the
+        re-edit document must never look like the save failed.
+        """
+        if not self.settings.get("save_sidecar", True):
+            return
+        try:
+            if not self.canvas.shapes:
+                # Nothing to re-edit: don't litter, and drop a stale document
+                # from an earlier save to this same path.
+                sidecar.remove(image_path)
+                return
+            sidecar.save(image_path, self.canvas.shapes,
+                         save_mod.pixbuf_to_png_bytes(self.canvas.base))
+        except Exception:
+            pass
 
     def save_as(self):
         dialog = Gtk.FileDialog()
@@ -549,6 +572,7 @@ class EditorWindow(Gtk.ApplicationWindow):
                 self.toast(tr("Save failed: {error}", error=e))
                 return
             self._dirty = False
+            self._write_sidecar(path)
             self.toast(tr("Saved  {path}", path=path))
 
         dialog.save(self, None, done)

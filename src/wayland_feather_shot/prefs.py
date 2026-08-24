@@ -21,6 +21,7 @@ _HELP = {
     "pen_width": "Default line width",
     "font_size": "Default text size",
     "blur_factor": "Blur/pixelate strength",
+    "save_sidecar": "Keep annotations editable (writes <image>.wfs.json)",
     "scroll_top_margin": "Fixed header rows to drop (-1 = auto)",
     "scroll_bottom_margin": "Fixed footer rows to drop (-1 = auto)",
     "scroll_max_height": "Max stitched image height (px)",

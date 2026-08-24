@@ -225,9 +225,43 @@ class FeatherShotApp(Gtk.Application):
             _die_dialog(self, tr("Could not read the captured image: {error}", error=e))
             self.release()
             return
-        win = EditorWindow(self, pixbuf, self.settings)
+        pixbuf, shapes, toast = self._restore_sidecar(path, pixbuf)
+        win = EditorWindow(self, pixbuf, self.settings, shapes=shapes,
+                           startup_toast=toast)
         win.connect("destroy", lambda *_: self.release())
         win.present()
+
+    def _restore_sidecar(self, path, pixbuf):
+        """Reopen the editable document saved next to *path*, if there is one.
+
+        Returns the base image to edit, the annotations to restore, and a toast.
+        Anything unreadable degrades to the flat image — which is always still
+        correct, just not re-editable — with a note saying so, because silently
+        dropping someone's annotations would be the worse failure.
+        """
+        from . import save as save_mod
+        from .editor import sidecar
+
+        try:
+            document = sidecar.load(path)
+        except sidecar.UnsupportedVersion:
+            return pixbuf, None, _("Annotations were saved by a newer version; "
+                                   "opening the flat image.")
+        except sidecar.SidecarError as e:
+            return pixbuf, None, tr("Could not reopen the annotations: {error}",
+                                    error=e)
+        if document is None or not document.shapes:
+            return pixbuf, None, None
+
+        if document.base_png:
+            try:
+                pixbuf = save_mod.pixbuf_from_png_bytes(document.base_png)
+            except ValueError as e:
+                return pixbuf, None, tr(
+                    "Could not reopen the annotations: {error}", error=e)
+        return (pixbuf, list(document.shapes),
+                tr("Restored {count} editable annotations.",
+                   count=len(document.shapes)))
 
     def _open_editor(self, pixbuf, shapes=None, startup_toast=None):
         self.hold()

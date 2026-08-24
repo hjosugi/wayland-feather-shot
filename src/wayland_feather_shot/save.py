@@ -33,6 +33,20 @@ def pixbuf_to_png_bytes(pixbuf: GdkPixbuf.Pixbuf) -> bytes:
     return bytes(data)
 
 
+def pixbuf_from_png_bytes(data: bytes) -> GdkPixbuf.Pixbuf:
+    """Decode PNG bytes (an editable sidecar's stored base image)."""
+    loader = GdkPixbuf.PixbufLoader.new_with_type("png")
+    try:
+        loader.write_bytes(GLib.Bytes.new(data))
+        loader.close()
+    except GLib.Error as exc:
+        raise ValueError(f"could not decode the stored base image: {exc}") from exc
+    pixbuf = loader.get_pixbuf()
+    if pixbuf is None:
+        raise ValueError("stored base image decoded to nothing")
+    return pixbuf
+
+
 def save_pixbuf(pixbuf: GdkPixbuf.Pixbuf, path: str) -> str:
     name, path, options = format_for_path(path, _writable_formats())
     keys = [k for k, _v in options]

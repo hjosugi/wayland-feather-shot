@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Annotations stay editable after saving** (#27). Saving a screenshot that
+  has annotations now writes an editable document beside it as
+  `<image>.wfs.json`, and `wayland-feather-shot edit x.png` picks the
+  annotations back up exactly where they were left instead of opening flat
+  pixels. The document carries the untouched base image as well as the shapes,
+  because the saved PNG has the annotations burned in — so it is one extra
+  file rather than two, and it cannot get separated from the image it
+  describes. Screenshots with no annotations stay a single file. The format is
+  versioned and tolerant: an unknown shape kind or field from a newer release
+  is skipped rather than failing the whole document, and a document written by
+  a newer version opens the flat image with a note instead of guessing. Turn it
+  off with the new `save_sidecar` setting.
+
 ## 0.8.1 (2026-08-24)
 
 - Fixed the region-overlay toolbar and sidebar jumping while a selection was
