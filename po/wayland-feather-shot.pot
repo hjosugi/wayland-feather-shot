@@ -171,6 +171,39 @@ msgstr ""
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr ""
 
+msgid "Arrowheads"
+msgstr ""
+
+msgid "Start"
+msgstr ""
+
+msgid "End"
+msgstr ""
+
+msgid "None"
+msgstr ""
+
+msgid "Outlined triangle"
+msgstr ""
+
+msgid "Chevron"
+msgstr ""
+
+msgid "Square"
+msgstr ""
+
+msgid "Dot"
+msgstr ""
+
+msgid "Diamond"
+msgstr ""
+
+msgid "Bar"
+msgstr ""
+
+msgid "Inverted"
+msgstr ""
+
 msgid "Freeform"
 msgstr ""
 

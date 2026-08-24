@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- **Arrows curve, and have heads worth choosing** (#32). An arrow was a
+  straight shaft with one filled triangle at the far end, which is the wrong
+  tool for a dense screenshot where a straight line to the thing you mean often
+  crosses the thing you don't. Arrows now carry a **bend**: select one and drag
+  its middle handle to bow it into an arc, with the head following the tangent
+  rather than the chord, and a nearly-straight arrow snapping back to straight.
+  Nine head styles — none, arrow, outlined triangle, chevron, square, dot,
+  diamond, bar, inverted — selectable for each end independently, so a line is
+  simply an arrow with no heads. A selected arrow shows start / middle / end
+  handles instead of a resize frame, because its bounding box is mostly empty
+  space; for the same reason it opts out of drag-from-the-inside. The shaft is
+  trimmed by each head's own length instead of a flat fudge factor, so a heavy
+  stroke no longer pokes out through the tip.
+
 - **Freehand strokes have real ink** (#33). The pen joined raw pointer samples
   with a constant-width polyline, so a fast stroke came out visibly polygonal,
   a slow one lumpy, and both of them dead — circling a UI element looked like a

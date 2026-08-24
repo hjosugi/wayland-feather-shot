@@ -15,6 +15,7 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango  # noqa: E402
 from .. import save as save_mod
 from ..i18n import _, tr
 from ..theme import install_custom_css
+from . import arrows as arrow_mod
 from . import crop as crop_mod
 from . import sidecar
 from .canvas import EditorCanvas
@@ -166,6 +167,7 @@ class EditorWindow(Gtk.ApplicationWindow):
         header.pack_start(composite)
 
         header.pack_start(self._build_presets(color, width))
+        header.pack_start(self._build_arrowhead_menu())
 
         extract = self._build_extract_menu()
         if extract is not None:
@@ -335,6 +337,39 @@ class EditorWindow(Gtk.ApplicationWindow):
         popover.set_child(box)
         menu.set_popover(popover)
         return menu
+
+    def _build_arrowhead_menu(self):
+        """Which head each end of a new arrow gets.
+
+        Applies to the selection too, so an arrow already drawn can be turned
+        around or given a second head without redrawing it.
+        """
+        menu = Gtk.MenuButton()
+        menu.set_icon_name("mail-forward-symbolic")
+        menu.set_tooltip_text(_("Arrowheads"))
+        popover = Gtk.Popover()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        for margin in ("top", "bottom", "start", "end"):
+            getattr(box, f"set_margin_{margin}")(8)
+
+        for end, label in (("head_start", _("Start")), ("head_end", _("End"))):
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            row.append(Gtk.Label(label=label, xalign=0.0, width_chars=5))
+            chooser = Gtk.DropDown.new_from_strings(
+                [_(arrow_mod.HEAD_TITLES[name]) for name in arrow_mod.HEADS])
+            chooser.set_selected(arrow_mod.HEADS.index(
+                "none" if end == "head_start" else "arrow"))
+            chooser.connect("notify::selected", self._on_arrowhead_changed, end)
+            row.append(chooser)
+            box.append(row)
+
+        popover.set_child(box)
+        menu.set_popover(popover)
+        return menu
+
+    def _on_arrowhead_changed(self, chooser, _pspec, end):
+        name = arrow_mod.HEADS[chooser.get_selected()]
+        self.canvas.set_arrowhead(end, name)
 
     def _build_extract_menu(self):
         """OCR / QR menu, or None when neither tool is installed."""

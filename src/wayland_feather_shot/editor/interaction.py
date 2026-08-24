@@ -16,6 +16,7 @@ import math
 from dataclasses import dataclass, replace
 from typing import Dict, List, Optional, Sequence, Tuple
 
+from . import arrows
 from .document import Document
 from .geometry import Box, Point, norm_rect, rotate
 from . import shapes as S
@@ -28,6 +29,9 @@ BOX_TOOLS = {"rect", "ellipse", "highlight", "blur", "pixelate"}
 CORNER_HANDLES = ("nw", "ne", "se", "sw")
 EDGE_HANDLES = ("n", "e", "s", "w")
 ROTATE_HANDLES = ("rot-nw", "rot-ne", "rot-se", "rot-sw")
+# A lone arrow gets these three instead of a resize frame: its bounding box is
+# mostly empty space, so a frame is the wrong affordance for it.
+ARROW_HANDLES = ("arrow-start", "arrow-middle", "arrow-end")
 
 # Normalized position of each handle inside the selection frame.
 HANDLE_UNIT: Dict[str, Point] = {
@@ -174,6 +178,12 @@ class Rotating:
     initial: Tuple[S.Shape, ...]
 
 
+@dataclass
+class DraggingArrow:
+    sid: str
+    handle: str
+
+
 class Editor:
     """Document + viewport + tool + the in-flight interaction."""
 
@@ -184,6 +194,8 @@ class Editor:
         self.tool = "pen"
         self.style = style or S.Style()
         self.redaction_density = 0.55
+        self.head_start = "none"
+        self.head_end = "arrow"
         self.state = Idle()
         self.brush: Optional[Box] = None
         self.on_change = None
@@ -211,6 +223,26 @@ class Editor:
     # -- selection frame ---------------------------------------------------
 
     @property
+    def lone_arrow(self) -> Optional[S.Shape]:
+        """The one selected shape, when it is an arrow and the only one."""
+        selected = self.doc.selected_shapes
+        if len(selected) == 1 and selected[0].kind == "arrow":
+            return selected[0]
+        return None
+
+    def arrow_handle_points(self) -> Dict[str, Point]:
+        """The three handle positions of a lone selected arrow, in page space."""
+        shape = self.lone_arrow
+        if shape is None:
+            return {}
+        props = shape.props
+        return {
+            "arrow-start": shape.to_page(props.start),
+            "arrow-middle": shape.to_page(props.middle()),
+            "arrow-end": shape.to_page(props.end),
+        }
+
+    @property
     def selection_frame(self) -> Optional[SelectionFrame]:
         selected = self.doc.selected_shapes
         if not selected:
@@ -227,6 +259,14 @@ class Editor:
         Tested in widget space so handles stay the same size to grab however
         far the canvas is zoomed.
         """
+        # An arrow's own three handles take the place of the resize frame.
+        for handle, page_point in self.arrow_handle_points().items():
+            if math.dist(self.viewport.to_widget(page_point),
+                         widget_point) <= HANDLE_HIT_RADIUS:
+                return handle
+        if self.lone_arrow is not None:
+            return None
+
         frame = self.selection_frame
         if frame is None:
             return None
@@ -264,6 +304,16 @@ class Editor:
 
     def _begin_select(self, p: PointerInfo) -> None:
         handle = self.handle_at(p.widget)
+
+        # An arrow's own handles take priority: a lone arrow has three of them
+        # instead of a resize frame.
+        if handle in ARROW_HANDLES:
+            shape = self.lone_arrow
+            if shape is not None:
+                self._mark_undo()
+                self.state = DraggingArrow(shape.sid, handle)
+                return
+
         frame = self.selection_frame
         if handle and frame:
             self._mark_undo()
@@ -289,7 +339,10 @@ class Editor:
 
         # Nothing under the pointer — but the selection's own frame acts as a
         # drag handle, so a hollow shape can be moved from its empty middle.
-        if frame and _point_in_polygon(p.page, frame.page_corners):
+        # Arrows opt out: their bounding box is mostly empty space, and
+        # dragging one from a corner nowhere near the shaft feels wrong.
+        if (frame and self.lone_arrow is None
+                and _point_in_polygon(p.page, frame.page_corners)):
             self._mark_undo()
             self.state = Translating(p.page, self._initial_origins())
             return
@@ -331,6 +384,8 @@ class Editor:
                                 S.next_number(self.doc.shapes), self.page_style)
         else:
             shape = S.Arrow(p.page, p.page, self.page_style)
+            shape = replace(shape, props=replace(
+                shape.props, head_start=self.head_start, head_end=self.head_end))
         self.doc.add(shape)
         self.state = CreatingArrow(shape.sid, p.page)
 
@@ -355,6 +410,8 @@ class Editor:
             self._resize(state, p)
         elif isinstance(state, Rotating):
             self._rotate(state, p)
+        elif isinstance(state, DraggingArrow):
+            self._drag_arrow(state, p)
         self._notify()
 
     def _append_pen_point(self, state: Drawing, p: PointerInfo) -> None:
@@ -454,6 +511,33 @@ class Editor:
                if s.sid in self.doc.selected]
         self.doc.update_many(out)
 
+    def _drag_arrow(self, state: DraggingArrow, p: PointerInfo) -> None:
+        shape = self.doc.shape(state.sid)
+        if shape is None:
+            return
+        props = shape.props
+        local = shape.to_local(p.page)
+
+        if state.handle == "arrow-end":
+            end = _snap_angle(props.start, local) if p.shift else local
+            self.doc.update(replace(shape, props=replace(props, end=end)))
+            return
+
+        if state.handle == "arrow-middle":
+            bend = arrows.bend_from_point(props.start, props.end, local)
+            self.doc.update(replace(shape, props=replace(
+                props, bend=arrows.snap_bend(bend, props.style.width))))
+            return
+
+        # Dragging the start moves the shape's origin, so the end has to be
+        # re-expressed against it or the arrow would drag its tip along too.
+        page_end = shape.to_page(props.end)
+        moved = shape.moved_to(p.page[0], p.page[1])
+        end = moved.to_local(page_end)
+        if p.shift:
+            end = _snap_angle(props.start, end)
+        self.doc.update(replace(moved, props=replace(props, end=end)))
+
     # -- release -----------------------------------------------------------
 
     def pointer_up(self, p: PointerInfo) -> None:
@@ -538,6 +622,19 @@ class Editor:
             self._notify()
             return None
         return self.tool
+
+    def set_arrowhead(self, end: str, name: str) -> bool:
+        """Set the head for new arrows, and for any selected ones."""
+        setattr(self, end, name)
+        selected = [s for s in self.doc.selected_shapes
+                    if s.kind == "arrow" and s.props.number is None]
+        if not selected:
+            return False
+        self._mark_undo()
+        self.doc.update_many([replace(s, props=replace(s.props, **{end: name}))
+                              for s in selected])
+        self._notify()
+        return True
 
     def add_shape(self, shape: S.Shape) -> None:
         self._mark_undo()

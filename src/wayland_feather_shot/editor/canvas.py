@@ -431,6 +431,10 @@ class EditorCanvas(Gtk.DrawingArea):
         self._notify()
         return True
 
+    def set_arrowhead(self, end: str, name: str) -> None:
+        self.editor.set_arrowhead(end, name)
+        self.queue_draw()
+
     def nudge_selected(self, dx: float, dy: float) -> bool:
         doc = self.editor.doc
         if not doc.has_selection:
@@ -672,6 +676,24 @@ class EditorCanvas(Gtk.DrawingArea):
 
         if self.tool != "select":
             return
+
+        # A lone arrow gets its own three handles: a resize frame around a
+        # diagonal shaft is mostly empty space and grabs the wrong things.
+        arrow_handles = self.editor.arrow_handle_points()
+        if arrow_handles:
+            cr.save()
+            for name, page_point in arrow_handles.items():
+                x, y = self.editor.viewport.to_widget(page_point)
+                radius = HANDLE_R if name == "arrow-middle" else HANDLE_R + 1
+                cr.set_source_rgb(1, 1, 1)
+                cr.arc(x, y, radius, 0, 2 * math.pi)
+                cr.fill_preserve()
+                cr.set_source_rgba(*SELECTION_RGBA)
+                cr.set_line_width(1.5)
+                cr.stroke()
+            cr.restore()
+            return
+
         frame = self.editor.selection_frame
         if frame is None:
             return

@@ -19,6 +19,7 @@ import itertools
 from dataclasses import dataclass, field, replace
 from typing import Callable, List, Optional, Sequence, Tuple
 
+from . import arrows
 from . import freehand
 from .geometry import (Box, Circle2d, Ellipse2d, Geometry, Group2d, Point,
                        Polygon2d, Polyline2d, Rect2d, norm_rect, rotate)
@@ -182,20 +183,34 @@ class ArrowProps(Props):
     head_end: str = "arrow"
     head_start: str = "none"
     number: Optional[int] = None
+    #: Signed perpendicular distance from the straight chord to the arrow's
+    #: middle.  Zero is a straight line; anything else bows it into an arc.
+    bend: float = 0.0
 
     @property
     def badge_radius(self) -> float:
         return max(11.0, self.style.font_size * 0.55)
 
+    @property
+    def start(self) -> Point:
+        return (0.0, 0.0)
+
+    def path(self):
+        return arrows.path_points(self.start, self.end, self.bend)
+
+    def middle(self) -> Point:
+        return arrows.middle_point(self.start, self.end, self.bend)
+
     def geometry(self):
-        shaft = Polyline2d([(0.0, 0.0), self.end])
+        shaft = Polyline2d(self.path(), padding=max(self.style.width / 2, 1.0))
         if self.number is None:
             return shaft
         r = self.badge_radius
         return Group2d([shaft, _Placed(Circle2d(r * 2, filled=True), (-r, -r))])
 
     def scaled(self, sx, sy):
-        return replace(self, end=(self.end[0] * sx, self.end[1] * sy))
+        return replace(self, end=(self.end[0] * sx, self.end[1] * sy),
+                       bend=self.bend * _mean_scale(sx, sy))
 
 
 @dataclass(frozen=True)

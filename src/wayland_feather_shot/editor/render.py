@@ -27,6 +27,7 @@ from gi.repository import Gdk, GdkPixbuf, Pango, PangoCairo  # noqa: E402
 
 import cairo  # noqa: E402
 
+from . import arrows  # noqa: E402
 from . import freehand  # noqa: E402
 from . import shapes as S  # noqa: E402
 
@@ -253,44 +254,52 @@ def _draw_pen(cr, shape, base):
     cr.fill()
 
 
-def _arrow_head(cr, tip, angle, size):
-    spread = math.pi / 7
-    cr.move_to(*tip)
-    cr.line_to(tip[0] - size * math.cos(angle - spread),
-               tip[1] - size * math.sin(angle - spread))
-    cr.line_to(tip[0] - size * math.cos(angle + spread),
-               tip[1] - size * math.sin(angle + spread))
-    cr.close_path()
-    cr.fill()
+def _draw_head(cr, style_name: str, tip, angle: float, style) -> None:
+    kind, points = arrows.head_path(style_name, tip, angle, style.width)
+    if len(points) < 2:
+        return
+    cr.move_to(*points[0])
+    for p in points[1:]:
+        cr.line_to(*p)
+    if kind == "fill":
+        cr.close_path()
+        cr.fill()
+    else:
+        if kind == "outline":
+            cr.close_path()
+        cr.set_line_width(style.width)
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        cr.set_line_join(cairo.LINE_JOIN_ROUND)
+        cr.stroke()
 
 
 def _draw_arrow(cr, shape, base):
     props = shape.props
     style = props.style
-    x1, y1 = props.end
+    start, end = props.start, props.end
     _set_color(cr, style)
     cr.set_line_width(style.width)
     cr.set_line_cap(cairo.LINE_CAP_ROUND)
-    angle = math.atan2(y1, x1)
-    head = max(10.0, style.width * 4.0)
+    cr.set_line_join(cairo.LINE_JOIN_ROUND)
 
-    # Stop the shaft short of each head so a heavy stroke can't poke through it.
-    sx, sy = 0.0, 0.0
-    ex, ey = x1, y1
-    if props.head_end == "arrow":
-        ex -= head * 0.6 * math.cos(angle)
-        ey -= head * 0.6 * math.sin(angle)
-    if props.head_start == "arrow":
-        sx += head * 0.6 * math.cos(angle)
-        sy += head * 0.6 * math.sin(angle)
-    cr.move_to(sx, sy)
-    cr.line_to(ex, ey)
-    cr.stroke()
+    # Trim the shaft by each head's own length, so a heavy stroke stops exactly
+    # where the head starts instead of poking out through the tip.
+    shaft = arrows.trimmed(
+        start, end, props.bend,
+        start_trim=arrows.head_length(props.head_start, style.width),
+        end_trim=arrows.head_length(props.head_end, style.width))
+    if len(shaft) >= 2:
+        cr.move_to(*shaft[0])
+        for p in shaft[1:]:
+            cr.line_to(*p)
+        cr.stroke()
 
-    if props.head_end == "arrow":
-        _arrow_head(cr, (x1, y1), angle, head)
-    if props.head_start == "arrow":
-        _arrow_head(cr, (0.0, 0.0), angle + math.pi, head)
+    # On a bent arrow the head follows the tangent, not the chord.
+    _draw_head(cr, props.head_end, end,
+               arrows.direction_at(start, end, props.bend, at_end=True), style)
+    _draw_head(cr, props.head_start, start,
+               arrows.direction_at(start, end, props.bend, at_end=False), style)
+
     if props.number is not None:
         _badge(cr, 0.0, 0.0, props.badge_radius, str(props.number), style)
 

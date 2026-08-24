@@ -171,6 +171,39 @@ msgstr "認識したテキストをクリップボードにコピーしました
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr "ぼかし/モザイクで注釈も覆う(フラット化)"
 
+msgid "Arrowheads"
+msgstr "矢印の先端"
+
+msgid "Start"
+msgstr "始点"
+
+msgid "End"
+msgstr "終点"
+
+msgid "None"
+msgstr "なし"
+
+msgid "Outlined triangle"
+msgstr "三角(輪郭)"
+
+msgid "Chevron"
+msgstr "山形"
+
+msgid "Square"
+msgstr "四角"
+
+msgid "Dot"
+msgstr "丸"
+
+msgid "Diamond"
+msgstr "ひし形"
+
+msgid "Bar"
+msgstr "棒"
+
+msgid "Inverted"
+msgstr "逆向き"
+
 msgid "Freeform"
 msgstr "自由"
 
