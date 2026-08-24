@@ -269,10 +269,16 @@ class Circle2d(Ellipse2d):
 
 
 class Polyline2d(Geometry):
-    """An open path — a pen stroke, a straight line, an arrow shaft."""
+    """An open path — a pen stroke, a straight line, an arrow shaft.
 
-    def __init__(self, points: Sequence[Point]):
+    *padding* is the path's own half-width.  A wide pen stroke is grabbable
+    anywhere in its ink, not just within the pointer margin of its centreline,
+    and its bounds have to cover the ink too.
+    """
+
+    def __init__(self, points: Sequence[Point], padding: float = 0.0):
         self.points = list(points)
+        self.padding = padding
 
     @property
     def vertices(self) -> List[Point]:
@@ -282,15 +288,31 @@ class Polyline2d(Geometry):
     def closed(self) -> bool:
         return False
 
+    @property
+    def bounds(self) -> Box:
+        return Box.from_points(self.vertices).expand(self.padding)
+
+    def hit_test(self, p, margin=0.0, hit_inside=False):
+        return super().hit_test(p, margin + self.padding, hit_inside)
+
 
 class Polygon2d(Geometry):
-    def __init__(self, points: Sequence[Point], filled: bool = False):
+    def __init__(self, points: Sequence[Point], filled: bool = False,
+                 padding: float = 0.0):
         self.points = list(points)
         self.filled = filled
+        self.padding = padding
 
     @property
     def vertices(self) -> List[Point]:
         return self.points
+
+    @property
+    def bounds(self) -> Box:
+        return Box.from_points(self.vertices).expand(self.padding)
+
+    def hit_test(self, p, margin=0.0, hit_inside=False):
+        return super().hit_test(p, margin + self.padding, hit_inside)
 
 
 class Group2d(Geometry):

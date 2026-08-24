@@ -13,7 +13,8 @@ Japanese annotations and the whole emoji palette unusable.
 from __future__ import annotations
 
 import math
-from typing import Optional, Tuple
+from collections import OrderedDict
+from typing import List, Optional, Tuple
 
 import gi
 
@@ -26,6 +27,7 @@ from gi.repository import Gdk, GdkPixbuf, Pango, PangoCairo  # noqa: E402
 
 import cairo  # noqa: E402
 
+from . import freehand  # noqa: E402
 from . import shapes as S  # noqa: E402
 
 _scratch_cr: Optional[cairo.Context] = None
@@ -186,21 +188,69 @@ def draw_shape(cr, shape: S.Shape, base_pixbuf) -> None:
     cr.restore()
 
 
+# Committed strokes get redrawn on every frame - panning, drawing something
+# else, moving another shape - and re-running the whole pipeline for ink that
+# has not moved is pure waste.  Keyed on the payload's identity, which is
+# stable because the payloads are frozen.
+_OUTLINE_CACHE: "OrderedDict[Tuple[int, int, float], List[Tuple[float, float]]]" = OrderedDict()
+_OUTLINE_CACHE_LIMIT = 128
+
+
+def pen_outline(props) -> List[Tuple[float, float]]:
+    key = (id(props), len(props.points), props.style.width)
+    cached = _OUTLINE_CACHE.get(key)
+    if cached is not None:
+        _OUTLINE_CACHE.move_to_end(key)
+        return cached
+    outline = freehand.get_stroke(props.points, props.stroke_options())
+    _OUTLINE_CACHE[key] = outline
+    if len(_OUTLINE_CACHE) > _OUTLINE_CACHE_LIMIT:
+        _OUTLINE_CACHE.popitem(last=False)
+    return outline
+
+
+def _smooth_closed_path(cr, points) -> None:
+    """Trace a closed polygon as quadratic curves through its midpoints.
+
+    Filling the raw outline shows every vertex as a facet; running the curve
+    through the midpoints instead is what makes the ink read as ink.
+    """
+    if len(points) < 3:
+        return
+    mid = _midpoint(points[-1], points[0])
+    cr.move_to(*mid)
+    for i in range(len(points)):
+        control = points[i]
+        end = _midpoint(control, points[(i + 1) % len(points)])
+        _quad_to(cr, control, end)
+    cr.close_path()
+
+
+def _midpoint(a, b):
+    return ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+
+
+def _quad_to(cr, control, end) -> None:
+    """Cairo only has cubics, so raise the quadratic's degree."""
+    start = cr.get_current_point()
+    cr.curve_to(start[0] + 2 / 3 * (control[0] - start[0]),
+                start[1] + 2 / 3 * (control[1] - start[1]),
+                end[0] + 2 / 3 * (control[0] - end[0]),
+                end[1] + 2 / 3 * (control[1] - end[1]),
+                end[0], end[1])
+
+
 def _draw_pen(cr, shape, base):
     props = shape.props
-    points = props.points
-    if len(points) < 2:
+    if len(props.points) < 2:
+        return
+    outline = pen_outline(props)
+    if len(outline) < 3:
         return
     _set_color(cr, props.style)
-    cr.set_line_width(props.style.width)
-    cr.set_line_cap(cairo.LINE_CAP_ROUND)
-    cr.set_line_join(cairo.LINE_JOIN_ROUND)
-    cr.move_to(*points[0])
-    for p in points[1:]:
-        cr.line_to(*p)
-    if props.closed:
-        cr.close_path()
-    cr.stroke()
+    _smooth_closed_path(cr, outline)
+    cr.set_fill_rule(cairo.FILL_RULE_WINDING)
+    cr.fill()
 
 
 def _arrow_head(cr, tip, angle, size):

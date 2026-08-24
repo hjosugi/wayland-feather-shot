@@ -19,6 +19,7 @@ import itertools
 from dataclasses import dataclass, field, replace
 from typing import Callable, List, Optional, Sequence, Tuple
 
+from . import freehand
 from .geometry import (Box, Circle2d, Ellipse2d, Geometry, Group2d, Point,
                        Polygon2d, Polyline2d, Rect2d, norm_rect, rotate)
 
@@ -146,13 +147,21 @@ class PenProps(Props):
     style: Style
     closed: bool = False
 
+    def stroke_options(self) -> freehand.StrokeOptions:
+        return freehand.options_for(self.style.width, complete=True)
+
     def geometry(self):
         if len(self.points) < 2:
             radius = max(self.style.width, 1.0)
             return Circle2d(radius * 2, filled=True)
+        # The streamlined centreline, padded by the stroke's half-width: it is
+        # what the ink follows, it costs a fraction of the full outline, and it
+        # keeps what you grab in step with what you see.
+        line = freehand.centerline(self.points, self.stroke_options())
+        padding = max(self.style.width / 2, 1.0)
         if self.closed:
-            return Polygon2d(self.points, filled=False)
-        return Polyline2d(self.points)
+            return Polygon2d(line, filled=False, padding=padding)
+        return Polyline2d(line, padding=padding)
 
     def scaled(self, sx, sy):
         return replace(self, points=tuple((x * sx, y * sy) for x, y in self.points))
@@ -440,9 +449,15 @@ class Shape:
 
     @property
     def page_bounds(self) -> Box:
-        return Box.from_points(
-            self.to_page(v) for v in self.geometry().vertices) if self.geometry().vertices \
-            else Box(self.x, self.y, 0.0, 0.0)
+        geometry = self.geometry()
+        vertices = geometry.vertices
+        if not vertices:
+            return Box(self.x, self.y, 0.0, 0.0)
+        box = Box.from_points(self.to_page(v) for v in vertices)
+        # A path that carries its own half-width (a pen stroke) covers more
+        # than its centreline does.
+        padding = getattr(geometry, "padding", 0.0)
+        return box.expand(padding) if padding else box
 
     @property
     def is_filled(self) -> bool:

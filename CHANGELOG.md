@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **Freehand strokes have real ink** (#33). The pen joined raw pointer samples
+  with a constant-width polyline, so a fast stroke came out visibly polygonal,
+  a slow one lumpy, and both of them dead — circling a UI element looked like a
+  rubber band. Strokes now go through a port of `perfect-freehand`: the samples
+  are streamlined to remove hand jitter, pressure is simulated from speed so
+  fast segments thin and slow ones thicken, each point gets a radius from that,
+  and the resulting outline is filled as a smoothed polygon rather than stroked
+  as a path. Hit-testing follows the streamlined centreline padded by the
+  stroke's own half-width, so a wide stroke is grabbable anywhere in its ink
+  and what you grab matches what you see. Committed strokes cache their
+  outline, so redrawing ink that has not moved costs nothing.
+
 - **Crop is now a rect over the pristine image, not a resample** (#30). Press
   `C` and the canvas shows the untouched capture with the current crop
   selected, so an earlier crop can be **widened** again and not only tightened
