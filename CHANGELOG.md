@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.9.0 (2026-08-25)
+
 - **Text is typed on the canvas** (#31). The text tool used to open a popover;
   you typed into a widget-scale box and pressed Add, and after that the text
   was frozen — no re-editing, no cursor in the image, and no way to tell how

@@ -1,6 +1,6 @@
 # Maintainer: wayland-feather-shot contributors
 pkgname=wayland-feather-shot
-pkgver=0.8.1
+pkgver=0.9.0
 pkgrel=1
 pkgdesc="Flameshot-style, local-only screenshot tool for Wayland (portal capture, annotation, scrolling capture)"
 arch=('any')

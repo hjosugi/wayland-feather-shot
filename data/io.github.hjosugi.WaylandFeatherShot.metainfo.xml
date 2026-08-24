@@ -52,6 +52,22 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.9.0" date="2026-08-25">
+      <description>
+        <p>
+          Annotations stay editable after saving: an editable document is
+          written beside the image, so a saved screenshot reopens with its
+          arrows and text intact rather than as flat pixels.
+        </p>
+        <p>
+          Crop becomes a rect over the pristine capture, so an earlier crop can
+          be widened again, with drag handles and aspect presets. Freehand
+          strokes get velocity-tapered variable width. Arrows can curve and
+          offer nine head styles for each end. Text is typed directly on the
+          canvas, with alignment and word wrapping.
+        </p>
+      </description>
+    </release>
     <release version="0.8.1" date="2026-08-24">
       <description>
         <p>
