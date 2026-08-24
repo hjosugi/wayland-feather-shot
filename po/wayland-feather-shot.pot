@@ -171,6 +171,21 @@ msgstr ""
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr ""
 
+msgid "Smart redaction…"
+msgstr ""
+
+msgid "Proposed {count} redactions — adjust them, or Ctrl+Z to drop them."
+msgstr ""
+
+msgid "Find text that looks sensitive and propose blur regions"
+msgstr ""
+
+msgid "Scanning for sensitive text…"
+msgstr ""
+
+msgid "Nothing recognised as sensitive. Check the image yourself before sharing it."
+msgstr ""
+
 msgid "Redaction strength"
 msgstr ""
 

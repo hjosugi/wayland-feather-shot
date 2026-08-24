@@ -171,6 +171,21 @@ msgstr "認識したテキストをクリップボードにコピーしました
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr "ぼかし/モザイクで注釈も覆う(フラット化)"
 
+msgid "Smart redaction…"
+msgstr "スマート伏せ字…"
+
+msgid "Proposed {count} redactions — adjust them, or Ctrl+Z to drop them."
+msgstr "{count}件の伏せ字を提案しました — 調整するか、Ctrl+Zで取り消せます。"
+
+msgid "Find text that looks sensitive and propose blur regions"
+msgstr "機密らしいテキストを探してぼかし領域を提案します"
+
+msgid "Scanning for sensitive text…"
+msgstr "機密テキストを走査中…"
+
+msgid "Nothing recognised as sensitive. Check the image yourself before sharing it."
+msgstr "機密と判定されたものはありません。共有前にご自身でも確認してください。"
+
 msgid "Redaction strength"
 msgstr "伏せ字の強さ"
 

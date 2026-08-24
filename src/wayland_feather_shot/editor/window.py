@@ -556,6 +556,14 @@ class EditorWindow(Gtk.ApplicationWindow):
             b.connect("clicked",
                       lambda *_: (popover.popdown(), self.extract_text("ocr")))
             box.append(b)
+        if has_ocr:
+            b = Gtk.Button(label=_("Smart redaction…"))
+            b.add_css_class("flat")
+            b.set_tooltip_text(
+                _("Find text that looks sensitive and propose blur regions"))
+            b.connect("clicked",
+                      lambda *_: (popover.popdown(), self.smart_redact()))
+            box.append(b)
         if has_qr:
             b = Gtk.Button(label=_("Copy QR / barcode"))
             b.add_css_class("flat")
@@ -565,6 +573,67 @@ class EditorWindow(Gtk.ApplicationWindow):
         popover.set_child(box)
         menu.set_popover(popover)
         return menu
+
+    def smart_redact(self):
+        """Propose blur regions over text that looks sensitive.
+
+        Never applied silently.  The regions arrive selected and undoable, and
+        a run that finds nothing says so plainly — a false negative must not
+        read as "this image is clean".
+        """
+        import tempfile
+        import threading
+
+        from .. import recognize
+        from . import sensitive
+
+        fd, tmp = tempfile.mkstemp(prefix="wfs-redact-", suffix=".png")
+        os.close(fd)
+        try:
+            save_mod.save_pixbuf(self.canvas.export_pixbuf(), tmp)
+        except Exception as e:
+            os.unlink(tmp)
+            self.toast(tr("Recognition failed: {error}", error=e))
+            return
+
+        self.toast(_("Scanning for sensitive text…"), 30.0)
+
+        def work():
+            # Off the UI thread: OCR on a big screenshot takes seconds, and the
+            # editor has to stay usable while it runs.
+            try:
+                rows = recognize.run_ocr_words(tmp)
+                error = None
+            except Exception as exc:  # subprocess failure, timeout, bad output
+                rows, error = [], exc
+            finally:
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
+            GLib.idle_add(done, rows, error)
+
+        def done(rows, error):
+            if error is not None:
+                self.toast(tr("Recognition failed: {error}", error=error))
+                return False
+            words = [sensitive.Word(text, x, y, w, h, group)
+                     for (text, x, y, w, h, group) in rows]
+            regions = sensitive.regions_from_words(
+                words, (float(self.canvas.base.get_width()),
+                        float(self.canvas.base.get_height())))
+            count = self.canvas.propose_redactions(regions)
+            if count:
+                self.select_tool("select")
+                self.toast(tr(
+                    "Proposed {count} redactions — adjust them, or Ctrl+Z to "
+                    "drop them.", count=count), 6.0)
+            else:
+                self.toast(_("Nothing recognised as sensitive. Check the "
+                             "image yourself before sharing it."), 6.0)
+            return False
+
+        threading.Thread(target=work, daemon=True).start()
 
     def extract_text(self, kind):
         import os

@@ -108,6 +108,11 @@ JA = {
         "認識したテキストをクリップボードにコピーしました。",
     "Blur/pixelate covers annotations too (flatten)":
         "ぼかし/モザイクで注釈も覆う(フラット化)",
+    "Smart redaction…": "スマート伏せ字…",
+    "Proposed {count} redactions — adjust them, or Ctrl+Z to drop them.": "{count}件の伏せ字を提案しました — 調整するか、Ctrl+Zで取り消せます。",
+    "Find text that looks sensitive and propose blur regions": "機密らしいテキストを探してぼかし領域を提案します",
+    "Scanning for sensitive text…": "機密テキストを走査中…",
+    "Nothing recognised as sensitive. Check the image yourself before sharing it.": "機密と判定されたものはありません。共有前にご自身でも確認してください。",
     "Redaction strength": "伏せ字の強さ",
     "Blur radius and mosaic block size — applies to a selected region too": "ぼかし半径とモザイクのブロックサイズ — 選択中の領域にも適用",
     "Marker": "マーカー",

@@ -460,6 +460,34 @@ class EditorCanvas(Gtk.DrawingArea):
     def stop_editing(self) -> None:
         self.editor.stop_editing()
 
+    def propose_redactions(self, regions) -> int:
+        """Turn detected regions into ordinary redaction shapes.
+
+        Ordinary on purpose: they are selected, movable, resizable, deletable
+        and undoable like anything else drawn by hand.  Detection proposes;
+        the person decides.
+        """
+        width = self.base.get_width()
+        height = self.base.get_height()
+        shapes = []
+        for region in regions:
+            x, y, w, h = region.rect
+            if w <= 0 or h <= 0:
+                continue
+            shapes.append(S.Obscure(
+                (x * width, y * height, w * width, h * height),
+                density=max(self.editor.redaction_density, 0.7)))
+        if not shapes:
+            return 0
+        doc = self.editor.doc
+        doc.mark_undo(self._state())
+        for shape in shapes:
+            doc.add(shape)
+        doc.select([s.sid for s in shapes])
+        self.tool = "select"
+        self._notify()
+        return len(shapes)
+
     def set_redaction_density(self, density: float) -> None:
         self.editor.set_redaction_density(density)
         self.queue_draw()

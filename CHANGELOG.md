@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- **Smart redaction** (#35). Redacting a screenshot before sharing meant
+  finding every token, email address and IP by eye, and missing one is the
+  whole risk — the failure is silent. The editor can now scan a capture with
+  the OCR that already ships and **propose** blur regions over anything that
+  looks sensitive: email addresses, URLs, IPv4 (validated octet by octet, so
+  version numbers do not match), phone numbers by digit count, payment cards
+  **checked with Luhn**, JWTs, the known key prefixes (`sk_`/`pk_`, `ghp_`,
+  `xoxb-`, `AKIA`, `AIza`, `ya29.`, …), long opaque tokens, and
+  `password: …`-style labels — where it redacts the value, not the label.
+  Overlapping matches merge into one region and near-duplicates are dropped, so
+  a key that is also an opaque token gets one box rather than three. The scan
+  runs off the UI thread, and the results arrive as **ordinary redaction
+  shapes**: selected, movable, resizable and undoable in one step. Nothing is
+  ever applied silently, and a scan that finds nothing says so rather than
+  implying the image is clean.
+
 - **Redaction finishes the job** (#22). Blur is now a real Gaussian — three
   running-sum box passes, which converge on one — over a **padded** sample of
   the source, so a region no longer smears its own edge inwards instead of the
