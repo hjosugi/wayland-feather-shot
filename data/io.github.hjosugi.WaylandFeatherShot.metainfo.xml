@@ -52,6 +52,21 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.8.0" date="2026-08-24">
+      <description>
+        <p>
+          Rebuilds the annotation editor on a shape model that carries a
+          transform, so annotations can be selected precisely, resized,
+          rotated, multi-selected and reordered after they are drawn. Adds
+          canvas zoom and pan, and makes stroke widths and font sizes
+          resolution-independent.
+        </p>
+        <p>
+          Fixes Japanese text and emoji stickers rendering as empty boxes, and
+          fixes numbered markers reusing a number after a delete or undo.
+        </p>
+      </description>
+    </release>
     <release version="0.7.9" date="2026-07-09">
       <description>
         <p>
