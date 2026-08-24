@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.10.0 (2026-08-25)
+
 - **Background and framing** (#36). A screenshot can now be handed back as a
   finished image rather than raw pixels: padded on a **solid colour, a
   gradient, or an image**, with rounded corners, a real **drop shadow** (soft /
