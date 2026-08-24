@@ -16,7 +16,7 @@ from .. import save as save_mod
 from ..i18n import _, tr
 from ..theme import install_custom_css
 from .canvas import EditorCanvas
-from .tools import Style
+from .shapes import Style
 
 TOOLS = [
     # (id, label, tooltip incl. shortcut key)
@@ -43,6 +43,11 @@ TOOL_KEYS = {
     Gdk.KEY_t: "text", Gdk.KEY_b: "blur", Gdk.KEY_x: "pixelate",
     Gdk.KEY_m: "marker", Gdk.KEY_c: "crop", Gdk.KEY_v: "select",
     Gdk.KEY_g: "steparrow", Gdk.KEY_u: "bubble", Gdk.KEY_j: "emoji",
+}
+
+_NUDGE_KEYS = {
+    Gdk.KEY_Left: (-1.0, 0.0), Gdk.KEY_Right: (1.0, 0.0),
+    Gdk.KEY_Up: (0.0, -1.0), Gdk.KEY_Down: (0.0, 1.0),
 }
 
 EMOJI_CHOICES = ["✅", "❌", "⭐", "❤️", "👍", "👎", "⚠️", "🔥", "💡", "➡️",
@@ -160,6 +165,8 @@ class EditorWindow(Gtk.ApplicationWindow):
         if extract is not None:
             header.pack_start(extract)
 
+        header.pack_start(self._build_zoom_controls())
+
         undo = Gtk.Button.new_from_icon_name("edit-undo-symbolic")
         undo.set_tooltip_text(_("Undo (Ctrl+Z)"))
         undo.connect("clicked", lambda *_: self.canvas.undo())
@@ -189,6 +196,41 @@ class EditorWindow(Gtk.ApplicationWindow):
         header.pack_end(copy_btn)
         header.pack_end(folder_btn)
         header.pack_end(pin_btn)
+
+    def _build_zoom_controls(self):
+        """Zoom out / percentage / zoom in.  Clicking the percentage toggles
+        between fit and 100%."""
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
+        box.add_css_class("linked")
+
+        out = Gtk.Button.new_from_icon_name("zoom-out-symbolic")
+        out.set_tooltip_text(_("Zoom out (Ctrl+-)"))
+        out.connect("clicked", lambda *_: self.canvas.zoom_out())
+
+        self._zoom_label = Gtk.Button(label="100%")
+        self._zoom_label.set_tooltip_text(
+            _("Fit / actual size (Ctrl+1 / Ctrl+0)"))
+        self._zoom_label.connect("clicked", self._on_zoom_toggle)
+
+        into = Gtk.Button.new_from_icon_name("zoom-in-symbolic")
+        into.set_tooltip_text(_("Zoom in (Ctrl++)"))
+        into.connect("clicked", lambda *_: self.canvas.zoom_in())
+
+        box.append(out)
+        box.append(self._zoom_label)
+        box.append(into)
+        self.canvas.on_zoom_changed = self._update_zoom_label
+        return box
+
+    def _on_zoom_toggle(self, _button):
+        if self.canvas.zoom_to_fit:
+            self.canvas.zoom_actual()
+        else:
+            self.canvas.zoom_fit()
+
+    def _update_zoom_label(self):
+        if getattr(self, "_zoom_label", None) is not None:
+            self._zoom_label.set_label(f"{self.canvas.zoom_percent}%")
 
     def _build_presets(self, color_btn, width_spin):
         """A popover of colour swatches + stroke-size presets. Reuses the
@@ -573,6 +615,31 @@ class EditorWindow(Gtk.ApplicationWindow):
         if ctrl and key == Gdk.KEY_y:
             self.canvas.redo()
             return True
+        if ctrl and key == Gdk.KEY_a:
+            self.canvas.select_all()
+            self.select_tool("select")
+            return True
+        if ctrl and keyval in (Gdk.KEY_plus, Gdk.KEY_equal, Gdk.KEY_KP_Add):
+            self.canvas.zoom_in()
+            return True
+        if ctrl and keyval in (Gdk.KEY_minus, Gdk.KEY_underscore,
+                               Gdk.KEY_KP_Subtract):
+            self.canvas.zoom_out()
+            return True
+        if ctrl and keyval == Gdk.KEY_1:
+            self.canvas.zoom_fit()
+            return True
+        if ctrl and keyval == Gdk.KEY_0:
+            self.canvas.zoom_actual()
+            return True
+        if ctrl and keyval == Gdk.KEY_Up:
+            return self.canvas.raise_selected()
+        if ctrl and keyval == Gdk.KEY_Down:
+            return self.canvas.lower_selected()
+        if keyval in _NUDGE_KEYS:
+            dx, dy = _NUDGE_KEYS[keyval]
+            step = 10.0 if shift else 1.0
+            return self.canvas.nudge_selected(dx * step, dy * step)
         if keyval in (Gdk.KEY_Delete, Gdk.KEY_BackSpace):
             if self.canvas.delete_selected():
                 return True

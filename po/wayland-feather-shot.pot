@@ -171,6 +171,15 @@ msgstr ""
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr ""
 
+msgid "Zoom out (Ctrl+-)"
+msgstr ""
+
+msgid "Zoom in (Ctrl++)"
+msgstr ""
+
+msgid "Fit / actual size (Ctrl+1 / Ctrl+0)"
+msgstr ""
+
 msgid "Undo (Ctrl+Z)"
 msgstr ""
 

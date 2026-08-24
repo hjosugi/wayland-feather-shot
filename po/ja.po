@@ -171,6 +171,15 @@ msgstr "認識したテキストをクリップボードにコピーしました
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr "ぼかし/モザイクで注釈も覆う(フラット化)"
 
+msgid "Zoom out (Ctrl+-)"
+msgstr "縮小 (Ctrl+-)"
+
+msgid "Zoom in (Ctrl++)"
+msgstr "拡大 (Ctrl++)"
+
+msgid "Fit / actual size (Ctrl+1 / Ctrl+0)"
+msgstr "全体表示 / 等倍 (Ctrl+1 / Ctrl+0)"
+
 msgid "Undo (Ctrl+Z)"
 msgstr "元に戻す (Ctrl+Z)"
 

@@ -108,6 +108,9 @@ JA = {
         "認識したテキストをクリップボードにコピーしました。",
     "Blur/pixelate covers annotations too (flatten)":
         "ぼかし/モザイクで注釈も覆う(フラット化)",
+    "Zoom out (Ctrl+-)": "縮小 (Ctrl+-)",
+    "Zoom in (Ctrl++)": "拡大 (Ctrl++)",
+    "Fit / actual size (Ctrl+1 / Ctrl+0)": "全体表示 / 等倍 (Ctrl+1 / Ctrl+0)",
     "Undo (Ctrl+Z)": "元に戻す (Ctrl+Z)",
     "Redo (Ctrl+Shift+Z)": "やり直し (Ctrl+Shift+Z)",
     "Save (Ctrl+S)": "保存 (Ctrl+S)",

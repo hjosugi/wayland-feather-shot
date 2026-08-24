@@ -22,9 +22,9 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 import cairo  # noqa: E402
 
 from . import save as save_mod
-from .editor import tools
-from .editor.tools import (Arrow, EllipseShape, Highlight, Line, Marker,
-                           Obscure, Pen, RectShape, Style, Text)
+from .editor import shapes as shape_model
+from .editor.shapes import (Arrow, EllipseShape, Highlight, Line, Marker,
+                            Obscure, Pen, RectShape, Style, Text)
 from .i18n import _, tr
 from .theme import install_custom_css
 
@@ -75,10 +75,11 @@ class OverlayWindow(Gtk.ApplicationWindow):
 
         rgba = Gdk.RGBA()
         rgba.parse(settings.pen_color)
+        self._pen_width = float(settings.pen_width)
         self.style = Style(rgba=(rgba.red, rgba.green, rgba.blue, rgba.alpha),
-                           width=float(settings.pen_width),
+                           width=self._page_width(self._pen_width),
                            font_size=float(settings.font_size))
-        self.blur_factor = int(settings.blur_factor)
+        self.redaction_density = shape_model.density_from_factor(settings.blur_factor)
 
         self.mode = "select"          # "select" -> "edit"
         self.tool = "move"
@@ -397,6 +398,11 @@ class OverlayWindow(Gtk.ApplicationWindow):
         if btn:
             btn.set_active(True)
 
+    def _page_width(self, slider_value: float) -> float:
+        """An authored stroke width in image pixels."""
+        return shape_model.page_stroke_width(
+            slider_value, max(self.pixbuf.get_width(), self.pixbuf.get_height()))
+
     def _on_color_changed(self, button, _pspec):
         rgba = button.get_rgba()
         self.style = Style(rgba=(rgba.red, rgba.green, rgba.blue, rgba.alpha),
@@ -404,7 +410,9 @@ class OverlayWindow(Gtk.ApplicationWindow):
                            font_size=self.style.font_size)
 
     def _on_width_changed(self, spin):
-        self.style = Style(rgba=self.style.rgba, width=spin.get_value(),
+        self._pen_width = spin.get_value()
+        self.style = Style(rgba=self.style.rgba,
+                           width=self._page_width(self._pen_width),
                            font_size=self.style.font_size)
 
     def _on_drag_begin(self, gesture, x, y):
@@ -521,7 +529,7 @@ class OverlayWindow(Gtk.ApplicationWindow):
         elif tool == "arrow":
             self._preview = Arrow(start, cur, self.style)
         elif tool in RECT_TOOLS:
-            rect = tools.norm_rect(start[0], start[1], cur[0], cur[1])
+            rect = shape_model.norm_rect(start[0], start[1], cur[0], cur[1])
             if tool == "rect":
                 self._preview = RectShape(rect, self.style)
             elif tool == "ellipse":
@@ -529,18 +537,20 @@ class OverlayWindow(Gtk.ApplicationWindow):
             elif tool == "highlight":
                 self._preview = Highlight(rect, self.style)
             elif tool == "blur":
-                self._preview = Obscure(rect, self.blur_factor, pixelate=False)
+                self._preview = Obscure(rect, self.redaction_density,
+                                        pixelate=False)
             elif tool == "pixelate":
-                self._preview = Obscure(rect, self.blur_factor, pixelate=True)
+                self._preview = Obscure(rect, self.redaction_density,
+                                        pixelate=True)
 
     def _on_click(self, gesture, n_press, x, y):
         if self.mode != "edit" or self.tool not in ("text", "marker"):
             return
         ix, iy = self._to_image(x, y)
         if self.tool == "marker":
-            number = sum(1 for s in self.shapes if isinstance(s, Marker)) + 1
             self._push_history()
-            self.shapes.append(Marker((ix, iy), number, self.style))
+            self.shapes.append(
+                Marker((ix, iy), shape_model.next_number(self.shapes), self.style))
             self.area.queue_draw()
         else:
             self._open_text_popover(ix, iy, x, y)
