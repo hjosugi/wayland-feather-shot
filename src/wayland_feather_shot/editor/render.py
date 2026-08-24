@@ -28,6 +28,7 @@ from gi.repository import Gdk, GdkPixbuf, GLib, Pango, PangoCairo  # noqa: E402
 import cairo  # noqa: E402
 
 from . import arrows  # noqa: E402
+from . import background as bg  # noqa: E402
 from . import blur as blur_mod  # noqa: E402
 from . import freehand  # noqa: E402
 from . import shapes as S  # noqa: E402
@@ -561,11 +562,219 @@ def draw_scene(cr, base, shape_list, skip_sid=None) -> None:
             draw_shape(cr, shape, base)
 
 
-def flatten(base: GdkPixbuf.Pixbuf, shape_list) -> GdkPixbuf.Pixbuf:
-    """Render the base plus every shape into one opaque pixbuf."""
-    w, h = base.get_width(), base.get_height()
+# -- the background stage ----------------------------------------------------
+
+_wallpaper_cache = {}
+_shadow_cache = {}
+
+
+def _wallpaper(path: str) -> Optional[GdkPixbuf.Pixbuf]:
+    if path in _wallpaper_cache:
+        return _wallpaper_cache[path]
+    try:
+        pixbuf = GdkPixbuf.Pixbuf.new_from_file(path)
+    except Exception:
+        pixbuf = None
+    if len(_wallpaper_cache) > 8:
+        _wallpaper_cache.clear()
+    _wallpaper_cache[path] = pixbuf
+    return pixbuf
+
+
+def _replay(cr, instructions) -> None:
+    """Trace a path described by :func:`background.rounded_rect_path`."""
+    for command, args in instructions:
+        if command == "move":
+            cr.move_to(*args)
+        elif command == "line":
+            cr.line_to(*args)
+        elif command == "arc":
+            cr.arc(*args)
+        elif command == "rect":
+            cr.rectangle(*args)
+        elif command == "close":
+            cr.close_path()
+
+
+def _fill_background(cr, layout, settings) -> None:
+    width, height = layout.canvas
+    if settings.fill == "solid":
+        cr.set_source_rgba(*settings.color)
+        cr.rectangle(0, 0, width, height)
+        cr.fill()
+    elif settings.fill == "gradient":
+        start, end = bg.gradient_colors(settings.gradient)
+        gradient = cairo.LinearGradient(0, 0, width, height)
+        gradient.add_color_stop_rgba(0, *start)
+        gradient.add_color_stop_rgba(1, *end)
+        cr.set_source(gradient)
+        cr.rectangle(0, 0, width, height)
+        cr.fill()
+    elif settings.fill == "image" and settings.image_path:
+        picture = _wallpaper(settings.image_path)
+        if picture is None:
+            return
+        # Cover: fill the canvas and crop the overflow, rather than letterbox.
+        scale = max(width / picture.get_width(), height / picture.get_height())
+        cr.save()
+        cr.translate((width - picture.get_width() * scale) / 2,
+                     (height - picture.get_height() * scale) / 2)
+        cr.scale(scale, scale)
+        Gdk.cairo_set_source_pixbuf(cr, picture, 0, 0)
+        cr.paint()
+        cr.restore()
+
+
+def _blur_surface(surface: cairo.ImageSurface, sigma: float) -> None:
+    """Blur an ARGB32 surface in place.
+
+    Premultiplied channels are what cairo stores, and blurring premultiplied
+    values is the correct thing to do — averaging straight alpha against
+    unassociated colour is what produces dark halos.
+    """
+    surface.flush()
+    width, height = surface.get_width(), surface.get_height()
+    stride = surface.get_stride()
+    data = surface.get_data()
+    row_bytes = width * 4
+
+    if stride == row_bytes:
+        packed = bytearray(data)
+    else:
+        packed = bytearray(row_bytes * height)
+        for y in range(height):
+            packed[y * row_bytes:(y + 1) * row_bytes] = \
+                data[y * stride:y * stride + row_bytes]
+
+    blurred = blur_mod.gaussian_blur(packed, width, height, sigma)
+    if stride == row_bytes:
+        data[:] = blurred
+    else:
+        for y in range(height):
+            data[y * stride:y * stride + row_bytes] = \
+                blurred[y * row_bytes:(y + 1) * row_bytes]
+    surface.mark_dirty()
+
+
+def _draw_shadow(cr, layout, settings) -> None:
+    """Cast the card's shadow.
+
+    Actually blurred, not a dark rectangle offset downwards: a hard edge at 35%
+    alpha reads as a second card, not as a shadow.  The caster is rendered at a
+    fraction of the size and blurred there — a shadow is low-frequency by
+    definition, so nothing is lost and the cost drops by the square of the
+    scale.
+    """
+    shadow = bg.shadow_layer(settings.shadow, min(layout.card[2], layout.card[3]),
+                             settings.shadow_style)
+    if shadow is None or shadow.radius <= 0:
+        return
+
+    x, y, w, h = layout.card
+    inset = layout.border_width
+    caster = (x - inset, y - inset + shadow.offset_y,
+              w + inset * 2, h + inset * 2)
+
+    canvas_w, canvas_h = layout.canvas
+    scale = max(1.0, shadow.radius / 6.0)
+    small_w = max(1, int(canvas_w / scale))
+    small_h = max(1, int(canvas_h / scale))
+
+    # The canvas redraws on every pointer move; the shadow only changes when
+    # the card or the setting does.
+    key = (small_w, small_h, tuple(round(v, 2) for v in caster),
+           round(layout.corner_radius, 2), round(shadow.radius, 2),
+           round(shadow.alpha, 3))
+    surface = _shadow_cache.get(key)
+    if surface is None:
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, small_w, small_h)
+        caster_cr = cairo.Context(surface)
+        caster_cr.scale(small_w / canvas_w, small_h / canvas_h)
+        caster_cr.set_source_rgba(0, 0, 0, shadow.alpha)
+        _replay(caster_cr, bg.rounded_rect_path(caster, layout.corner_radius))
+        caster_cr.fill()
+        _blur_surface(surface, max(1.0, shadow.radius / scale))
+        if len(_shadow_cache) > 6:
+            _shadow_cache.clear()
+        _shadow_cache[key] = surface
+
+    cr.save()
+    cr.scale(canvas_w / small_w, canvas_h / small_h)
+    cr.set_source_surface(surface, 0, 0)
+    cr.get_source().set_filter(cairo.FILTER_BILINEAR)
+    cr.paint()
+    cr.restore()
+
+
+def _draw_watermark(cr, layout, settings) -> None:
+    mark = settings.watermark
+    positions = bg.watermark_positions(layout.canvas, mark)
+    if not positions:
+        return
+    size = max(6.0, mark.size * min(layout.canvas))
+    style = S.Style(rgba=(1.0, 1.0, 1.0, mark.opacity), font_size=size)
+    width, height = measure(mark.text, style, size=size)
+    for x, y in positions:
+        cr.save()
+        cr.translate(x, y)
+        cr.rotate(math.radians(mark.rotation_degrees))
+        draw_text(cr, mark.text, -width / 2, -height / 2, style, size=size,
+                  rgba=style.rgba)
+        cr.restore()
+
+
+def draw_composition(cr, base, shape_list, settings=None, skip_sid=None):
+    """The whole picture: the stage, then the screenshot card on it.
+
+    Returns the layout, so the canvas can map pointer coordinates through the
+    same numbers the drawing used.
+    """
+    settings = settings or bg.BackgroundSettings()
+    content = (float(base.get_width()), float(base.get_height()))
+    layout = bg.layout(content, settings)
+
+    if not settings.enabled:
+        draw_scene(cr, base, shape_list, skip_sid)
+        return layout
+
+    _fill_background(cr, layout, settings)
+    if settings.has_shadow:
+        _draw_shadow(cr, layout, settings)
+
+    x, y, w, h = layout.card
+    if layout.border_width > 0 and settings.border.visible:
+        border = settings.border
+        cr.save()
+        cr.set_source_rgba(border.color[0], border.color[1], border.color[2],
+                           border.color[3] * border.opacity)
+        _replay(cr, bg.rounded_rect_path(
+            (x - layout.border_width, y - layout.border_width,
+             w + layout.border_width * 2, h + layout.border_width * 2),
+            layout.corner_radius + layout.border_width))
+        cr.fill()
+        cr.restore()
+
+    cr.save()
+    _replay(cr, bg.rounded_rect_path((x, y, w, h), layout.corner_radius))
+    cr.clip()
+    cr.translate(x, y)
+    draw_scene(cr, base, shape_list, skip_sid)
+    cr.restore()
+
+    _draw_watermark(cr, layout, settings)
+    return layout
+
+
+def flatten(base: GdkPixbuf.Pixbuf, shape_list,
+            settings=None) -> GdkPixbuf.Pixbuf:
+    """Render the base plus every shape, on its background, into one pixbuf."""
+    settings = settings or bg.BackgroundSettings()
+    layout = bg.layout((float(base.get_width()), float(base.get_height())),
+                       settings)
+    w = max(1, int(round(layout.canvas[0])))
+    h = max(1, int(round(layout.canvas[1])))
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
     cr = cairo.Context(surface)
-    draw_scene(cr, base, shape_list)
+    draw_composition(cr, base, shape_list, settings)
     surface.flush()
     return Gdk.pixbuf_get_from_surface(surface, 0, 0, w, h)

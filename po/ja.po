@@ -171,6 +171,57 @@ msgstr "認識したテキストをクリップボードにコピーしました
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr "ぼかし/モザイクで注釈も覆う(フラット化)"
 
+msgid "Background & framing"
+msgstr "背景と額装"
+
+msgid "Background"
+msgstr "背景"
+
+msgid "Solid"
+msgstr "単色"
+
+msgid "Gradient"
+msgstr "グラデーション"
+
+msgid "Image…"
+msgstr "画像…"
+
+msgid "Padding"
+msgstr "余白"
+
+msgid "Corners"
+msgstr "角丸"
+
+msgid "Shadow"
+msgstr "影"
+
+msgid "Aspect"
+msgstr "アスペクト比"
+
+msgid "Auto"
+msgstr "自動"
+
+msgid "Align"
+msgstr "配置"
+
+msgid "Border around the screenshot"
+msgstr "スクリーンショットに枠線"
+
+msgid "Watermark"
+msgstr "透かし"
+
+msgid "Watermark text"
+msgstr "透かしの文字"
+
+msgid "Repeat"
+msgstr "繰り返し"
+
+msgid "0 places one mark in the corner; higher tiles it"
+msgstr "0で隅に1つ、大きくすると敷き詰めます"
+
+msgid "Choose a background image"
+msgstr "背景画像を選択"
+
 msgid "Smart redaction…"
 msgstr "スマート伏せ字…"
 
@@ -341,9 +392,6 @@ msgstr "テキスト…(Enterで追加)"
 
 msgid "Outline"
 msgstr "縁取り"
-
-msgid "Background"
-msgstr "背景"
 
 msgid "Add"
 msgstr "追加"

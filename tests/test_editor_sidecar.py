@@ -136,6 +136,51 @@ class CropTests(unittest.TestCase):
             shutil.rmtree(directory, ignore_errors=True)
 
 
+class BackgroundTests(unittest.TestCase):
+    """The framing is part of the document, so a composition reopens as it was."""
+
+    def _settings(self):
+        from wayland_feather_shot.editor import background as B
+        return B.BackgroundSettings(
+            fill="gradient", gradient="ocean", padding=0.12, shadow=0.5,
+            aspect="16:9", alignment="bottom-right",
+            border=B.Border(enabled=True, thickness=0.02),
+            watermark=B.Watermark(enabled=True, text="DRAFT", density=3))
+
+    def test_it_round_trips(self):
+        restored = sidecar.decode(sidecar.encode([], background=self._settings()))
+        self.assertEqual(restored.background, self._settings())
+
+    def test_a_document_without_one_has_no_background(self):
+        self.assertEqual(sidecar.decode(sidecar.encode([])).background.fill,
+                         "none")
+
+    def test_a_malformed_background_degrades_to_none(self):
+        data = sidecar.encode([S.RectShape((0, 0, 9, 9), STYLE)])
+        data["background"] = "nonsense"
+        document = sidecar.decode(data)
+        self.assertEqual(document.background.fill, "none")
+        # ...and does not take the annotations with it.
+        self.assertEqual(len(document.shapes), 1)
+
+    def test_one_bad_field_does_not_lose_the_rest(self):
+        data = sidecar.encode([], background=self._settings())
+        data["background"]["padding"] = "wide"
+        data["background"]["fill"] = "hologram"
+        restored = sidecar.decode(data).background
+        self.assertEqual(restored.fill, "none")
+        self.assertEqual(restored.gradient, "ocean")
+
+    def test_it_survives_a_file(self):
+        directory = tempfile.mkdtemp()
+        try:
+            image = os.path.join(directory, "shot.png")
+            sidecar.save(image, [], background=self._settings())
+            self.assertEqual(sidecar.load(image).background, self._settings())
+        finally:
+            shutil.rmtree(directory, ignore_errors=True)
+
+
 class ToleranceTests(unittest.TestCase):
     """A document from a newer minor release still has to open."""
 

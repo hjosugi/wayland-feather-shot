@@ -225,9 +225,11 @@ class FeatherShotApp(Gtk.Application):
             _die_dialog(self, tr("Could not read the captured image: {error}", error=e))
             self.release()
             return
-        pixbuf, shapes, crop, toast = self._restore_sidecar(path, pixbuf)
+        pixbuf, shapes, crop, background, toast = self._restore_sidecar(
+            path, pixbuf)
         win = EditorWindow(self, pixbuf, self.settings, shapes=shapes,
-                           startup_toast=toast, crop=crop)
+                           startup_toast=toast, crop=crop,
+                           background=background)
         win.connect("destroy", lambda *_: self.release())
         win.present()
 
@@ -246,22 +248,23 @@ class FeatherShotApp(Gtk.Application):
         try:
             document = sidecar.load(path)
         except sidecar.UnsupportedVersion:
-            return pixbuf, None, None, _(
+            return pixbuf, None, None, None, _(
                 "Annotations were saved by a newer version; "
                 "opening the flat image.")
         except sidecar.SidecarError as e:
-            return pixbuf, None, None, tr(
+            return pixbuf, None, None, None, tr(
                 "Could not reopen the annotations: {error}", error=e)
         if document is None or not document.shapes:
-            return pixbuf, None, None, None
+            return pixbuf, None, None, None, None
 
         if document.base_png:
             try:
                 pixbuf = save_mod.pixbuf_from_png_bytes(document.base_png)
             except ValueError as e:
-                return pixbuf, None, None, tr(
+                return pixbuf, None, None, None, tr(
                     "Could not reopen the annotations: {error}", error=e)
         return (pixbuf, list(document.shapes), document.crop,
+                document.background,
                 tr("Restored {count} editable annotations.",
                    count=len(document.shapes)))
 

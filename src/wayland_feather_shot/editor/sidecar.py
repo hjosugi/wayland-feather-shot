@@ -26,6 +26,7 @@ import json
 import os
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from . import background as bg_mod
 from . import crop as crop_mod
 from . import shapes as S
 
@@ -55,6 +56,8 @@ class Document:
     # rect over the pristine image rather than cropped pixels is what lets a
     # reopened screenshot have its crop widened again.
     crop: Tuple[float, float, float, float] = crop_mod.UNIT
+    background: "bg_mod.BackgroundSettings" = dataclasses.field(
+        default_factory=lambda: bg_mod.BackgroundSettings())
 
 
 # -- paths -------------------------------------------------------------------
@@ -181,14 +184,87 @@ def decode_shape(data: Any) -> Optional[S.Shape]:
 
 # -- document codec ----------------------------------------------------------
 
+def encode_background(settings) -> Dict[str, Any]:
+    data = dataclasses.asdict(settings)
+    data["color"] = list(settings.color)
+    data["border"]["color"] = list(settings.border.color)
+    return data
+
+
+def decode_background(data: Any):
+    """Rebuild the background, field by field.
+
+    A background that cannot be read degrades to none: losing the framing is
+    recoverable, losing the annotations along with it is not.
+    """
+    default = bg_mod.BackgroundSettings()
+    if not isinstance(data, dict):
+        return default
+
+    def number(key, source=None, fallback=None):
+        holder = data if source is None else source
+        value = holder.get(key) if isinstance(holder, dict) else None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return fallback
+
+    def colour(value, fallback):
+        if isinstance(value, (list, tuple)) and len(value) == 4:
+            try:
+                return tuple(float(c) for c in value)
+            except (TypeError, ValueError):
+                return fallback
+        return fallback
+
+    def choice(key, allowed, fallback):
+        return data[key] if data.get(key) in allowed else fallback
+
+    border_data = data.get("border") if isinstance(data.get("border"), dict) else {}
+    mark_data = data.get("watermark") if isinstance(data.get("watermark"), dict) else {}
+
+    return bg_mod.BackgroundSettings(
+        fill=choice("fill", bg_mod.FILLS, default.fill),
+        color=colour(data.get("color"), default.color),
+        gradient=choice("gradient", bg_mod.GRADIENT_PRESETS, default.gradient),
+        image_path=(data.get("image_path")
+                    if isinstance(data.get("image_path"), str) else None),
+        padding=number("padding", fallback=default.padding),
+        corner_radius=number("corner_radius", fallback=default.corner_radius),
+        shadow=number("shadow", fallback=default.shadow),
+        shadow_style=choice("shadow_style", bg_mod.SHADOW_STYLES,
+                            default.shadow_style),
+        aspect=choice("aspect", bg_mod.ASPECTS, default.aspect),
+        alignment=choice("alignment", bg_mod.ALIGNMENTS, default.alignment),
+        border=bg_mod.Border(
+            enabled=bool(border_data.get("enabled", False)),
+            color=colour(border_data.get("color"), default.border.color),
+            thickness=number("thickness", border_data, default.border.thickness),
+            opacity=number("opacity", border_data, default.border.opacity),
+        ),
+        watermark=bg_mod.Watermark(
+            enabled=bool(mark_data.get("enabled", False)),
+            text=(mark_data.get("text")
+                  if isinstance(mark_data.get("text"), str) else ""),
+            size=number("size", mark_data, default.watermark.size),
+            opacity=number("opacity", mark_data, default.watermark.opacity),
+            rotation_degrees=number("rotation_degrees", mark_data,
+                                    default.watermark.rotation_degrees),
+            density=number("density", mark_data, default.watermark.density),
+        ),
+    )
+
+
 def encode(shapes: Sequence[S.Shape], base_png: Optional[bytes] = None,
            base_image: str = "",
-           crop: Tuple[float, float, float, float] = crop_mod.UNIT) -> Dict[str, Any]:
+           crop: Tuple[float, float, float, float] = crop_mod.UNIT,
+           background=None) -> Dict[str, Any]:
     document: Dict[str, Any] = {
         "version": SIDECAR_VERSION,
         "generator": "wayland-feather-shot",
         "base_image": base_image,
         "crop": list(crop),
+        "background": encode_background(background or bg_mod.BackgroundSettings()),
         "shapes": [encode_shape(s) for s in shapes],
     }
     if base_png:
@@ -234,6 +310,7 @@ def decode(data: Any) -> Document:
         base_image=str(data.get("base_image", "")),
         version=version,
         crop=_decode_crop(data.get("crop")),
+        background=decode_background(data.get("background")),
     )
 
 
@@ -258,7 +335,8 @@ def _decode_crop(value: Any) -> Tuple[float, float, float, float]:
 
 def save(image_path: str, shapes: Sequence[S.Shape],
          base_png: Optional[bytes] = None,
-         crop: Tuple[float, float, float, float] = crop_mod.UNIT) -> str:
+         crop: Tuple[float, float, float, float] = crop_mod.UNIT,
+         background=None) -> str:
     """Write the sidecar for *image_path* and return its path.
 
     Written through a temporary file in the same directory and renamed, so a
@@ -267,7 +345,8 @@ def save(image_path: str, shapes: Sequence[S.Shape],
     """
     path = sidecar_path(image_path)
     document = encode(shapes, base_png,
-                      base_image=os.path.basename(image_path), crop=crop)
+                      base_image=os.path.basename(image_path), crop=crop,
+                      background=background)
     temporary = path + ".tmp"
     with open(temporary, "w", encoding="utf-8") as fh:
         json.dump(document, fh, ensure_ascii=False)

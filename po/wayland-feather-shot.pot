@@ -171,6 +171,57 @@ msgstr ""
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr ""
 
+msgid "Background & framing"
+msgstr ""
+
+msgid "Background"
+msgstr ""
+
+msgid "Solid"
+msgstr ""
+
+msgid "Gradient"
+msgstr ""
+
+msgid "Image…"
+msgstr ""
+
+msgid "Padding"
+msgstr ""
+
+msgid "Corners"
+msgstr ""
+
+msgid "Shadow"
+msgstr ""
+
+msgid "Aspect"
+msgstr ""
+
+msgid "Auto"
+msgstr ""
+
+msgid "Align"
+msgstr ""
+
+msgid "Border around the screenshot"
+msgstr ""
+
+msgid "Watermark"
+msgstr ""
+
+msgid "Watermark text"
+msgstr ""
+
+msgid "Repeat"
+msgstr ""
+
+msgid "0 places one mark in the corner; higher tiles it"
+msgstr ""
+
+msgid "Choose a background image"
+msgstr ""
+
 msgid "Smart redaction…"
 msgstr ""
 
@@ -340,9 +391,6 @@ msgid "Text… (Enter to add)"
 msgstr ""
 
 msgid "Outline"
-msgstr ""
-
-msgid "Background"
 msgstr ""
 
 msgid "Add"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from dataclasses import replace
 
 import gi
 
@@ -16,6 +17,7 @@ from .. import save as save_mod
 from ..i18n import _, tr
 from ..theme import install_custom_css
 from . import arrows as arrow_mod
+from . import background as bg
 from . import crop as crop_mod
 from . import preset as preset_mod
 from . import sidecar
@@ -67,7 +69,8 @@ PRESET_WIDTHS = [2, 4, 8, 12]
 
 class EditorWindow(Gtk.ApplicationWindow):
     def __init__(self, app, pixbuf: GdkPixbuf.Pixbuf, settings, shapes=None,
-                 startup_toast=None, save_path=None, crop=None):
+                 startup_toast=None, save_path=None, crop=None,
+                 background=None):
         super().__init__(application=app, title="Feather Shot")
         self.settings = settings
         self._save_path = save_path  # --output override for Ctrl+S, or None
@@ -94,6 +97,8 @@ class EditorWindow(Gtk.ApplicationWindow):
         self.canvas.editor.head_end = self._preset.head_end
         if crop is not None:
             self.canvas.set_source(pixbuf, crop)
+        if background is not None:
+            self.canvas.background = background
         if shapes:
             self.canvas.shapes = list(shapes)
         self.canvas.on_edit_text = self._on_edit_text
@@ -188,6 +193,7 @@ class EditorWindow(Gtk.ApplicationWindow):
         header.pack_start(self._build_presets(color, width))
         header.pack_start(self._build_arrowhead_menu())
         header.pack_start(self._build_align_buttons())
+        header.pack_start(self._build_background_menu())
 
         extract = self._build_extract_menu()
         if extract is not None:
@@ -476,6 +482,131 @@ class EditorWindow(Gtk.ApplicationWindow):
         popover.set_child(box)
         menu.set_popover(popover)
         return menu
+
+    def _build_background_menu(self):
+        """The stage the screenshot sits on: fill, padding, shadow, and the
+        finishing touches.  Off by default — a screenshot tool should hand back
+        the pixels you captured unless you ask for more."""
+        menu = Gtk.MenuButton()
+        menu.set_icon_name("view-paged-symbolic")
+        menu.set_tooltip_text(_("Background & framing"))
+        popover = Gtk.Popover()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        for margin in ("top", "bottom", "start", "end"):
+            getattr(box, f"set_margin_{margin}")(10)
+        box.set_size_request(300, -1)
+
+        self._bg_widgets = {}
+
+        def row(label, widget):
+            line = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            caption = Gtk.Label(label=label, xalign=0.0)
+            caption.set_size_request(96, -1)
+            line.append(caption)
+            widget.set_hexpand(True)
+            line.append(widget)
+            box.append(line)
+
+        fill = Gtk.DropDown.new_from_strings(
+            [_("None"), _("Solid"), _("Gradient"), _("Image…")])
+        fill.connect("notify::selected", self._on_background_changed)
+        self._bg_widgets["fill"] = fill
+        row(_("Background"), fill)
+
+        gradient = Gtk.DropDown.new_from_strings(
+            [name.capitalize() for name in bg.GRADIENT_PRESETS])
+        gradient.connect("notify::selected", self._on_background_changed)
+        self._bg_widgets["gradient"] = gradient
+        row(_("Gradient"), gradient)
+
+        for key, label, low, high, step, value in (
+                ("padding", _("Padding"), 0.0, 0.35, 0.01, 0.08),
+                ("corner_radius", _("Corners"), 0.0, 0.08, 0.002, 0.018),
+                ("shadow", _("Shadow"), 0.0, 1.0, 0.05, 0.36)):
+            scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,
+                                             low, high, step)
+            scale.set_value(value)
+            scale.set_draw_value(False)
+            scale.connect("value-changed", self._on_background_changed)
+            self._bg_widgets[key] = scale
+            row(label, scale)
+
+        aspect = Gtk.DropDown.new_from_strings(
+            [_("Auto") if name == "auto" else name for name in bg.ASPECTS])
+        aspect.connect("notify::selected", self._on_background_changed)
+        self._bg_widgets["aspect"] = aspect
+        row(_("Aspect"), aspect)
+
+        alignment = Gtk.DropDown.new_from_strings(
+            [name.replace("-", " ").capitalize() for name in bg.ALIGNMENTS])
+        alignment.set_selected(bg.ALIGNMENTS.index("center"))
+        alignment.connect("notify::selected", self._on_background_changed)
+        self._bg_widgets["alignment"] = alignment
+        row(_("Align"), alignment)
+
+        border = Gtk.CheckButton(label=_("Border around the screenshot"))
+        border.connect("toggled", self._on_background_changed)
+        self._bg_widgets["border"] = border
+        box.append(border)
+
+        watermark = Gtk.Entry()
+        watermark.set_placeholder_text(_("Watermark text"))
+        watermark.connect("changed", self._on_background_changed)
+        self._bg_widgets["watermark"] = watermark
+        row(_("Watermark"), watermark)
+
+        tile = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 6, 1)
+        tile.set_draw_value(False)
+        tile.set_tooltip_text(_("0 places one mark in the corner; higher tiles it"))
+        tile.connect("value-changed", self._on_background_changed)
+        self._bg_widgets["tile"] = tile
+        row(_("Repeat"), tile)
+
+        popover.set_child(box)
+        menu.set_popover(popover)
+        return menu
+
+    def _on_background_changed(self, *_args):
+        widgets = self._bg_widgets
+        fill = bg.FILLS[widgets["fill"].get_selected()]
+        if fill == "image" and not self.canvas.background.image_path:
+            self._choose_background_image()
+            return
+        gradient = list(bg.GRADIENT_PRESETS)[widgets["gradient"].get_selected()]
+        text = widgets["watermark"].get_text()
+        settings = bg.BackgroundSettings(
+            fill=fill,
+            gradient=gradient,
+            image_path=self.canvas.background.image_path,
+            padding=widgets["padding"].get_value(),
+            corner_radius=widgets["corner_radius"].get_value(),
+            shadow=widgets["shadow"].get_value(),
+            aspect=bg.ASPECTS[widgets["aspect"].get_selected()],
+            alignment=bg.ALIGNMENTS[widgets["alignment"].get_selected()],
+            border=bg.Border(enabled=widgets["border"].get_active()),
+            watermark=bg.Watermark(enabled=bool(text.strip()), text=text,
+                                   density=widgets["tile"].get_value()),
+        )
+        self.canvas.set_background(settings)
+
+    def _choose_background_image(self):
+        dialog = Gtk.FileDialog()
+        dialog.set_title(_("Choose a background image"))
+
+        def chosen(dlg, result):
+            try:
+                gfile = dlg.open_finish(result)
+            except GLib.Error:
+                # Cancelled: fall back to whatever was selected before.
+                self._bg_widgets["fill"].set_selected(
+                    bg.FILLS.index(self.canvas.background.fill))
+                return
+            self.canvas.set_background(
+                replace(self.canvas.background, fill="image",
+                        image_path=gfile.get_path()))
+            self._on_background_changed()
+
+        dialog.open(self, None, chosen)
 
     def _build_align_buttons(self):
         """Text alignment, applied to new text and to any selected text."""
@@ -830,7 +961,8 @@ class EditorWindow(Gtk.ApplicationWindow):
                 return
             sidecar.save(image_path, self.canvas.shapes,
                          save_mod.pixbuf_to_png_bytes(self.canvas.source),
-                         crop=self.canvas.crop_rect)
+                         crop=self.canvas.crop_rect,
+                         background=self.canvas.background)
         except Exception:
             pass
 

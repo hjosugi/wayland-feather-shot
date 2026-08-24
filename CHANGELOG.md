@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Background and framing** (#36). A screenshot can now be handed back as a
+  finished image rather than raw pixels: padded on a **solid colour, a
+  gradient, or an image**, with rounded corners, a real **drop shadow** (soft /
+  long / glow / crisp), an optional **border**, a canvas **aspect ratio**
+  (1:1 / 4:3 / 3:2 / 16:9 / 9:16) with nine-point alignment inside it, and a
+  **watermark** that can sit in the corner or tile across the whole thing. All
+  of it stays live in the document — nothing is flattened into the image — and
+  it is saved in the sidecar, so a composition reopens exactly as it was.
+  Everything is expressed as a fraction of the screenshot rather than in
+  pixels, so one setting looks the same on a 1080p capture and a 4K one. Off by
+  default: a screenshot tool should hand back what you captured unless you ask
+  for more.
+
 - **Smart redaction** (#35). Redacting a screenshot before sharing meant
   finding every token, email address and IP by eye, and missing one is the
   whole risk — the failure is silent. The editor can now scan a capture with

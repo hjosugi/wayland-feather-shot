@@ -21,6 +21,7 @@ from gi.repository import Gdk, GdkPixbuf, Gtk  # noqa: E402
 
 import cairo  # noqa: E402
 
+from . import background as bg  # noqa: E402
 from . import crop as crop_mod  # noqa: E402
 from . import render, shapes as S  # noqa: E402
 from .document import Document  # noqa: E402
@@ -65,6 +66,8 @@ class EditorCanvas(Gtk.DrawingArea):
         # When True, blur/pixelate flattens the annotations below it into the
         # base first, so a redaction covers drawn annotations too.
         self.blur_composite = False
+        #: The stage the screenshot sits on when exporting.
+        self.background = bg.BackgroundSettings()
 
         # Crop mode.
         self._crop_mode = False
@@ -156,10 +159,17 @@ class EditorCanvas(Gtk.DrawingArea):
 
     # -- geometry ------------------------------------------------------------
 
-    def _displayed(self) -> GdkPixbuf.Pixbuf:
-        """What the canvas is showing: the pristine capture while cropping, so
-        a crop can be widened, and the cropped view the rest of the time."""
-        return self.source if self._crop_mode else self.base
+    def _layout(self):
+        """Where the screenshot sits on its background, in canvas pixels."""
+        return bg.layout((float(self.base.get_width()),
+                          float(self.base.get_height())), self.background)
+
+    def _displayed_size(self) -> Tuple[float, float]:
+        """The extent the canvas is showing: the source while cropping, the
+        composed canvas otherwise."""
+        if self._crop_mode:
+            return self._source_size
+        return self._layout().canvas
 
     def _fit_scale(self) -> float:
         # Crop mode insets the fit so the handles at the image edge stay on
@@ -167,16 +177,14 @@ class EditorCanvas(Gtk.DrawingArea):
         inset = CROP_MARGIN * 2 if self._crop_mode else 0
         w = max(1, self.get_width() - inset)
         h = max(1, self.get_height() - inset)
-        image = self._displayed()
-        iw, ih = image.get_width(), image.get_height()
-        return min(w / iw, h / ih, 1.0)
+        iw, ih = self._displayed_size()
+        return min(w / max(iw, 1), h / max(ih, 1), 1.0)
 
     def _view_params(self) -> Tuple[float, float, float]:
         """(scale, offset_x, offset_y) mapping page coords to widget coords."""
         w = max(1, self.get_width())
         h = max(1, self.get_height())
-        image = self._displayed()
-        iw, ih = image.get_width(), image.get_height()
+        iw, ih = self._displayed_size()
         scale = self._fit_scale() if self.zoom_to_fit else self._manual_scale
         px, py = self._clamped_pan(scale)
         ox = (w - iw * scale) / 2 + px
@@ -185,8 +193,7 @@ class EditorCanvas(Gtk.DrawingArea):
 
     def _clamped_pan(self, scale: float) -> Tuple[float, float]:
         w, h = max(1, self.get_width()), max(1, self.get_height())
-        image = self._displayed()
-        iw, ih = image.get_width(), image.get_height()
+        iw, ih = self._displayed_size()
         max_x = max(0.0, (iw * scale - w) / 2)
         max_y = max(0.0, (ih * scale - h) / 2)
         return (min(max(self._pan[0], -max_x), max_x),
@@ -200,6 +207,13 @@ class EditorCanvas(Gtk.DrawingArea):
             cx, cy, _cw, _ch = crop_mod.to_pixels(self._crop, self._source_size)
             ox += cx * scale
             oy += cy * scale
+        elif self.background.enabled:
+            # ...and on a background, the screenshot is offset inside the
+            # stage.  Pointer coordinates go through the same numbers the
+            # drawing does, so what you click is what you drew.
+            card = self._layout().card
+            ox += card[0] * scale
+            oy += card[1] * scale
         self.editor.viewport = Viewport(
             image_size=(float(self.base.get_width()), float(self.base.get_height())),
             scale=scale, offset=(ox, oy))
@@ -707,24 +721,20 @@ class EditorCanvas(Gtk.DrawingArea):
         self._draw_chrome(cr, scale, ox, oy)
 
     def _render_content(self, cr):
-        image = self._displayed()
-        Gdk.cairo_set_source_pixbuf(cr, image, 0, 0)
-        cr.paint()
         if self._crop_mode:
+            Gdk.cairo_set_source_pixbuf(cr, self.source, 0, 0)
+            cr.paint()
             # Annotations belong to the cropped region, which sits at an offset
             # inside the source the canvas is showing while cropping.
             x, y, _w, _h = crop_mod.to_pixels(self._crop, self._source_size)
             cr.save()
             cr.translate(x, y)
-        render.draw_scrim(cr, [s for s in self.shapes if s.kind == "spotlight"],
-                          self.base.get_width(), self.base.get_height())
-        for shape in self.shapes:
-            # The shape being typed into is drawn by the text overlay sitting
-            # on top of it; drawing it here too would double up.
-            if shape.sid != self.editor.editing_sid:
-                render.draw_shape(cr, shape, self.base)
-        if self._crop_mode:
+            render.draw_scene(cr, self.base, self.shapes,
+                              skip_sid=self.editor.editing_sid)
             cr.restore()
+            return
+        render.draw_composition(cr, self.base, self.shapes, self.background,
+                                skip_sid=self.editor.editing_sid)
 
     def _draw_chrome(self, cr, scale, ox, oy):
         """Selection frame, handles, marquee and crop preview — drawn in widget
@@ -856,7 +866,12 @@ class EditorCanvas(Gtk.DrawingArea):
     # -- export --------------------------------------------------------------
 
     def export_pixbuf(self) -> GdkPixbuf.Pixbuf:
-        return render.flatten(self.base, self.shapes)
+        return render.flatten(self.base, self.shapes, self.background)
+
+    def set_background(self, settings) -> None:
+        self.background = settings
+        self.zoom_fit()
+        self._notify()
 
 
 def _rects_equal(a, b, tolerance: float = 1e-6) -> bool:
