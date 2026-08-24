@@ -171,6 +171,15 @@ msgstr "認識したテキストをクリップボードにコピーしました
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr "ぼかし/モザイクで注釈も覆う(フラット化)"
 
+msgid "Align left"
+msgstr "左揃え"
+
+msgid "Align centre"
+msgstr "中央揃え"
+
+msgid "Align right"
+msgstr "右揃え"
+
 msgid "Arrowheads"
 msgstr "矢印の先端"
 

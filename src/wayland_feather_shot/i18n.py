@@ -108,6 +108,9 @@ JA = {
         "認識したテキストをクリップボードにコピーしました。",
     "Blur/pixelate covers annotations too (flatten)":
         "ぼかし/モザイクで注釈も覆う(フラット化)",
+    "Align left": "左揃え",
+    "Align centre": "中央揃え",
+    "Align right": "右揃え",
     "Arrowheads": "矢印の先端",
     "Start": "始点",
     "End": "終点",

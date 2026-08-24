@@ -113,9 +113,115 @@ class CreationTests(EditorTestCase):
         self.assertEqual(self.editor.doc.shapes[0].props.number, 1)
 
     def test_click_tools_that_need_content_ask_the_window(self):
-        self.editor.tool = "text"
-        self.assertEqual(self.editor.click(pointer(10, 10)), "text")
+        # Bubbles and stickers still need a dialog; text does not any more.
+        for tool in ("bubble", "emoji"):
+            self.editor.tool = tool
+            self.assertEqual(self.editor.click(pointer(10, 10)), tool)
         self.assertEqual(self.editor.doc.shapes, [])
+
+
+class TextEditingTests(EditorTestCase):
+    """#31: text is typed on the canvas, not into a dialog."""
+
+    def _new_text(self, at=(50, 50), text="hello"):
+        self.editor.tool = "text"
+        self.editor.click(pointer(*at))
+        sid = self.editor.editing_sid
+        self.editor.update_text(sid, text)
+        return sid
+
+    def test_clicking_with_the_text_tool_starts_typing_immediately(self):
+        self.editor.tool = "text"
+        self.assertIsNone(self.editor.click(pointer(30, 30)))
+        self.assertIsNotNone(self.editor.editing_sid)
+        self.assertEqual(len(self.editor.doc.shapes), 1)
+
+    def test_typing_updates_the_shape(self):
+        sid = self._new_text(text="annotated")
+        self.assertEqual(self.editor.doc.shape(sid).props.text, "annotated")
+        self.assertGreater(self.editor.doc.shape(sid).props.w, 0)
+
+    def test_committing_keeps_the_text(self):
+        sid = self._new_text()
+        self.editor.stop_editing()
+        self.assertIsNone(self.editor.editing_sid)
+        self.assertIsNotNone(self.editor.doc.shape(sid))
+
+    def test_an_empty_text_shape_is_discarded(self):
+        self.editor.tool = "text"
+        self.editor.click(pointer(10, 10))
+        self.editor.stop_editing()
+        self.assertEqual(self.editor.doc.shapes, [])
+
+    def test_whitespace_only_counts_as_empty(self):
+        self._new_text(text="   \n  ")
+        self.editor.stop_editing()
+        self.assertEqual(self.editor.doc.shapes, [])
+
+    def test_clicking_existing_text_reopens_it(self):
+        sid = self._new_text(at=(50, 50), text="first")
+        self.editor.stop_editing()
+        self.editor.tool = "text"
+        self.editor.click(pointer(52, 52))
+        self.assertEqual(self.editor.editing_sid, sid)
+
+    def test_clicking_elsewhere_commits_what_was_typed(self):
+        sid = self._new_text(text="kept")
+        self.editor.tool = "select"
+        self.editor.pointer_down(pointer(400, 400))
+        self.editor.pointer_up(pointer(400, 400))
+        self.assertIsNone(self.editor.editing_sid)
+        self.assertEqual(self.editor.doc.shape(sid).props.text, "kept")
+
+    def test_left_aligned_text_grows_rightwards(self):
+        sid = self._new_text(at=(100, 100), text="a")
+        origin = self.editor.doc.shape(sid).origin
+        self.editor.update_text(sid, "a much longer line")
+        self.assertEqual(self.editor.doc.shape(sid).origin, origin)
+
+    def test_centred_text_grows_evenly_to_both_sides(self):
+        self.editor.text_align = "center"
+        sid = self._new_text(at=(100, 100), text="a")
+        before = self.editor.doc.shape(sid)
+        self.editor.update_text(sid, "a much longer line")
+        after = self.editor.doc.shape(sid)
+        grew = after.props.w - before.props.w
+        self.assertAlmostEqual(before.x - after.x, grew / 2, places=6)
+
+    def test_right_aligned_text_grows_leftwards(self):
+        self.editor.text_align = "right"
+        sid = self._new_text(at=(100, 100), text="a")
+        before = self.editor.doc.shape(sid)
+        self.editor.update_text(sid, "a much longer line")
+        after = self.editor.doc.shape(sid)
+        self.assertAlmostEqual(before.x - after.x,
+                               after.props.w - before.props.w, places=6)
+
+    def test_alignment_applies_to_the_selection(self):
+        sid = self._new_text(text="x")
+        self.editor.stop_editing()
+        self.editor.doc.select([sid])
+        self.editor.set_text_align("center")
+        self.assertEqual(self.editor.doc.shape(sid).props.align, "center")
+
+    def test_a_side_handle_switches_text_from_growing_to_wrapping(self):
+        sid = self._new_text(text="a fairly long line of text")
+        self.editor.stop_editing()
+        shape = self.editor.doc.shape(sid)
+        self.assertTrue(shape.props.auto_size)
+        narrowed = shape.scaled(0.5, 1.0, width_only=True)
+        self.assertFalse(narrowed.props.auto_size)
+        self.assertGreater(narrowed.props.wrap_width, 0)
+        self.assertLess(narrowed.props.wrap_width, shape.props.w)
+
+    def test_a_corner_handle_scales_the_type_instead(self):
+        sid = self._new_text(text="scale me")
+        self.editor.stop_editing()
+        shape = self.editor.doc.shape(sid)
+        bigger = shape.scaled(2.0, 2.0)
+        self.assertTrue(bigger.props.auto_size)
+        self.assertAlmostEqual(bigger.props.style.font_size,
+                               shape.props.style.font_size * 2)
 
 
 class SelectionTests(EditorTestCase):

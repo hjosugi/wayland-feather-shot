@@ -58,6 +58,7 @@ class EditorCanvas(Gtk.DrawingArea):
         self.base = pixbuf
         self.editor = Editor(Document(), style)
         self.editor.on_change = self._notify
+        self.editor.on_editing_changed = self._on_editing_changed
         self.editor.base_provider = self._state
         self.editor.redaction_density = S.density_from_factor(blur_factor)
 
@@ -78,11 +79,12 @@ class EditorCanvas(Gtk.DrawingArea):
         self._pan_start: Optional[Tuple[float, float, float, float]] = None
 
         # Set by the window: called as (img_x, img_y, widget_x, widget_y).
-        self.on_request_text: Optional[Callable] = None
         self.on_request_bubble: Optional[Callable] = None
         self.on_request_emoji: Optional[Callable] = None
         self.on_changed: Optional[Callable] = None
         self.on_zoom_changed: Optional[Callable] = None
+        #: Called with the shape id being typed into, or None when it ends.
+        self.on_edit_text: Optional[Callable] = None
 
         self.set_hexpand(True)
         self.set_vexpand(True)
@@ -379,19 +381,12 @@ class EditorCanvas(Gtk.DrawingArea):
         if request is None:
             return
         ix, iy = pointer.page
-        callback = {"text": self.on_request_text,
-                    "bubble": self.on_request_bubble,
+        callback = {"bubble": self.on_request_bubble,
                     "emoji": self.on_request_emoji}.get(request)
         if callback:
             callback(ix, iy, x, y)
 
     # -- placing shapes from the window's popovers ---------------------------
-
-    def add_text(self, ix, iy, text, outline=True, background=False):
-        if not text.strip():
-            return
-        self.editor.add_shape(S.Text((ix, iy), text, self.editor.page_style,
-                                     outline=outline, background=background))
 
     def add_bubble(self, ix, iy, text, w=170.0, h=74.0):
         if not text.strip():
@@ -430,6 +425,44 @@ class EditorCanvas(Gtk.DrawingArea):
             return False
         self._notify()
         return True
+
+    # -- in-place text -------------------------------------------------------
+
+    def _on_editing_changed(self, sid) -> None:
+        if self.on_edit_text:
+            self.on_edit_text(sid)
+        self.queue_draw()
+
+    def text_edit_geometry(self):
+        """Where and how to draw the caret overlay for the text being typed.
+
+        Returns ``(x, y, width, height, font_px, rgba, align)`` in widget
+        coordinates, or None when nothing is being edited.
+        """
+        sid = self.editor.editing_sid
+        shape = self.editor.doc.shape(sid) if sid else None
+        if shape is None or shape.kind != "text":
+            return None
+        self._sync_viewport()
+        scale = self.editor.viewport.scale or 1.0
+        props = shape.props
+        origin = self.editor.viewport.to_widget(shape.to_page((0.0, 0.0)))
+        width = max(props.w, props.style.font_size * 3) * scale
+        height = max(props.h, props.style.font_size * 1.3) * scale
+        return (origin[0], origin[1], width, height,
+                props.style.font_size * scale, props.style.rgba, props.align)
+
+    def commit_text(self, text: str) -> None:
+        sid = self.editor.editing_sid
+        if sid is not None:
+            self.editor.update_text(sid, text)
+
+    def stop_editing(self) -> None:
+        self.editor.stop_editing()
+
+    def set_text_align(self, align: str) -> None:
+        self.editor.set_text_align(align)
+        self.queue_draw()
 
     def set_arrowhead(self, end: str, name: str) -> None:
         self.editor.set_arrowhead(end, name)
@@ -641,6 +674,7 @@ class EditorCanvas(Gtk.DrawingArea):
         image = self._displayed()
         Gdk.cairo_set_source_pixbuf(cr, image, 0, 0)
         cr.paint()
+        editing = self.editor.editing_sid
         if self._crop_mode:
             # Annotations belong to the cropped region, which sits at an offset
             # inside the source the canvas is showing while cropping.
@@ -648,7 +682,10 @@ class EditorCanvas(Gtk.DrawingArea):
             cr.save()
             cr.translate(x, y)
         for shape in self.shapes:
-            render.draw_shape(cr, shape, self.base)
+            # The shape being typed into is drawn by the text overlay sitting
+            # on top of it; drawing it here too would double up.
+            if shape.sid != editing:
+                render.draw_shape(cr, shape, self.base)
         if self._crop_mode:
             cr.restore()
 

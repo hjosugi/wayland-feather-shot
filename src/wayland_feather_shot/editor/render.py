@@ -44,8 +44,16 @@ def _scratch() -> cairo.Context:
 
 # -- text --------------------------------------------------------------------
 
+_ALIGNMENTS = {
+    "left": Pango.Alignment.LEFT,
+    "center": Pango.Alignment.CENTER,
+    "right": Pango.Alignment.RIGHT,
+}
+
+
 def make_layout(cr, text: str, style: S.Style, bold: bool = True,
-                size: Optional[float] = None):
+                size: Optional[float] = None, wrap_width: float = 0.0,
+                align: str = "left"):
     layout = PangoCairo.create_layout(cr)
     desc = Pango.FontDescription()
     desc.set_family(style.font_family or "Sans")
@@ -55,28 +63,41 @@ def make_layout(cr, text: str, style: S.Style, bold: bool = True,
     desc.set_absolute_size(max(1.0, size if size is not None else style.font_size)
                            * Pango.SCALE)
     layout.set_font_description(desc)
+    if wrap_width > 0:
+        layout.set_width(int(wrap_width * Pango.SCALE))
+        layout.set_wrap(Pango.WrapMode.WORD_CHAR)
+    layout.set_alignment(_ALIGNMENTS.get(align, Pango.Alignment.LEFT))
     layout.set_text(text, -1)
     return layout
 
 
 def measure(text: str, style: S.Style, bold: bool = True,
-            size: Optional[float] = None) -> Tuple[float, float]:
-    layout = make_layout(_scratch(), text, style, bold=bold, size=size)
+            size: Optional[float] = None,
+            wrap_width: float = 0.0) -> Tuple[float, float]:
+    layout = make_layout(_scratch(), text, style, bold=bold, size=size,
+                         wrap_width=wrap_width)
     _ink, logical = layout.get_pixel_extents()
-    return (float(logical.width), float(logical.height))
+    # A wrapped box keeps the width it was given, so the box does not snap to
+    # the longest line every time a word moves between rows.
+    width = wrap_width if wrap_width > 0 else float(logical.width)
+    return (width, float(logical.height))
 
 
-S.set_text_measurer(lambda text, style: measure(text, style))
+S.set_text_measurer(
+    lambda text, style, wrap_width=0.0: measure(text, style,
+                                                wrap_width=wrap_width))
 
 
 def draw_text(cr, text: str, x: float, y: float, style: S.Style,
               bold: bool = True, size: Optional[float] = None,
               rgba: Optional[Tuple[float, float, float, float]] = None,
-              outline: bool = False) -> None:
+              outline: bool = False, wrap_width: float = 0.0,
+              align: str = "left") -> None:
     """Draw *text* with its top-left at (x, y)."""
     if not text:
         return
-    layout = make_layout(cr, text, style, bold=bold, size=size)
+    layout = make_layout(cr, text, style, bold=bold, size=size,
+                         wrap_width=wrap_width, align=align)
     r, g, b, a = rgba if rgba is not None else style.rgba
 
     if outline:
@@ -369,7 +390,8 @@ def _draw_text(cr, shape, base):
         rounded_rect(cr, -pad, -pad, props.w + 2 * pad, props.h + 2 * pad,
                      props.style.font_size * 0.25)
         cr.fill()
-    draw_text(cr, props.text, 0, 0, props.style, outline=props.outline)
+    draw_text(cr, props.text, 0, 0, props.style, outline=props.outline,
+              wrap_width=props.effective_wrap, align=props.align)
 
 
 def _draw_marker(cr, shape, base):

@@ -196,6 +196,11 @@ class Editor:
         self.redaction_density = 0.55
         self.head_start = "none"
         self.head_end = "arrow"
+        self.text_align = "left"
+        #: The text shape currently being typed into.  The canvas skips drawing
+        #: it, because the editor overlay is showing the same text on top.
+        self.editing_sid: Optional[str] = None
+        self.on_editing_changed = None
         self.state = Idle()
         self.brush: Optional[Box] = None
         self.on_change = None
@@ -292,6 +297,11 @@ class Editor:
     # -- press -------------------------------------------------------------
 
     def pointer_down(self, p: PointerInfo) -> None:
+        if self.editing_sid is not None:
+            index = S.hit_shape(self.doc.shapes, p.page, self.hit_margin())
+            hit = self.doc.shapes[index].sid if index is not None else None
+            if hit != self.editing_sid:
+                self.stop_editing()
         if self.tool == "select":
             self._begin_select(p)
         elif self.tool == "pen":
@@ -495,11 +505,12 @@ class Editor:
         sx = math.copysign(max(abs(sx), 0.01), sx or 1.0)
         sy = math.copysign(max(abs(sy), 0.01), sy or 1.0)
 
+        width_only = not scales_y(handle)
         out = []
         for shape in state.initial:
             if shape.sid not in self.doc.selected:
                 continue
-            out.append(_scaled_about(shape, frame, anchor, sx, sy))
+            out.append(_scaled_about(shape, frame, anchor, sx, sy, width_only))
         self.doc.update_many(out)
 
     def _rotate(self, state: Rotating, p: PointerInfo) -> None:
@@ -609,9 +620,18 @@ class Editor:
         """Handle a click for the click-to-place tools.
 
         Returns the name of a tool whose content the window has to ask the user
-        for (text, bubble, emoji), or None when the click was handled here.
+        for (bubble, emoji), or None when the click was handled here.
         """
         if self.tool not in CLICK_TOOLS:
+            return None
+        if self.tool == "text":
+            # Clicking existing text edits it; clicking empty canvas starts a
+            # new one, with the caret already in it.
+            index = S.hit_shape(self.doc.shapes, p.page, self.hit_margin())
+            if index is not None and self.doc.shapes[index].kind == "text":
+                self.start_editing(self.doc.shapes[index].sid)
+            else:
+                self.create_text(p.page)
             return None
         if self.tool == "marker":
             self._mark_undo()
@@ -635,6 +655,58 @@ class Editor:
                               for s in selected])
         self._notify()
         return True
+
+    # -- text editing ------------------------------------------------------
+
+    def create_text(self, page_point: Point) -> str:
+        """Place an empty text shape and put the caret in it."""
+        self._mark_undo()
+        shape = S.Text(page_point, "", self.page_style, align=self.text_align)
+        self.doc.add(shape)
+        self.doc.select([shape.sid])
+        self.start_editing(shape.sid)
+        return shape.sid
+
+    def start_editing(self, sid: str) -> None:
+        shape = self.doc.shape(sid)
+        if shape is None or shape.kind != "text":
+            return
+        self.editing_sid = sid
+        self.doc.select([sid])
+        if self.on_editing_changed:
+            self.on_editing_changed(sid)
+        self._notify()
+
+    def update_text(self, sid: str, text: str) -> None:
+        shape = self.doc.shape(sid)
+        if shape is None or shape.kind != "text" or shape.props.text == text:
+            return
+        self.doc.update(shape.retexted(text))
+        self._notify()
+
+    def stop_editing(self) -> None:
+        """Commit what was typed.  An empty text shape is thrown away."""
+        sid, self.editing_sid = self.editing_sid, None
+        if sid is None:
+            return
+        shape = self.doc.shape(sid)
+        if shape is not None and not shape.props.text.strip():
+            self.doc.remove([sid])
+            # The click that created it was not an edit after all.
+            self.doc.cancel_undo()
+        if self.on_editing_changed:
+            self.on_editing_changed(None)
+        self._notify()
+
+    def set_text_align(self, align: str) -> None:
+        self.text_align = align
+        selected = [s for s in self.doc.selected_shapes if s.kind == "text"]
+        if not selected:
+            return
+        self._mark_undo()
+        self.doc.update_many([replace(s, props=replace(
+            s.props, align=align).remeasured()) for s in selected])
+        self._notify()
 
     def add_shape(self, shape: S.Shape) -> None:
         self._mark_undo()
@@ -665,7 +737,7 @@ def _point_in_polygon(p: Point, poly: Sequence[Point]) -> bool:
 
 
 def _scaled_about(shape: S.Shape, frame: SelectionFrame, anchor: Point,
-                  sx: float, sy: float) -> S.Shape:
+                  sx: float, sy: float, width_only: bool = False) -> S.Shape:
     """Scale one shape about *anchor*, expressed in the frame's space."""
     origin = frame.to_frame(shape.origin)
     scaled_origin = (anchor[0] + (origin[0] - anchor[0]) * sx,
@@ -678,4 +750,4 @@ def _scaled_about(shape: S.Shape, frame: SelectionFrame, anchor: Point,
     cos_r, sin_r = abs(math.cos(relative)), abs(math.sin(relative))
     local_sx = sx * cos_r + sy * sin_r
     local_sy = sy * cos_r + sx * sin_r
-    return shape.moved_to(*page_origin).scaled(local_sx, local_sy)
+    return shape.moved_to(*page_origin).scaled(local_sx, local_sy, width_only)

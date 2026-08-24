@@ -171,6 +171,15 @@ msgstr ""
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr ""
 
+msgid "Align left"
+msgstr ""
+
+msgid "Align centre"
+msgstr ""
+
+msgid "Align right"
+msgstr ""
+
 msgid "Arrowheads"
 msgstr ""
 

@@ -150,6 +150,15 @@ def install_custom_css() -> None:
         border-radius: 9px;
         padding: 8px 18px;
     }
+    .wfs-text-edit {
+        background-color: rgba(0, 0, 0, 0);
+        background-image: none;
+        caret-color: #2f7ff5;
+        padding: 0;
+    }
+    .wfs-text-edit text {
+        background-color: rgba(0, 0, 0, 0);
+    }
     .wfs-crop-bar {
         background-color: rgba(17, 24, 39, 0.96);
         border: 1px solid rgba(255, 255, 255, 0.24);

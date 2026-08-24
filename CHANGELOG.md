@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- **Text is typed on the canvas** (#31). The text tool used to open a popover;
+  you typed into a widget-scale box and pressed Add, and after that the text
+  was frozen — no re-editing, no cursor in the image, and no way to tell how
+  the result would look at export size. Now clicking with the text tool puts a
+  caret directly on the image at the right position, size and colour, and
+  clicking existing text with the tool re-opens it. Clicking away commits;
+  <kbd>Esc</kbd> or <kbd>Ctrl+Enter</kbd> finishes; an empty text shape is
+  discarded along with the undo step that created it. Text gains **alignment**
+  (left / centre / right) and an **auto-size → wrap** switch: the box hugs its
+  text until a side handle is dragged, which sets a wrap width, while corner
+  handles keep scaling the type. Growing text keeps its alignment anchor fixed,
+  so centred text grows evenly to both sides and right-aligned text grows
+  leftwards instead of everything shoving rightwards from where it was placed.
+
 - **Arrows curve, and have heads worth choosing** (#32). An arrow was a
   straight shaft with one filled triangle at the far end, which is the wrong
   tool for a dense screenshot where a straight line to the thing you mean often

@@ -81,7 +81,7 @@ class EditorWindow(Gtk.ApplicationWindow):
             self.canvas.set_source(pixbuf, crop)
         if shapes:
             self.canvas.shapes = list(shapes)
-        self.canvas.on_request_text = self._open_text_popover
+        self.canvas.on_edit_text = self._on_edit_text
         self.canvas.on_request_bubble = self._open_bubble_popover
         self.canvas.on_request_emoji = self._open_emoji_popover
         self.canvas.on_changed = self._on_canvas_changed
@@ -99,6 +99,8 @@ class EditorWindow(Gtk.ApplicationWindow):
         overlay.add_overlay(self._toast)
         self._crop_bar = self._build_crop_bar()
         overlay.add_overlay(self._crop_bar)
+        self._text_layer = self._build_text_editor()
+        overlay.add_overlay(self._text_layer)
         self.set_child(overlay)
         self._install_css()
 
@@ -168,6 +170,7 @@ class EditorWindow(Gtk.ApplicationWindow):
 
         header.pack_start(self._build_presets(color, width))
         header.pack_start(self._build_arrowhead_menu())
+        header.pack_start(self._build_align_buttons())
 
         extract = self._build_extract_menu()
         if extract is not None:
@@ -204,6 +207,99 @@ class EditorWindow(Gtk.ApplicationWindow):
         header.pack_end(copy_btn)
         header.pack_end(folder_btn)
         header.pack_end(pin_btn)
+
+    def _build_text_editor(self):
+        """The caret that sits on the canvas while text is being typed.
+
+        Typing where the text will actually appear, at the size it will appear,
+        is the point: a popover at widget scale told you nothing about how the
+        result would look at export size.
+        """
+        layer = Gtk.Fixed()
+        layer.set_visible(False)
+        layer.set_can_target(True)
+
+        self._text_view = Gtk.TextView()
+        self._text_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        self._text_view.add_css_class("wfs-text-edit")
+        self._text_view.get_buffer().connect("changed", self._on_text_changed)
+
+        keys = Gtk.EventControllerKey()
+        keys.connect("key-pressed", self._on_text_key)
+        self._text_view.add_controller(keys)
+
+        layer.put(self._text_view, 0, 0)
+        return layer
+
+    def _on_edit_text(self, sid):
+        if sid is None:
+            self._text_layer.set_visible(False)
+            self.canvas.grab_focus()
+            return
+        buffer = self._text_view.get_buffer()
+        shape = self.canvas.editor.doc.shape(sid)
+        self._suppress_text_change = True
+        buffer.set_text(shape.props.text if shape else "")
+        self._suppress_text_change = False
+        self._text_layer.set_visible(True)
+        self._position_text_editor()
+        self._text_view.grab_focus()
+
+    def _position_text_editor(self):
+        geometry = self.canvas.text_edit_geometry()
+        if geometry is None:
+            return
+        x, y, width, height, font_px, rgba, align = geometry
+        self._text_layer.move(self._text_view, int(x), int(y))
+        self._text_view.set_size_request(int(width) + 12, int(height) + 6)
+        self._text_view.set_justification({
+            "left": Gtk.Justification.LEFT,
+            "center": Gtk.Justification.CENTER,
+            "right": Gtk.Justification.RIGHT,
+        }.get(align, Gtk.Justification.LEFT))
+        self._style_text_editor(font_px, rgba)
+
+    def _style_text_editor(self, font_px, rgba):
+        """Match the caret's type to the annotation's.
+
+        Styled with a text tag rather than CSS: the size changes with the zoom
+        level, and a tag carries both the size and the colour without reloading
+        a stylesheet on every keystroke.
+        """
+        buffer = self._text_view.get_buffer()
+        tag_table = buffer.get_tag_table()
+        tag = tag_table.lookup("wfs-live")
+        if tag is None:
+            tag = buffer.create_tag("wfs-live")
+        desc = Pango.FontDescription()
+        desc.set_family("Sans")
+        desc.set_weight(Pango.Weight.BOLD)
+        desc.set_absolute_size(max(6.0, font_px) * Pango.SCALE)
+        tag.set_property("font-desc", desc)
+        colour = Gdk.RGBA()
+        colour.red, colour.green, colour.blue, colour.alpha = rgba
+        tag.set_property("foreground-rgba", colour)
+        start, end = buffer.get_bounds()
+        buffer.apply_tag(tag, start, end)
+
+    def _on_text_changed(self, buffer):
+        if getattr(self, "_suppress_text_change", False):
+            return
+        start, end = buffer.get_bounds()
+        self.canvas.commit_text(buffer.get_text(start, end, False))
+        # The shape grows as it is typed into, so the caret follows it.
+        self._position_text_editor()
+
+    def _on_text_key(self, _controller, keyval, _keycode, state):
+        if keyval == Gdk.KEY_Escape:
+            self.canvas.stop_editing()
+            return True
+        # Enter is a newline; Ctrl+Enter finishes, matching the old popover.
+        if (keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter)
+                and state & Gdk.ModifierType.CONTROL_MASK):
+            self.canvas.stop_editing()
+            return True
+        return False
 
     def _build_crop_bar(self):
         """Aspect presets plus apply/cancel, shown only while cropping.
@@ -337,6 +433,31 @@ class EditorWindow(Gtk.ApplicationWindow):
         popover.set_child(box)
         menu.set_popover(popover)
         return menu
+
+    def _build_align_buttons(self):
+        """Text alignment, applied to new text and to any selected text."""
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
+        box.add_css_class("linked")
+        first = None
+        for name, icon, tip in (
+                ("left", "format-justify-left-symbolic", _("Align left")),
+                ("center", "format-justify-center-symbolic", _("Align centre")),
+                ("right", "format-justify-right-symbolic", _("Align right"))):
+            btn = Gtk.ToggleButton()
+            btn.set_icon_name(icon)
+            btn.set_tooltip_text(tip)
+            if first is None:
+                first = btn
+                btn.set_active(True)
+            else:
+                btn.set_group(first)
+            btn.connect("toggled", self._on_align_toggled, name)
+            box.append(btn)
+        return box
+
+    def _on_align_toggled(self, button, name):
+        if button.get_active():
+            self.canvas.set_text_align(name)
 
     def _build_arrowhead_menu(self):
         """Which head each end of a new arrow gets.
@@ -516,68 +637,6 @@ class EditorWindow(Gtk.ApplicationWindow):
             font_family=family))
 
     # -- text tool ---------------------------------------------------------------
-
-    def _open_text_popover(self, ix, iy, wx, wy):
-        popover = Gtk.Popover()
-        popover.set_parent(self.canvas)
-        rect = Gdk.Rectangle()
-        rect.x, rect.y, rect.width, rect.height = int(wx), int(wy), 1, 1
-        popover.set_pointing_to(rect)
-
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-
-        view = Gtk.TextView()
-        view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
-        view.set_size_request(240, 72)
-        view.add_css_class("wfs-text-entry")
-        buf = view.get_buffer()
-        scroller = Gtk.ScrolledWindow()
-        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scroller.set_child(view)
-        scroller.set_size_request(240, 72)
-        box.append(scroller)
-
-        opts = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        outline_chk = Gtk.CheckButton(label=_("Outline"))
-        outline_chk.set_active(True)
-        bg_chk = Gtk.CheckButton(label=_("Background"))
-        opts.append(outline_chk)
-        opts.append(bg_chk)
-        opts.append(Gtk.Box(hexpand=True))  # spacer
-        add_btn = Gtk.Button(label=_("Add"))
-        add_btn.add_css_class("suggested-action")
-        opts.append(add_btn)
-        box.append(opts)
-        box.append(Gtk.Label(
-            label=_("Enter: newline · Ctrl+Enter: add"),
-            css_classes=["dim-label"]))
-
-        def commit(*_a):
-            start, end = buf.get_bounds()
-            text = buf.get_text(start, end, False)
-            self.canvas.add_text(ix, iy, text,
-                                 outline=outline_chk.get_active(),
-                                 background=bg_chk.get_active())
-            popover.popdown()
-
-        add_btn.connect("clicked", commit)
-
-        keys = Gtk.EventControllerKey()
-
-        def on_key(_c, keyval, _kc, state):
-            if (keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter)
-                    and state & Gdk.ModifierType.CONTROL_MASK):
-                commit()
-                return True
-            return False
-
-        keys.connect("key-pressed", on_key)
-        view.add_controller(keys)
-
-        popover.set_child(box)
-        popover.connect("closed", lambda p: GLib.idle_add(p.unparent))
-        popover.popup()
-        view.grab_focus()
 
     def _popover_at(self, wx, wy):
         popover = Gtk.Popover()

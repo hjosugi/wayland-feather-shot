@@ -74,12 +74,21 @@ class Style:
 # measurer at import time; until then a rough monospace estimate keeps the
 # model usable (and testable) on its own.
 
-MeasureFn = Callable[[str, Style], Tuple[float, float]]
+MeasureFn = Callable[[str, Style, float], Tuple[float, float]]
 
 
-def _estimate_text(text: str, style: Style) -> Tuple[float, float]:
+def _estimate_text(text: str, style: Style,
+                   wrap_width: float = 0.0) -> Tuple[float, float]:
+    """A rough monospace guess, for when Pango is not importable (CI)."""
+    per_char = style.font_size * 0.6
     lines = text.split("\n") or [""]
-    width = max((len(line) for line in lines), default=0) * style.font_size * 0.6
+    if wrap_width > 0:
+        columns = max(1, int(wrap_width / per_char))
+        wrapped = 0
+        for line in lines:
+            wrapped += max(1, -(-len(line) // columns))
+        return (wrap_width, wrapped * style.font_size * 1.3)
+    width = max((len(line) for line in lines), default=0) * per_char
     return (width, len(lines) * style.font_size * 1.3)
 
 
@@ -92,7 +101,8 @@ def set_text_measurer(fn: MeasureFn) -> None:
     _measure_text = fn
 
 
-def measure_text(text: str, style: Style) -> Tuple[float, float]:
+def measure_text(text: str, style: Style,
+                 wrap_width: float = 0.0) -> Tuple[float, float]:
     """Measure a string, hooking up the real measurer on first use.
 
     The estimate exists so the model can be imported and tested without a
@@ -108,12 +118,13 @@ def measure_text(text: str, style: Style) -> Tuple[float, float]:
         except Exception:
             # No GObject stack: keep the estimate.
             _measure_text = _estimate_text_final
-    return _measure_text(text, style)
+    return _measure_text(text, style, wrap_width)
 
 
-def _estimate_text_final(text: str, style: Style) -> Tuple[float, float]:
+def _estimate_text_final(text: str, style: Style,
+                         wrap_width: float = 0.0) -> Tuple[float, float]:
     """The estimate, under a distinct name so the hook only runs once."""
-    return _estimate_text(text, style)
+    return _estimate_text(text, style, wrap_width)
 
 
 # -- payloads ----------------------------------------------------------------
@@ -127,8 +138,13 @@ class Props:
     def geometry(self) -> Geometry:
         raise NotImplementedError
 
-    def scaled(self, sx: float, sy: float) -> "Props":
-        """Return a copy scaled about the local origin."""
+    def scaled(self, sx: float, sy: float, width_only: bool = False) -> "Props":
+        """Return a copy scaled about the local origin.
+
+        *width_only* means the drag was a side handle rather than a corner;
+        only text cares, and for it the distinction is the difference between
+        resizing the box and resizing the type.
+        """
         raise NotImplementedError
 
     def restyled(self, style: Style) -> "Props":
@@ -164,7 +180,7 @@ class PenProps(Props):
             return Polygon2d(line, filled=False, padding=padding)
         return Polyline2d(line, padding=padding)
 
-    def scaled(self, sx, sy):
+    def scaled(self, sx, sy, width_only: bool = False):
         return replace(self, points=tuple((x * sx, y * sy) for x, y in self.points))
 
 
@@ -208,7 +224,7 @@ class ArrowProps(Props):
         r = self.badge_radius
         return Group2d([shaft, _Placed(Circle2d(r * 2, filled=True), (-r, -r))])
 
-    def scaled(self, sx, sy):
+    def scaled(self, sx, sy, width_only: bool = False):
         return replace(self, end=(self.end[0] * sx, self.end[1] * sy),
                        bend=self.bend * _mean_scale(sx, sy))
 
@@ -228,7 +244,7 @@ class GeoProps(Props):
         cls = Ellipse2d if self.geo == "ellipse" else Rect2d
         return cls(self.w, self.h, filled=self.filled)
 
-    def scaled(self, sx, sy):
+    def scaled(self, sx, sy, width_only: bool = False):
         return replace(self, w=max(1.0, abs(self.w * sx)), h=max(1.0, abs(self.h * sy)))
 
 
@@ -244,7 +260,7 @@ class HighlightProps(Props):
     def geometry(self):
         return Rect2d(self.w, self.h, filled=True)
 
-    def scaled(self, sx, sy):
+    def scaled(self, sx, sy, width_only: bool = False):
         return replace(self, w=max(1.0, abs(self.w * sx)), h=max(1.0, abs(self.h * sy)))
 
 
@@ -265,8 +281,14 @@ class ObscureProps(Props):
     def geometry(self):
         return Rect2d(self.w, self.h, filled=True)
 
-    def scaled(self, sx, sy):
+    def scaled(self, sx, sy, width_only: bool = False):
         return replace(self, w=max(1.0, abs(self.w * sx)), h=max(1.0, abs(self.h * sy)))
+
+
+ALIGNMENTS = ("left", "center", "right")
+
+#: A wrapped text box never gets narrower than this many page units.
+MIN_TEXT_WIDTH = 24.0
 
 
 @dataclass(frozen=True)
@@ -274,8 +296,12 @@ class TextProps(Props):
     """Text anchored at the local origin.
 
     ``w``/``h`` are the measured size, kept on the payload so geometry and
-    hit-testing stay pure; :meth:`remeasured` refreshes them whenever the text
-    or the style changes.
+    hit-testing stay pure; :meth:`remeasured` refreshes them whenever the text,
+    the style or the wrap width changes.
+
+    While ``auto_size`` is true the box is exactly as wide as its text.
+    Dragging a side handle turns it off and sets ``wrap_width``, which is how
+    text switches from growing to wrapping.
     """
 
     KIND = "text"
@@ -285,26 +311,46 @@ class TextProps(Props):
     h: float = 0.0
     outline: bool = True
     background: bool = False
+    align: str = "left"
+    auto_size: bool = True
+    wrap_width: float = 0.0
 
     @property
     def padding(self) -> float:
         return self.style.font_size * 0.3
+
+    @property
+    def effective_wrap(self) -> float:
+        """The width text wraps into, or 0 when it grows instead."""
+        return 0.0 if self.auto_size else max(self.wrap_width, MIN_TEXT_WIDTH)
 
     def geometry(self):
         pad = self.padding
         return _Placed(Rect2d(self.w + 2 * pad, self.h + 2 * pad, filled=True),
                        (-pad, -pad))
 
-    def scaled(self, sx, sy):
+    def scaled(self, sx, sy, width_only: bool = False):
+        if width_only:
+            # A side handle sets the width text wraps into rather than scaling
+            # the type: that is the whole gesture for turning a growing box
+            # into a wrapping one.
+            width = self.w if not self.auto_size else self.w
+            return replace(self, auto_size=False,
+                           wrap_width=max(MIN_TEXT_WIDTH,
+                                          abs(width * sx))).remeasured()
         scale = _mean_scale(sx, sy)
         style = replace(self.style, font_size=max(4.0, self.style.font_size * scale))
-        return replace(self, style=style).remeasured()
+        wrap = self.wrap_width * scale if not self.auto_size else self.wrap_width
+        return replace(self, style=style, wrap_width=wrap).remeasured()
 
     def restyled(self, style):
         return replace(self, style=style).remeasured()
 
+    def with_text(self, text: str) -> "TextProps":
+        return replace(self, text=text).remeasured()
+
     def remeasured(self) -> "TextProps":
-        w, h = measure_text(self.text, self.style)
+        w, h = measure_text(self.text, self.style, self.effective_wrap)
         return replace(self, w=w, h=h)
 
 
@@ -320,7 +366,7 @@ class MarkerProps(Props):
     def geometry(self):
         return Circle2d(self.diameter, filled=True)
 
-    def scaled(self, sx, sy):
+    def scaled(self, sx, sy, width_only: bool = False):
         return replace(self, diameter=max(8.0, self.diameter * _mean_scale(sx, sy)))
 
 
@@ -341,7 +387,7 @@ class BubbleProps(Props):
     def geometry(self):
         return Rect2d(self.w, self.h + self.tail_depth, filled=True)
 
-    def scaled(self, sx, sy):
+    def scaled(self, sx, sy, width_only: bool = False):
         return replace(self, w=max(6.0, abs(self.w * sx)), h=max(6.0, abs(self.h * sy)))
 
 
@@ -360,7 +406,7 @@ class EmojiProps(Props):
     def geometry(self):
         return Rect2d(self.w, self.size, filled=True)
 
-    def scaled(self, sx, sy):
+    def scaled(self, sx, sy, width_only: bool = False):
         return replace(self, size=max(8.0, self.size * _mean_scale(sx, sy)))
 
 
@@ -442,8 +488,28 @@ class Shape:
         nx, ny = rotate((self.x, self.y), delta, center)
         return replace(self, x=nx, y=ny, rotation=self.rotation + delta)
 
-    def scaled(self, sx: float, sy: float) -> "Shape":
-        return replace(self, props=self.props.scaled(sx, sy))
+    def scaled(self, sx: float, sy: float, width_only: bool = False) -> "Shape":
+        return replace(self, props=self.props.scaled(sx, sy, width_only))
+
+    def retexted(self, text: str) -> "Shape":
+        """Set a text shape's content, keeping its alignment anchor fixed.
+
+        Centred text grows evenly to both sides and right-aligned text grows
+        leftwards; without this every edit would shove the box rightwards from
+        wherever it was placed.
+        """
+        if self.kind != "text":
+            return self
+        before = self.props.w
+        props = self.props.with_text(text)
+        delta = props.w - before
+        if delta == 0 or props.align == "left":
+            return replace(self, props=props)
+        shift = delta / 2 if props.align == "center" else delta
+        # The shift happens in the shape's own frame, so rotated text still
+        # grows the right way.
+        dx, dy = rotate((shift, 0.0), self.rotation)
+        return replace(self, x=self.x - dx, y=self.y - dy, props=props)
 
     def restyled(self, style: Style) -> "Shape":
         return replace(self, props=self.props.restyled(style))
@@ -542,8 +608,9 @@ def Obscure(rect, density: float = 0.55, pixelate: bool = False) -> Shape:
 
 
 def Text(pos: Point, text: str, style: Style, outline: bool = True,
-         background: bool = False) -> Shape:
-    props = TextProps(text, style, outline=outline, background=background).remeasured()
+         background: bool = False, align: str = "left") -> Shape:
+    props = TextProps(text, style, outline=outline, background=background,
+                      align=align).remeasured()
     return Shape(pos[0], pos[1], props)
 
 
@@ -605,6 +672,7 @@ __all__ = [
     "REFERENCE_EDGE", "Style", "Shape", "Props", "Box", "Point",
     "PenProps", "ArrowProps", "GeoProps", "HighlightProps", "ObscureProps",
     "TextProps", "MarkerProps", "BubbleProps", "EmojiProps",
+    "ALIGNMENTS", "MIN_TEXT_WIDTH",
     "Pen", "Line", "Arrow", "StepArrow", "RectShape", "EllipseShape",
     "Highlight", "Obscure", "Text", "Marker", "SpeechBubble", "EmojiSticker",
     "next_number", "hit_shape", "shapes_in", "selection_bounds", "norm_rect",
