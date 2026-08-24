@@ -97,6 +97,45 @@ class BaseImageTests(unittest.TestCase):
             sidecar.decode(data)
 
 
+class CropTests(unittest.TestCase):
+    """The crop is stored as a rect over the pristine image, so a reopened
+    screenshot can have its crop widened again."""
+
+    def test_the_crop_round_trips(self):
+        restored = sidecar.decode(sidecar.encode([], crop=(0.1, 0.2, 0.5, 0.6)))
+        self.assertEqual(restored.crop, (0.1, 0.2, 0.5, 0.6))
+
+    def test_a_document_without_a_crop_covers_the_whole_image(self):
+        self.assertEqual(sidecar.decode(sidecar.encode([])).crop, (0, 0, 1, 1))
+
+    def test_a_crop_outside_the_image_falls_back_to_the_whole_image(self):
+        data = sidecar.encode([])
+        data["crop"] = [0.0, 0.0, 5.0, 5.0]
+        self.assertEqual(sidecar.decode(data).crop, (0, 0, 1, 1))
+
+    def test_an_empty_crop_falls_back_to_the_whole_image(self):
+        data = sidecar.encode([])
+        data["crop"] = [0.5, 0.5, 0.0, 0.0]
+        self.assertEqual(sidecar.decode(data).crop, (0, 0, 1, 1))
+
+    def test_a_malformed_crop_does_not_take_the_annotations_with_it(self):
+        data = sidecar.encode([S.RectShape((0, 0, 9, 9), STYLE)])
+        data["crop"] = "nonsense"
+        document = sidecar.decode(data)
+        self.assertEqual(document.crop, (0, 0, 1, 1))
+        self.assertEqual(len(document.shapes), 1)
+
+    def test_the_crop_survives_a_file(self):
+        directory = tempfile.mkdtemp()
+        try:
+            image = os.path.join(directory, "shot.png")
+            sidecar.save(image, [S.RectShape((0, 0, 9, 9), STYLE)],
+                         crop=(0.25, 0.25, 0.5, 0.5))
+            self.assertEqual(sidecar.load(image).crop, (0.25, 0.25, 0.5, 0.5))
+        finally:
+            shutil.rmtree(directory, ignore_errors=True)
+
+
 class ToleranceTests(unittest.TestCase):
     """A document from a newer minor release still has to open."""
 

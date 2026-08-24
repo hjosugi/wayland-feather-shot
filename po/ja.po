@@ -171,6 +171,21 @@ msgstr "認識したテキストをクリップボードにコピーしました
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr "ぼかし/モザイクで注釈も覆う(フラット化)"
 
+msgid "Freeform"
+msgstr "自由"
+
+msgid "Original"
+msgstr "元の比率"
+
+msgid "Cancel (Esc)"
+msgstr "キャンセル (Esc)"
+
+msgid "Crop (Enter)"
+msgstr "切り抜き (Enter)"
+
+msgid "Cropped. Undo restores the full image."
+msgstr "切り抜きました。元に戻すで全体が復元されます。"
+
 msgid "Zoom out (Ctrl+-)"
 msgstr "縮小 (Ctrl+-)"
 
@@ -209,9 +224,6 @@ msgstr "画面にピン留め(枠なしウィンドウ)"
 
 msgid "Pin to screen (Ctrl+P)"
 msgstr "画面にピン留め (Ctrl+P)"
-
-msgid "Cancel (Esc)"
-msgstr "キャンセル (Esc)"
 
 msgid "Saved  {path}"
 msgstr "保存しました  {path}"

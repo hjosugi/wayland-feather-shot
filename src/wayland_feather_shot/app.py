@@ -225,16 +225,17 @@ class FeatherShotApp(Gtk.Application):
             _die_dialog(self, tr("Could not read the captured image: {error}", error=e))
             self.release()
             return
-        pixbuf, shapes, toast = self._restore_sidecar(path, pixbuf)
+        pixbuf, shapes, crop, toast = self._restore_sidecar(path, pixbuf)
         win = EditorWindow(self, pixbuf, self.settings, shapes=shapes,
-                           startup_toast=toast)
+                           startup_toast=toast, crop=crop)
         win.connect("destroy", lambda *_: self.release())
         win.present()
 
     def _restore_sidecar(self, path, pixbuf):
         """Reopen the editable document saved next to *path*, if there is one.
 
-        Returns the base image to edit, the annotations to restore, and a toast.
+        Returns the base image to edit, the annotations to restore, the crop
+        to re-apply, and a toast.
         Anything unreadable degrades to the flat image — which is always still
         correct, just not re-editable — with a note saying so, because silently
         dropping someone's annotations would be the worse failure.
@@ -245,21 +246,22 @@ class FeatherShotApp(Gtk.Application):
         try:
             document = sidecar.load(path)
         except sidecar.UnsupportedVersion:
-            return pixbuf, None, _("Annotations were saved by a newer version; "
-                                   "opening the flat image.")
+            return pixbuf, None, None, _(
+                "Annotations were saved by a newer version; "
+                "opening the flat image.")
         except sidecar.SidecarError as e:
-            return pixbuf, None, tr("Could not reopen the annotations: {error}",
-                                    error=e)
+            return pixbuf, None, None, tr(
+                "Could not reopen the annotations: {error}", error=e)
         if document is None or not document.shapes:
-            return pixbuf, None, None
+            return pixbuf, None, None, None
 
         if document.base_png:
             try:
                 pixbuf = save_mod.pixbuf_from_png_bytes(document.base_png)
             except ValueError as e:
-                return pixbuf, None, tr(
+                return pixbuf, None, None, tr(
                     "Could not reopen the annotations: {error}", error=e)
-        return (pixbuf, list(document.shapes),
+        return (pixbuf, list(document.shapes), document.crop,
                 tr("Restored {count} editable annotations.",
                    count=len(document.shapes)))
 

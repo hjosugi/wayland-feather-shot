@@ -108,6 +108,11 @@ JA = {
         "認識したテキストをクリップボードにコピーしました。",
     "Blur/pixelate covers annotations too (flatten)":
         "ぼかし/モザイクで注釈も覆う(フラット化)",
+    "Freeform": "自由",
+    "Original": "元の比率",
+    "Cancel (Esc)": "キャンセル (Esc)",
+    "Crop (Enter)": "切り抜き (Enter)",
+    "Cropped. Undo restores the full image.": "切り抜きました。元に戻すで全体が復元されます。",
     "Zoom out (Ctrl+-)": "縮小 (Ctrl+-)",
     "Zoom in (Ctrl++)": "拡大 (Ctrl++)",
     "Fit / actual size (Ctrl+1 / Ctrl+0)": "全体表示 / 等倍 (Ctrl+1 / Ctrl+0)",

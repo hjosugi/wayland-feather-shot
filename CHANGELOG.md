@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- **Crop is now a rect over the pristine image, not a resample** (#30). Press
+  `C` and the canvas shows the untouched capture with the current crop
+  selected, so an earlier crop can be **widened** again and not only tightened
+  — the pixels outside it are no longer thrown away. Eight drag handles, a
+  rule-of-thirds grid, everything outside dimmed, and aspect presets:
+  Freeform / Original / 1:1 / 16:9 / 9:16 / 4:3 / 3:2. Corner drags respect the
+  lock, edge drags ignore it, <kbd>Alt</kbd> resizes about the centre. Crop is
+  modal: <kbd>Enter</kbd> applies, <kbd>Esc</kbd> cancels, and other editing
+  shortcuts are swallowed so they cannot act on the layer the overlay covers.
+  Applying remaps the annotations and is one undo step, and the crop is stored
+  in the sidecar so a reopened screenshot is still adjustable. The fit leaves
+  room around the image while cropping, so a handle dragged to the very edge
+  stays grabbable.
+
 - **Annotations stay editable after saving** (#27). Saving a screenshot that
   has annotations now writes an editable document beside it as
   `<image>.wfs.json`, and `wayland-feather-shot edit x.png` picks the

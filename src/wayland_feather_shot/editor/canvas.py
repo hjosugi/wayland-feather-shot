@@ -19,6 +19,9 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gdk, GdkPixbuf, Gtk  # noqa: E402
 
+import cairo  # noqa: E402
+
+from . import crop as crop_mod  # noqa: E402
 from . import render, shapes as S  # noqa: E402
 from .document import Document  # noqa: E402
 from .geometry import norm_rect  # noqa: E402
@@ -33,22 +36,40 @@ HANDLE_R = 4.5          # widget px
 ROTATE_HANDLE_R = 4.0
 SELECTION_RGBA = (0.20, 0.60, 1.00, 0.95)
 
+CROP_HANDLE_R = 5.5     # widget px
+CROP_HANDLE_HIT = 13.0
+# Room reserved around the image while cropping, so a handle dragged to the
+# very edge stays on-screen and grabbable.
+CROP_MARGIN = 30.0
+CROP_DIM_ALPHA = 0.55
+CROP_MIN_SIZE = 0.02    # normalized
+
 
 class EditorCanvas(Gtk.DrawingArea):
     def __init__(self, pixbuf: GdkPixbuf.Pixbuf, style: S.Style,
                  blur_factor: int = 8):
         super().__init__()
+        # The pristine capture, and the region of it currently being edited.
+        # Keeping both means a crop is a *rect*, not a destructive resample:
+        # it can be widened again later, and it can be stored in the sidecar
+        # and re-applied to the original.
+        self.source = pixbuf
+        self._crop = crop_mod.UNIT
         self.base = pixbuf
         self.editor = Editor(Document(), style)
         self.editor.on_change = self._notify
-        self.editor.base_provider = lambda: self.base
+        self.editor.base_provider = self._state
         self.editor.redaction_density = S.density_from_factor(blur_factor)
 
         # When True, blur/pixelate flattens the annotations below it into the
         # base first, so a redaction covers drawn annotations too.
         self.blur_composite = False
-        self._crop_preview: Optional[Tuple[float, float, float, float]] = None
-        self._crop_start: Optional[Tuple[float, float]] = None
+
+        # Crop mode.
+        self._crop_mode = False
+        self._crop_rect = crop_mod.UNIT
+        self._crop_aspect = "free"
+        self._crop_drag: Optional[Tuple[str, Tuple[float, float], Tuple[float, float, float, float]]] = None
 
         # Camera.
         self.zoom_to_fit = True
@@ -133,17 +154,27 @@ class EditorCanvas(Gtk.DrawingArea):
 
     # -- geometry ------------------------------------------------------------
 
+    def _displayed(self) -> GdkPixbuf.Pixbuf:
+        """What the canvas is showing: the pristine capture while cropping, so
+        a crop can be widened, and the cropped view the rest of the time."""
+        return self.source if self._crop_mode else self.base
+
     def _fit_scale(self) -> float:
-        w = max(1, self.get_width())
-        h = max(1, self.get_height())
-        iw, ih = self.base.get_width(), self.base.get_height()
+        # Crop mode insets the fit so the handles at the image edge stay on
+        # screen and clickable.
+        inset = CROP_MARGIN * 2 if self._crop_mode else 0
+        w = max(1, self.get_width() - inset)
+        h = max(1, self.get_height() - inset)
+        image = self._displayed()
+        iw, ih = image.get_width(), image.get_height()
         return min(w / iw, h / ih, 1.0)
 
     def _view_params(self) -> Tuple[float, float, float]:
         """(scale, offset_x, offset_y) mapping page coords to widget coords."""
         w = max(1, self.get_width())
         h = max(1, self.get_height())
-        iw, ih = self.base.get_width(), self.base.get_height()
+        image = self._displayed()
+        iw, ih = image.get_width(), image.get_height()
         scale = self._fit_scale() if self.zoom_to_fit else self._manual_scale
         px, py = self._clamped_pan(scale)
         ox = (w - iw * scale) / 2 + px
@@ -152,7 +183,8 @@ class EditorCanvas(Gtk.DrawingArea):
 
     def _clamped_pan(self, scale: float) -> Tuple[float, float]:
         w, h = max(1, self.get_width()), max(1, self.get_height())
-        iw, ih = self.base.get_width(), self.base.get_height()
+        image = self._displayed()
+        iw, ih = image.get_width(), image.get_height()
         max_x = max(0.0, (iw * scale - w) / 2)
         max_y = max(0.0, (ih * scale - h) / 2)
         return (min(max(self._pan[0], -max_x), max_x),
@@ -160,17 +192,23 @@ class EditorCanvas(Gtk.DrawingArea):
 
     def _sync_viewport(self) -> None:
         scale, ox, oy = self._view_params()
+        if self._crop_mode:
+            # Annotations sit in the cropped image's space, which is offset
+            # inside the source the canvas is currently showing.
+            cx, cy, _cw, _ch = crop_mod.to_pixels(self._crop, self._source_size)
+            ox += cx * scale
+            oy += cy * scale
         self.editor.viewport = Viewport(
             image_size=(float(self.base.get_width()), float(self.base.get_height())),
             scale=scale, offset=(ox, oy))
 
+    @property
+    def _source_size(self) -> Tuple[float, float]:
+        return (float(self.source.get_width()), float(self.source.get_height()))
+
     def _to_image(self, wx: float, wy: float) -> Tuple[float, float]:
         self._sync_viewport()
         return self.editor.viewport.to_page(wx, wy)
-
-    def _clamped_to_image(self, p) -> Tuple[float, float]:
-        return (max(0.0, min(p[0], self.base.get_width())),
-                max(0.0, min(p[1], self.base.get_height())))
 
     # -- zoom ----------------------------------------------------------------
 
@@ -247,11 +285,11 @@ class EditorCanvas(Gtk.DrawingArea):
     # -- history -------------------------------------------------------------
 
     def undo(self):
-        self.base = self.editor.doc.undo(self.base) or self.base
+        self._restore_state(self.editor.doc.undo(self._state()))
         self._notify()
 
     def redo(self):
-        self.base = self.editor.doc.redo(self.base) or self.base
+        self._restore_state(self.editor.doc.redo(self._state()))
         self._notify()
 
     def _notify(self):
@@ -277,9 +315,8 @@ class EditorCanvas(Gtk.DrawingArea):
 
     def _on_drag_begin(self, gesture, x, y):
         state = gesture.get_current_event_state()
-        if self.tool == "crop":
-            self._crop_start = self._clamped_to_image(self._to_image(x, y))
-            self._crop_preview = None
+        if self._crop_mode:
+            self._crop_press(x, y)
             return
         self.editor.pointer_down(self._pointer(x, y, state))
 
@@ -288,25 +325,18 @@ class EditorCanvas(Gtk.DrawingArea):
         if not ok:
             return
         state = gesture.get_current_event_state()
-        if self.tool == "crop":
-            if self._crop_start is None:
-                return
-            cur = self._clamped_to_image(self._to_image(sx + dx, sy + dy))
-            self._crop_preview = norm_rect(*self._crop_start, *cur)
-            self.queue_draw()
+        if self._crop_mode:
+            self._crop_move(sx + dx, sy + dy,
+                            bool(state & Gdk.ModifierType.ALT_MASK))
             return
         self.editor.pointer_move(self._pointer(sx + dx, sy + dy, state))
 
     def _on_drag_end(self, gesture, dx, dy):
         ok, sx, sy = gesture.get_start_point()
         state = gesture.get_current_event_state()
-        if self.tool == "crop":
-            crop, self._crop_preview = self._crop_preview, None
-            self._crop_start = None
-            if crop and crop[2] >= 4 and crop[3] >= 4:
-                self.apply_crop(crop)
-            else:
-                self.queue_draw()
+        if self._crop_mode:
+            self._crop_drag = None
+            self.queue_draw()
             return
         if not ok:
             return
@@ -333,7 +363,12 @@ class EditorCanvas(Gtk.DrawingArea):
         if index is None or index == 0:
             return  # nothing underneath to bake in
         below, rest = doc.shapes[:index], doc.shapes[index:]
-        self.base = render.flatten(self.base, below)
+        # Flattening is the one deliberately destructive operation: the baked
+        # pixels become the new pristine image, so a crop can no longer be
+        # widened past what is now burned in.
+        self.source = render.flatten(self.base, below)
+        self._crop = crop_mod.UNIT
+        self._rebuild_base()
         doc.shapes = list(rest)
 
     def _on_click(self, gesture, n_press, x, y):
@@ -376,7 +411,7 @@ class EditorCanvas(Gtk.DrawingArea):
         doc = self.editor.doc
         if not doc.has_selection:
             return False
-        doc.mark_undo(self.base)
+        doc.mark_undo(self._state())
         doc.delete_selected()
         self._notify()
         return True
@@ -389,7 +424,7 @@ class EditorCanvas(Gtk.DrawingArea):
                              font_family=style.font_family,
                              width=S.page_stroke_width(
                                  style.width, self.editor.viewport.image_edge))
-        doc.mark_undo(self.base)
+        doc.mark_undo(self._state())
         if not doc.restyle_selected(page_style):
             doc.cancel_undo()
             return False
@@ -400,7 +435,7 @@ class EditorCanvas(Gtk.DrawingArea):
         doc = self.editor.doc
         if not doc.has_selection:
             return False
-        doc.mark_undo(self.base)
+        doc.mark_undo(self._state())
         doc.nudge_selected(dx, dy)
         self._notify()
         return True
@@ -423,24 +458,164 @@ class EditorCanvas(Gtk.DrawingArea):
         doc = self.editor.doc
         if not doc.has_selection:
             return False
-        doc.mark_undo(self.base)
+        doc.mark_undo(self._state())
         action()
         self._notify()
         return True
 
     # -- crop ----------------------------------------------------------------
 
-    def apply_crop(self, rect):
-        x, y, w, h = (int(v) for v in rect)
-        bw, bh = self.base.get_width(), self.base.get_height()
-        x = max(0, min(x, bw - 1))
-        y = max(0, min(y, bh - 1))
-        w = max(1, min(w, bw - x))
-        h = max(1, min(h, bh - y))
-        self.editor.doc.mark_undo(self.base)
-        self.base = self.base.new_subpixbuf(x, y, w, h).copy()
-        self.editor.doc.translate_all(-x, -y)
+    @property
+    def crop_rect(self):
+        """The committed crop, normalized against :attr:`source`."""
+        return self._crop
+
+    def set_source(self, pixbuf, crop=crop_mod.UNIT) -> None:
+        """Replace the pristine image and the region being edited.
+
+        Used when reopening a saved document: the sidecar stores the untouched
+        capture plus the crop, so the editor comes back with the same view and
+        the crop still adjustable.
+        """
+        self.source = pixbuf
+        self._crop = crop
+        self._rebuild_base()
+        self.zoom_fit()
+        self.queue_draw()
+
+    @property
+    def is_cropping(self) -> bool:
+        return self._crop_mode
+
+    @property
+    def crop_aspect(self) -> str:
+        return self._crop_aspect
+
+    def begin_crop(self) -> None:
+        """Enter crop mode.
+
+        The canvas switches to the pristine capture with the current crop
+        selected, so an earlier crop can be *widened* and not only tightened —
+        the whole point of keeping the crop as a rect rather than resampling.
+        """
+        if self._crop_mode:
+            return
+        self._crop_mode = True
+        self._crop_rect = self._crop
+        self.editor.doc.clear_selection()
+        self.zoom_fit()
         self._notify()
+
+    def cancel_crop(self) -> None:
+        if not self._crop_mode:
+            return
+        self._crop_mode = False
+        self._crop_drag = None
+        self.zoom_fit()
+        self._notify()
+
+    def set_crop_aspect(self, aspect: str) -> None:
+        self._crop_aspect = aspect
+        ratio = crop_mod.normalized_ratio(aspect, self._source_size)
+        if ratio is not None:
+            self._crop_rect = crop_mod.apply_aspect(self._crop_rect, ratio)
+        self.queue_draw()
+
+    def apply_crop(self) -> bool:
+        """Commit the crop rect: re-derive the view and remap the annotations."""
+        if not self._crop_mode:
+            return False
+        rect = self._crop_rect
+        self._crop_mode = False
+        self._crop_drag = None
+        if _rects_equal(rect, self._crop):
+            self.zoom_fit()
+            self._notify()
+            return False
+
+        before = crop_mod.to_pixels(self._crop, self._source_size)
+        after = crop_mod.to_pixels(rect, self._source_size)
+        self.editor.doc.mark_undo(self._state())
+        self._crop = rect
+        self._rebuild_base()
+        # Annotations live in the cropped image's space, so they shift by
+        # however far the crop's origin moved within the source.
+        self.editor.doc.translate_all(before[0] - after[0], before[1] - after[1])
+        self.zoom_fit()
+        self._notify()
+        return True
+
+    def _rebuild_base(self) -> None:
+        x, y, w, h = crop_mod.to_pixels(self._crop, self._source_size)
+        if (x, y, w, h) == (0, 0, self.source.get_width(), self.source.get_height()):
+            self.base = self.source
+        else:
+            self.base = self.source.new_subpixbuf(x, y, w, h).copy()
+
+    def _state(self):
+        """What undo has to restore alongside the shapes."""
+        return (self.source, self._crop)
+
+    def _restore_state(self, state) -> None:
+        if not state:
+            return
+        self.source, self._crop = state
+        self._rebuild_base()
+
+    # -- crop interaction ----------------------------------------------------
+
+    def _crop_point(self, wx: float, wy: float) -> Tuple[float, float]:
+        """A widget point as a normalized point in the source image."""
+        scale, ox, oy = self._view_params()
+        iw, ih = self._source_size
+        if scale <= 0 or iw <= 0 or ih <= 0:
+            return (0.0, 0.0)
+        return (min(max((wx - ox) / scale / iw, 0.0), 1.0),
+                min(max((wy - oy) / scale / ih, 0.0), 1.0))
+
+    def _crop_handle_at(self, wx: float, wy: float) -> Optional[str]:
+        scale, ox, oy = self._view_params()
+        iw, ih = self._source_size
+        for name in crop_mod.HANDLES:
+            hx, hy = crop_mod.handle_point(self._crop_rect, name)
+            px = ox + hx * iw * scale
+            py = oy + hy * ih * scale
+            if math.dist((px, py), (wx, wy)) <= CROP_HANDLE_HIT:
+                return name
+        return None
+
+    def _crop_press(self, wx: float, wy: float) -> None:
+        point = self._crop_point(wx, wy)
+        handle = self._crop_handle_at(wx, wy)
+        if handle:
+            self._crop_drag = (handle, point, self._crop_rect)
+        elif crop_mod.contains(self._crop_rect, point):
+            self._crop_drag = ("move", point, self._crop_rect)
+        else:
+            # Dragging outside the rect draws a fresh one.
+            self._crop_drag = ("new", point, (point[0], point[1], 0.0, 0.0))
+            self._crop_rect = (point[0], point[1], 0.0, 0.0)
+        self.queue_draw()
+
+    def _crop_move(self, wx: float, wy: float, from_center: bool) -> None:
+        if self._crop_drag is None:
+            return
+        kind, origin, initial = self._crop_drag
+        point = self._crop_point(wx, wy)
+        ratio = crop_mod.normalized_ratio(self._crop_aspect, self._source_size)
+
+        if kind == "move":
+            self._crop_rect = crop_mod.move(initial, point[0] - origin[0],
+                                            point[1] - origin[1])
+        elif kind == "new":
+            rect = norm_rect(origin[0], origin[1], point[0], point[1])
+            self._crop_rect = (crop_mod.apply_aspect(rect, ratio) if ratio
+                               else rect)
+        else:
+            self._crop_rect = crop_mod.resize(
+                initial, kind, point, ratio=ratio,
+                min_size=CROP_MIN_SIZE, from_center=from_center)
+        self.queue_draw()
 
     # -- rendering -----------------------------------------------------------
 
@@ -459,23 +634,26 @@ class EditorCanvas(Gtk.DrawingArea):
         self._draw_chrome(cr, scale, ox, oy)
 
     def _render_content(self, cr):
-        Gdk.cairo_set_source_pixbuf(cr, self.base, 0, 0)
+        image = self._displayed()
+        Gdk.cairo_set_source_pixbuf(cr, image, 0, 0)
         cr.paint()
+        if self._crop_mode:
+            # Annotations belong to the cropped region, which sits at an offset
+            # inside the source the canvas is showing while cropping.
+            x, y, _w, _h = crop_mod.to_pixels(self._crop, self._source_size)
+            cr.save()
+            cr.translate(x, y)
         for shape in self.shapes:
             render.draw_shape(cr, shape, self.base)
+        if self._crop_mode:
+            cr.restore()
 
     def _draw_chrome(self, cr, scale, ox, oy):
         """Selection frame, handles, marquee and crop preview — drawn in widget
         space so they stay the same size at every zoom level."""
-        if self._crop_preview:
-            x, y, cw, ch = self._crop_preview
-            cr.save()
-            cr.set_source_rgba(0.3, 0.7, 1.0, 0.95)
-            cr.set_line_width(2.0)
-            cr.set_dash([6.0, 4.0])
-            cr.rectangle(ox + x * scale, oy + y * scale, cw * scale, ch * scale)
-            cr.stroke()
-            cr.restore()
+        if self._crop_mode:
+            self._draw_crop_overlay(cr, scale, ox, oy)
+            return
 
         brush = self.editor.brush
         if brush is not None and (brush.w or brush.h):
@@ -533,10 +711,60 @@ class EditorCanvas(Gtk.DrawingArea):
             cr.fill()
         cr.restore()
 
+    def _draw_crop_overlay(self, cr, scale, ox, oy):
+        """Dim everything outside the crop, and draw the thirds grid and the
+        eight handles over it."""
+        iw, ih = self._source_size
+        x, y, w, h = self._crop_rect
+        rx, ry = ox + x * iw * scale, oy + y * ih * scale
+        rw, rh = w * iw * scale, h * ih * scale
+
+        # Dim the whole canvas, then punch the crop back out.
+        cr.save()
+        cr.set_source_rgba(0, 0, 0, CROP_DIM_ALPHA)
+        cr.rectangle(0, 0, self.get_width(), self.get_height())
+        cr.rectangle(rx, ry, rw, rh)
+        cr.set_fill_rule(cairo.FILL_RULE_EVEN_ODD)
+        cr.fill()
+        cr.restore()
+
+        if rw < 1 or rh < 1:
+            return
+
+        cr.save()
+        cr.set_source_rgba(1, 1, 1, 0.35)
+        cr.set_line_width(1.0)
+        for i in (1, 2):
+            cr.move_to(rx + rw * i / 3, ry)
+            cr.line_to(rx + rw * i / 3, ry + rh)
+            cr.move_to(rx, ry + rh * i / 3)
+            cr.line_to(rx + rw, ry + rh * i / 3)
+        cr.stroke()
+
+        cr.set_source_rgba(1, 1, 1, 0.95)
+        cr.set_line_width(1.5)
+        cr.rectangle(rx, ry, rw, rh)
+        cr.stroke()
+
+        for name in crop_mod.HANDLES:
+            hx, hy = crop_mod.handle_point(self._crop_rect, name)
+            px, py = ox + hx * iw * scale, oy + hy * ih * scale
+            cr.set_source_rgb(1, 1, 1)
+            cr.arc(px, py, CROP_HANDLE_R, 0, 2 * math.pi)
+            cr.fill_preserve()
+            cr.set_source_rgba(0, 0, 0, 0.55)
+            cr.set_line_width(1.0)
+            cr.stroke()
+        cr.restore()
+
     # -- export --------------------------------------------------------------
 
     def export_pixbuf(self) -> GdkPixbuf.Pixbuf:
         return render.flatten(self.base, self.shapes)
+
+
+def _rects_equal(a, b, tolerance: float = 1e-6) -> bool:
+    return all(abs(p - q) <= tolerance for p, q in zip(a, b))
 
 
 def _pointer_position(controller, widget) -> Tuple[bool, float, float]:

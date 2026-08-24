@@ -15,6 +15,7 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango  # noqa: E402
 from .. import save as save_mod
 from ..i18n import _, tr
 from ..theme import install_custom_css
+from . import crop as crop_mod
 from . import sidecar
 from .canvas import EditorCanvas
 from .shapes import Style
@@ -62,7 +63,7 @@ PRESET_WIDTHS = [2, 4, 8, 12]
 
 class EditorWindow(Gtk.ApplicationWindow):
     def __init__(self, app, pixbuf: GdkPixbuf.Pixbuf, settings, shapes=None,
-                 startup_toast=None, save_path=None):
+                 startup_toast=None, save_path=None, crop=None):
         super().__init__(application=app, title="Feather Shot")
         self.settings = settings
         self._save_path = save_path  # --output override for Ctrl+S, or None
@@ -75,6 +76,8 @@ class EditorWindow(Gtk.ApplicationWindow):
                       width=float(settings.pen_width),
                       font_size=float(settings.font_size))
         self.canvas = EditorCanvas(pixbuf, style, int(settings.blur_factor))
+        if crop is not None:
+            self.canvas.set_source(pixbuf, crop)
         if shapes:
             self.canvas.shapes = list(shapes)
         self.canvas.on_request_text = self._open_text_popover
@@ -93,6 +96,8 @@ class EditorWindow(Gtk.ApplicationWindow):
         self._toast.set_margin_bottom(24)
         self._toast.set_visible(False)
         overlay.add_overlay(self._toast)
+        self._crop_bar = self._build_crop_bar()
+        overlay.add_overlay(self._crop_bar)
         self.set_child(overlay)
         self._install_css()
 
@@ -197,6 +202,67 @@ class EditorWindow(Gtk.ApplicationWindow):
         header.pack_end(copy_btn)
         header.pack_end(folder_btn)
         header.pack_end(pin_btn)
+
+    def _build_crop_bar(self):
+        """Aspect presets plus apply/cancel, shown only while cropping.
+
+        Crop is modal on purpose: the annotation layer is visible but not
+        editable, so the bar has to say plainly how to get out of it.
+        """
+        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        bar.add_css_class("wfs-crop-bar")
+        bar.set_halign(Gtk.Align.CENTER)
+        bar.set_valign(Gtk.Align.END)
+        bar.set_margin_bottom(18)
+        bar.set_visible(False)
+
+        ratios = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
+        ratios.add_css_class("linked")
+        self._crop_buttons = {}
+        first = None
+        for name in crop_mod.ASPECTS:
+            btn = Gtk.ToggleButton(label=_(crop_mod.ASPECT_TITLES[name]))
+            if first is None:
+                first = btn
+                btn.set_active(True)
+            else:
+                btn.set_group(first)
+            btn.connect("toggled", self._on_crop_aspect, name)
+            ratios.append(btn)
+            self._crop_buttons[name] = btn
+        bar.append(ratios)
+
+        cancel = Gtk.Button(label=_("Cancel (Esc)"))
+        cancel.connect("clicked", lambda *_: self.cancel_crop())
+        apply_btn = Gtk.Button(label=_("Crop (Enter)"))
+        apply_btn.add_css_class("suggested-action")
+        apply_btn.connect("clicked", lambda *_: self.apply_crop())
+        bar.append(cancel)
+        bar.append(apply_btn)
+        return bar
+
+    def _on_crop_aspect(self, button, name):
+        if button.get_active():
+            self.canvas.set_crop_aspect(name)
+
+    def begin_crop(self):
+        self.canvas.begin_crop()
+        self._crop_bar.set_visible(True)
+
+    def apply_crop(self):
+        changed = self.canvas.apply_crop()
+        self._leave_crop()
+        if changed:
+            self.toast(_("Cropped. Undo restores the full image."))
+
+    def cancel_crop(self):
+        self.canvas.cancel_crop()
+        self._leave_crop()
+
+    def _leave_crop(self):
+        self._crop_bar.set_visible(False)
+        if self.canvas.tool == "crop":
+            self.select_tool("select")
 
     def _build_zoom_controls(self):
         """Zoom out / percentage / zoom in.  Clicking the percentage toggles
@@ -363,8 +429,16 @@ class EditorWindow(Gtk.ApplicationWindow):
         self._dirty = True
 
     def _on_tool_toggled(self, button, tool_id):
-        if button.get_active():
-            self.canvas.tool = tool_id
+        if not button.get_active():
+            return
+        if self.canvas.is_cropping and tool_id != "crop":
+            # Switching tools out of a modal crop abandons it rather than
+            # leaving a half-committed rect behind.
+            self.canvas.cancel_crop()
+            self._crop_bar.set_visible(False)
+        self.canvas.tool = tool_id
+        if tool_id == "crop":
+            self.begin_crop()
 
     def select_tool(self, tool_id: str):
         btn = self._tool_buttons.get(tool_id)
@@ -549,7 +623,8 @@ class EditorWindow(Gtk.ApplicationWindow):
                 sidecar.remove(image_path)
                 return
             sidecar.save(image_path, self.canvas.shapes,
-                         save_mod.pixbuf_to_png_bytes(self.canvas.base))
+                         save_mod.pixbuf_to_png_bytes(self.canvas.source),
+                         crop=self.canvas.crop_rect)
         except Exception:
             pass
 
@@ -617,6 +692,21 @@ class EditorWindow(Gtk.ApplicationWindow):
         ctrl = bool(state & Gdk.ModifierType.CONTROL_MASK)
         shift = bool(state & Gdk.ModifierType.SHIFT_MASK)
         key = Gdk.keyval_to_lower(keyval)
+
+        # Crop is modal: Return applies, Escape cancels, and every other
+        # editing shortcut is swallowed so it cannot act on the layer the crop
+        # overlay is covering.
+        if self.canvas.is_cropping:
+            if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
+                self.apply_crop()
+                return True
+            if keyval == Gdk.KEY_Escape:
+                self.cancel_crop()
+                return True
+            if ctrl and key == Gdk.KEY_z:
+                self.canvas.redo() if shift else self.canvas.undo()
+                return True
+            return True
 
         if ctrl and key == Gdk.KEY_s:
             self.save_as() if shift else self.quick_save()

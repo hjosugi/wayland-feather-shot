@@ -26,6 +26,7 @@ import json
 import os
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from . import crop as crop_mod
 from . import shapes as S
 
 SIDECAR_VERSION = 1
@@ -50,6 +51,10 @@ class Document:
     base_png: Optional[bytes]
     base_image: str = ""
     version: int = SIDECAR_VERSION
+    # The edited region of the stored base, normalized.  Storing the crop as a
+    # rect over the pristine image rather than cropped pixels is what lets a
+    # reopened screenshot have its crop widened again.
+    crop: Tuple[float, float, float, float] = crop_mod.UNIT
 
 
 # -- paths -------------------------------------------------------------------
@@ -177,11 +182,13 @@ def decode_shape(data: Any) -> Optional[S.Shape]:
 # -- document codec ----------------------------------------------------------
 
 def encode(shapes: Sequence[S.Shape], base_png: Optional[bytes] = None,
-           base_image: str = "") -> Dict[str, Any]:
+           base_image: str = "",
+           crop: Tuple[float, float, float, float] = crop_mod.UNIT) -> Dict[str, Any]:
     document: Dict[str, Any] = {
         "version": SIDECAR_VERSION,
         "generator": "wayland-feather-shot",
         "base_image": base_image,
+        "crop": list(crop),
         "shapes": [encode_shape(s) for s in shapes],
     }
     if base_png:
@@ -226,13 +233,32 @@ def decode(data: Any) -> Document:
         base_png=base_png,
         base_image=str(data.get("base_image", "")),
         version=version,
+        crop=_decode_crop(data.get("crop")),
     )
+
+
+def _decode_crop(value: Any) -> Tuple[float, float, float, float]:
+    """A stored crop rect, falling back to the whole image.
+
+    A nonsense rect degrades to the full image rather than raising: losing the
+    crop is recoverable, losing the annotations with it is not.
+    """
+    if not isinstance(value, (list, tuple)) or len(value) != 4:
+        return crop_mod.UNIT
+    try:
+        x, y, w, h = (float(v) for v in value)
+    except (TypeError, ValueError):
+        return crop_mod.UNIT
+    if not (w > 0 and h > 0) or x < 0 or y < 0 or x + w > 1.001 or y + h > 1.001:
+        return crop_mod.UNIT
+    return (x, y, w, h)
 
 
 # -- files -------------------------------------------------------------------
 
 def save(image_path: str, shapes: Sequence[S.Shape],
-         base_png: Optional[bytes] = None) -> str:
+         base_png: Optional[bytes] = None,
+         crop: Tuple[float, float, float, float] = crop_mod.UNIT) -> str:
     """Write the sidecar for *image_path* and return its path.
 
     Written through a temporary file in the same directory and renamed, so a
@@ -240,7 +266,8 @@ def save(image_path: str, shapes: Sequence[S.Shape],
     used to be.
     """
     path = sidecar_path(image_path)
-    document = encode(shapes, base_png, base_image=os.path.basename(image_path))
+    document = encode(shapes, base_png,
+                      base_image=os.path.basename(image_path), crop=crop)
     temporary = path + ".tmp"
     with open(temporary, "w", encoding="utf-8") as fh:
         json.dump(document, fh, ensure_ascii=False)

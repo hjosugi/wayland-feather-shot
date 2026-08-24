@@ -171,6 +171,21 @@ msgstr ""
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr ""
 
+msgid "Freeform"
+msgstr ""
+
+msgid "Original"
+msgstr ""
+
+msgid "Cancel (Esc)"
+msgstr ""
+
+msgid "Crop (Enter)"
+msgstr ""
+
+msgid "Cropped. Undo restores the full image."
+msgstr ""
+
 msgid "Zoom out (Ctrl+-)"
 msgstr ""
 
@@ -208,9 +223,6 @@ msgid "Pin to screen (frameless window)"
 msgstr ""
 
 msgid "Pin to screen (Ctrl+P)"
-msgstr ""
-
-msgid "Cancel (Esc)"
 msgstr ""
 
 msgid "Saved  {path}"
