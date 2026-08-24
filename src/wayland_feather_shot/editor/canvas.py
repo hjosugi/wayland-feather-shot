@@ -460,6 +460,10 @@ class EditorCanvas(Gtk.DrawingArea):
     def stop_editing(self) -> None:
         self.editor.stop_editing()
 
+    def set_spotlight_scrim(self, scrim: float) -> None:
+        self.editor.set_spotlight_scrim(scrim)
+        self.queue_draw()
+
     def set_text_align(self, align: str) -> None:
         self.editor.set_text_align(align)
         self.queue_draw()
@@ -674,17 +678,18 @@ class EditorCanvas(Gtk.DrawingArea):
         image = self._displayed()
         Gdk.cairo_set_source_pixbuf(cr, image, 0, 0)
         cr.paint()
-        editing = self.editor.editing_sid
         if self._crop_mode:
             # Annotations belong to the cropped region, which sits at an offset
             # inside the source the canvas is showing while cropping.
             x, y, _w, _h = crop_mod.to_pixels(self._crop, self._source_size)
             cr.save()
             cr.translate(x, y)
+        render.draw_scrim(cr, [s for s in self.shapes if s.kind == "spotlight"],
+                          self.base.get_width(), self.base.get_height())
         for shape in self.shapes:
             # The shape being typed into is drawn by the text overlay sitting
             # on top of it; drawing it here too would double up.
-            if shape.sid != editing:
+            if shape.sid != self.editor.editing_sid:
                 render.draw_shape(cr, shape, self.base)
         if self._crop_mode:
             cr.restore()

@@ -130,6 +130,31 @@ class HitTestTests(unittest.TestCase):
         self.assertEqual(S.shapes_in(shapes, Box(-5, -5, 40, 40)), [0])
 
 
+class SpotlightTests(unittest.TestCase):
+    """#34: a spotlight keeps a region bright; several leave one union."""
+
+    def test_a_spotlight_is_a_solid_region(self):
+        spot = S.Spotlight((10, 10, 100, 60))
+        self.assertEqual(spot.kind, "spotlight")
+        self.assertEqual(spot.page_bounds, Box(10, 10, 100, 60))
+        self.assertTrue(spot.is_filled)
+
+    def test_it_carries_its_own_scrim(self):
+        self.assertAlmostEqual(S.Spotlight((0, 0, 5, 5), scrim=0.8).props.scrim,
+                               0.8)
+
+    def test_it_resizes_like_any_other_box(self):
+        spot = S.Spotlight((0, 0, 100, 50)).scaled(2, 3)
+        self.assertEqual((spot.props.w, spot.props.h), (200, 150))
+
+    def test_it_has_no_style_to_restyle(self):
+        self.assertIsNone(S.Spotlight((0, 0, 5, 5)).style)
+
+    def test_it_can_be_grabbed_anywhere_inside(self):
+        spot = S.Spotlight((0, 0, 100, 100))
+        self.assertTrue(spot.hit_test((50, 50), margin=2))
+
+
 class NumberingTests(unittest.TestCase):
     """#21: counting badges hands out a duplicate after a delete."""
 

@@ -108,6 +108,12 @@ JA = {
         "認識したテキストをクリップボードにコピーしました。",
     "Blur/pixelate covers annotations too (flatten)":
         "ぼかし/モザイクで注釈も覆う(フラット化)",
+    "Marker": "マーカー",
+    "Highlighter pen (H)": "蛍光ペン (H)",
+    "Spot": "スポット",
+    "Spotlight — dim everything outside (S)": "スポットライト — 範囲外を暗く (S)",
+    "Spotlight dim": "スポットライトの暗さ",
+    "How dark the area outside a spotlight goes": "スポットライト範囲外をどれだけ暗くするか",
     "Align left": "左揃え",
     "Align centre": "中央揃え",
     "Align right": "右揃え",

@@ -171,6 +171,24 @@ msgstr ""
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr ""
 
+msgid "Marker"
+msgstr ""
+
+msgid "Highlighter pen (H)"
+msgstr ""
+
+msgid "Spot"
+msgstr ""
+
+msgid "Spotlight — dim everything outside (S)"
+msgstr ""
+
+msgid "Spotlight dim"
+msgstr ""
+
+msgid "How dark the area outside a spotlight goes"
+msgstr ""
+
 msgid "Align left"
 msgstr ""
 

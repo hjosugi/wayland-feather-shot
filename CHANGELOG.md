@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Spotlight tool** (`S`) (#34). Drag a region and everything outside it is
+  dimmed, so the eye lands where you are pointing — the common need when
+  explaining a screenshot, and the opposite of what the highlighter does.
+  Several spotlights leave a single bright **union**: the scrim is painted once
+  and each region cleared out of it, rather than dimmed per shape, so two
+  overlapping spotlights do not double-darken where they meet. The scrim sits
+  between the base image and the annotation layer, so an arrow or a label drawn
+  over a dimmed area keeps its full contrast. How dark it goes is adjustable,
+  for new spotlights and for any selected one. The existing highlighter keeps
+  its own tool and is now labelled **Marker**.
+
 ## 0.9.0 (2026-08-25)
 
 - **Text is typed on the canvas** (#31). The text tool used to open a popover;

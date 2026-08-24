@@ -78,8 +78,8 @@ def remove(image_path: str) -> bool:
 _PROPS_BY_KIND = {
     cls.KIND: cls for cls in (
         S.PenProps, S.ArrowProps, S.GeoProps, S.HighlightProps,
-        S.ObscureProps, S.TextProps, S.MarkerProps, S.BubbleProps,
-        S.EmojiProps,
+        S.ObscureProps, S.SpotlightProps, S.TextProps, S.MarkerProps,
+        S.BubbleProps, S.EmojiProps,
     )
 }
 

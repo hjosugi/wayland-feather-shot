@@ -265,6 +265,29 @@ class HighlightProps(Props):
 
 
 @dataclass(frozen=True)
+class SpotlightProps(Props):
+    """A region to keep bright while everything else is dimmed.
+
+    The scrim is not drawn per shape — several spotlights have to leave a
+    single union undimmed rather than double-darkening where they overlap — so
+    the renderer paints one scrim pass and punches every spotlight out of it.
+    """
+
+    KIND = "spotlight"
+    w: float
+    h: float
+    #: How dark the surrounding scrim is, 0…1.
+    scrim: float = 0.55
+
+    def geometry(self):
+        return Rect2d(self.w, self.h, filled=True)
+
+    def scaled(self, sx, sy, width_only: bool = False):
+        return replace(self, w=max(1.0, abs(self.w * sx)),
+                       h=max(1.0, abs(self.h * sy)))
+
+
+@dataclass(frozen=True)
 class ObscureProps(Props):
     """A blurred or pixelated region of the *base* image.
 
@@ -602,6 +625,11 @@ def Highlight(rect, style: Style) -> Shape:
     return Shape(x, y, HighlightProps(w, h, style))
 
 
+def Spotlight(rect, scrim: float = 0.55) -> Shape:
+    x, y, w, h = rect
+    return Shape(x, y, SpotlightProps(w, h, scrim=scrim))
+
+
 def Obscure(rect, density: float = 0.55, pixelate: bool = False) -> Shape:
     x, y, w, h = rect
     return Shape(x, y, ObscureProps(w, h, density=density, pixelate=pixelate))
@@ -671,6 +699,7 @@ def selection_bounds(shapes: Sequence[Shape]) -> Optional[Box]:
 __all__ = [
     "REFERENCE_EDGE", "Style", "Shape", "Props", "Box", "Point",
     "PenProps", "ArrowProps", "GeoProps", "HighlightProps", "ObscureProps",
+    "SpotlightProps", "Spotlight",
     "TextProps", "MarkerProps", "BubbleProps", "EmojiProps",
     "ALIGNMENTS", "MIN_TEXT_WIDTH",
     "Pen", "Line", "Arrow", "StepArrow", "RectShape", "EllipseShape",

@@ -109,5 +109,71 @@ class RedactionTests(unittest.TestCase):
                             bytes(redacted.get_pixels()))
 
 
+@unittest.skipUnless(HAVE_GTK, "PyGObject/Pango not available")
+class SpotlightRenderingTests(unittest.TestCase):
+    """#34: the scrim is a union, not one dim per region."""
+
+    def setUp(self):
+        self.base = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8,
+                                         200, 100)
+        self.base.fill(0xFFFFFFFF)
+
+    def _pixel(self, pixbuf, x, y):
+        data = pixbuf.get_pixels()
+        offset = y * pixbuf.get_rowstride() + x * pixbuf.get_n_channels()
+        return tuple(data[offset:offset + 3])
+
+    def test_outside_a_spotlight_is_dimmed(self):
+        out = render.flatten(self.base, [S.Spotlight((50, 20, 60, 60))])
+        self.assertLess(self._pixel(out, 5, 5)[0], 200)
+
+    def test_inside_a_spotlight_is_untouched(self):
+        out = render.flatten(self.base, [S.Spotlight((50, 20, 60, 60))])
+        self.assertEqual(self._pixel(out, 80, 50), (255, 255, 255))
+
+    def test_overlapping_spotlights_do_not_double_darken(self):
+        out = render.flatten(self.base, [S.Spotlight((10, 10, 80, 80)),
+                                         S.Spotlight((50, 10, 80, 80))])
+        # The overlap has to be exactly as bright as either region alone.
+        self.assertEqual(self._pixel(out, 60, 50), self._pixel(out, 20, 50))
+        self.assertEqual(self._pixel(out, 60, 50), (255, 255, 255))
+
+    def test_a_stronger_scrim_is_darker(self):
+        light = render.flatten(self.base, [S.Spotlight((50, 20, 60, 60),
+                                                       scrim=0.2)])
+        heavy = render.flatten(self.base, [S.Spotlight((50, 20, 60, 60),
+                                                       scrim=0.9)])
+        self.assertGreater(self._pixel(light, 5, 5)[0],
+                           self._pixel(heavy, 5, 5)[0])
+
+    def test_the_strongest_spotlight_sets_the_scrim(self):
+        out = render.flatten(self.base, [S.Spotlight((10, 10, 20, 20),
+                                                     scrim=0.2),
+                                         S.Spotlight((100, 10, 20, 20),
+                                                     scrim=0.9)])
+        only_light = render.flatten(self.base, [S.Spotlight((10, 10, 20, 20),
+                                                            scrim=0.2)])
+        self.assertLess(self._pixel(out, 180, 90)[0],
+                        self._pixel(only_light, 180, 90)[0])
+
+    def test_annotations_stay_bright_over_a_dimmed_area(self):
+        style = S.Style(rgba=(1.0, 0.0, 0.0, 1.0), width=10.0)
+        with_spot = render.flatten(
+            self.base, [S.Spotlight((150, 10, 40, 40)),
+                        S.RectShape((5, 40, 60, 20), style, filled=True)])
+        # The rectangle is outside the spotlight but drawn after the scrim, so
+        # it keeps its colour rather than being dimmed with the background.
+        self.assertEqual(self._pixel(with_spot, 30, 50), (255, 0, 0))
+
+    def test_no_spotlight_means_no_scrim(self):
+        out = render.flatten(self.base, [])
+        self.assertEqual(self._pixel(out, 5, 5), (255, 255, 255))
+
+    def test_a_zero_scrim_dims_nothing(self):
+        out = render.flatten(self.base, [S.Spotlight((50, 20, 60, 60),
+                                                     scrim=0.0)])
+        self.assertEqual(self._pixel(out, 5, 5), (255, 255, 255))
+
+
 if __name__ == "__main__":
     unittest.main()

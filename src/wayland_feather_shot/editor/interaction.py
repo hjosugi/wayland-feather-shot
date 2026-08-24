@@ -22,9 +22,9 @@ from .geometry import Box, Point, norm_rect, rotate
 from . import shapes as S
 
 DRAG_TOOLS = {"pen", "line", "arrow", "steparrow", "rect", "ellipse",
-              "highlight", "blur", "pixelate"}
+              "highlight", "spotlight", "blur", "pixelate"}
 CLICK_TOOLS = {"text", "marker", "bubble", "emoji"}
-BOX_TOOLS = {"rect", "ellipse", "highlight", "blur", "pixelate"}
+BOX_TOOLS = {"rect", "ellipse", "highlight", "spotlight", "blur", "pixelate"}
 
 CORNER_HANDLES = ("nw", "ne", "se", "sw")
 EDGE_HANDLES = ("n", "e", "s", "w")
@@ -194,6 +194,7 @@ class Editor:
         self.tool = "pen"
         self.style = style or S.Style()
         self.redaction_density = 0.55
+        self.spotlight_scrim = 0.55
         self.head_start = "none"
         self.head_end = "arrow"
         self.text_align = "left"
@@ -379,6 +380,8 @@ class Editor:
             shape = S.EllipseShape(rect, self.page_style)
         elif self.tool == "highlight":
             shape = S.Highlight(rect, self.page_style)
+        elif self.tool == "spotlight":
+            shape = S.Spotlight(rect, scrim=self.spotlight_scrim)
         else:
             shape = S.Obscure(rect, density=self.redaction_density,
                               pixelate=self.tool == "pixelate")
@@ -642,6 +645,18 @@ class Editor:
             self._notify()
             return None
         return self.tool
+
+    def set_spotlight_scrim(self, scrim: float) -> None:
+        """How dark the surround is, for new spotlights and selected ones."""
+        self.spotlight_scrim = scrim
+        selected = [s for s in self.doc.selected_shapes
+                    if s.kind == "spotlight"]
+        if not selected:
+            return
+        self._mark_undo()
+        self.doc.update_many([replace(s, props=replace(s.props, scrim=scrim))
+                              for s in selected])
+        self._notify()
 
     def set_arrowhead(self, end: str, name: str) -> bool:
         """Set the head for new arrows, and for any selected ones."""

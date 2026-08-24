@@ -426,6 +426,15 @@ def _draw_bubble(cr, shape, base):
               size=props.style.font_size * 0.8, rgba=(0.1, 0.1, 0.12, 1.0))
 
 
+def _draw_spotlight(cr, shape, base):
+    """Nothing: the scrim pass in :func:`draw_scene` handles spotlights.
+
+    Drawing one here would darken each region separately, and two overlapping
+    spotlights would double-darken where they meet — the opposite of what a
+    spotlight means.
+    """
+
+
 def _draw_emoji(cr, shape, base):
     props = shape.props
     draw_text(cr, props.char, 0, 0, S.Style(font_size=props.size),
@@ -442,7 +451,56 @@ _DRAWERS = {
     "marker": _draw_marker,
     "bubble": _draw_bubble,
     "emoji": _draw_emoji,
+    "spotlight": _draw_spotlight,
 }
+
+
+def draw_scrim(cr, spotlights, width: float, height: float) -> None:
+    """Dim everything outside the union of the spotlight regions.
+
+    Painted into a group and then cleared through, rather than drawn with a
+    fill rule: with even-odd or winding, the overlap of two spotlights lands
+    back inside the dimmed area.  Clearing is idempotent, so overlapping
+    regions leave a single bright union — which is what a spotlight is for.
+    """
+    if not spotlights:
+        return
+    alpha = max(min(max(s.props.scrim, 0.0), 1.0) for s in spotlights)
+    if alpha <= 0:
+        return
+
+    cr.save()
+    cr.push_group()
+    cr.set_source_rgba(0, 0, 0, alpha)
+    cr.rectangle(0, 0, width, height)
+    cr.fill()
+    cr.set_operator(cairo.OPERATOR_CLEAR)
+    for shape in spotlights:
+        cr.save()
+        cr.translate(shape.x, shape.y)
+        if shape.rotation:
+            cr.rotate(shape.rotation)
+        cr.rectangle(0, 0, shape.props.w, shape.props.h)
+        cr.fill()
+        cr.restore()
+    cr.pop_group_to_source()
+    cr.paint()
+    cr.restore()
+
+
+def draw_scene(cr, base, shape_list, skip_sid=None) -> None:
+    """Base image, then the spotlight scrim, then the annotations.
+
+    The scrim sits between them on purpose: an arrow drawn over a dimmed area
+    stays at full contrast, which is the whole point of pointing at something.
+    """
+    Gdk.cairo_set_source_pixbuf(cr, base, 0, 0)
+    cr.paint()
+    spotlights = [s for s in shape_list if s.kind == "spotlight"]
+    draw_scrim(cr, spotlights, base.get_width(), base.get_height())
+    for shape in shape_list:
+        if shape.sid != skip_sid:
+            draw_shape(cr, shape, base)
 
 
 def flatten(base: GdkPixbuf.Pixbuf, shape_list) -> GdkPixbuf.Pixbuf:
@@ -450,9 +508,6 @@ def flatten(base: GdkPixbuf.Pixbuf, shape_list) -> GdkPixbuf.Pixbuf:
     w, h = base.get_width(), base.get_height()
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
     cr = cairo.Context(surface)
-    Gdk.cairo_set_source_pixbuf(cr, base, 0, 0)
-    cr.paint()
-    for shape in shape_list:
-        draw_shape(cr, shape, base)
+    draw_scene(cr, base, shape_list)
     surface.flush()
     return Gdk.pixbuf_get_from_surface(surface, 0, 0, w, h)

@@ -31,7 +31,8 @@ TOOLS = [
     ("emoji", "Emoji", "Emoji sticker (J)"),
     ("rect", "Rect", "Rectangle (R)"),
     ("ellipse", "Ellipse", "Ellipse (E)"),
-    ("highlight", "High", "Highlighter (H)"),
+    ("highlight", "Marker", "Highlighter pen (H)"),
+    ("spotlight", "Spot", "Spotlight — dim everything outside (S)"),
     ("text", "Text", "Text — click to place (T)"),
     ("blur", "Blur", "Blur region (B)"),
     ("pixelate", "Pixel", "Pixelate region (X)"),
@@ -45,6 +46,7 @@ TOOL_KEYS = {
     Gdk.KEY_r: "rect", Gdk.KEY_e: "ellipse", Gdk.KEY_h: "highlight",
     Gdk.KEY_t: "text", Gdk.KEY_b: "blur", Gdk.KEY_x: "pixelate",
     Gdk.KEY_m: "marker", Gdk.KEY_c: "crop", Gdk.KEY_v: "select",
+    Gdk.KEY_s: "spotlight",
     Gdk.KEY_g: "steparrow", Gdk.KEY_u: "bubble", Gdk.KEY_j: "emoji",
 }
 
@@ -416,6 +418,18 @@ class EditorWindow(Gtk.ApplicationWindow):
         for rgb in PRESET_COLORS:
             flow.append(self._swatch(rgb, color_btn, popover))
         box.append(flow)
+
+        dim_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        dim_row.append(Gtk.Label(label=_("Spotlight dim"), xalign=0.0))
+        dim = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.1, 0.9, 0.05)
+        dim.set_value(0.55)
+        dim.set_hexpand(True)
+        dim.set_draw_value(False)
+        dim.set_tooltip_text(_("How dark the area outside a spotlight goes"))
+        dim.connect("value-changed",
+                    lambda s: self.canvas.set_spotlight_scrim(s.get_value()))
+        dim_row.append(dim)
+        box.append(dim_row)
 
         wrow = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         wrow.set_halign(Gtk.Align.CENTER)

@@ -171,6 +171,24 @@ msgstr "認識したテキストをクリップボードにコピーしました
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr "ぼかし/モザイクで注釈も覆う(フラット化)"
 
+msgid "Marker"
+msgstr "マーカー"
+
+msgid "Highlighter pen (H)"
+msgstr "蛍光ペン (H)"
+
+msgid "Spot"
+msgstr "スポット"
+
+msgid "Spotlight — dim everything outside (S)"
+msgstr "スポットライト — 範囲外を暗く (S)"
+
+msgid "Spotlight dim"
+msgstr "スポットライトの暗さ"
+
+msgid "How dark the area outside a spotlight goes"
+msgstr "スポットライト範囲外をどれだけ暗くするか"
+
 msgid "Align left"
 msgstr "左揃え"
 
