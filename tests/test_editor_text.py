@@ -98,6 +98,53 @@ class RedactionTests(unittest.TestCase):
         self.assertEqual(render.blur_radius(-5), render.blur_radius(0))
         self.assertEqual(render.blur_radius(5), render.blur_radius(1))
 
+    def _amplitude(self, pixbuf, rect):
+        x, y, w, h = rect
+        data = pixbuf.get_pixels()
+        stride, channels = pixbuf.get_rowstride(), pixbuf.get_n_channels()
+        values = [data[(y + j) * stride + (x + i) * channels]
+                  for j in range(h) for i in range(w)]
+        return max(values) - min(values)
+
+    def test_redacting_text_leaves_nothing_to_read(self):
+        """The acceptance criterion from the issue, without needing an OCR
+        engine installed: what decides legibility is how much contrast is left
+        in the region."""
+        base = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 300, 60)
+        base.fill(0xFFFFFFFF)
+        style = S.Style(rgba=(0.0, 0.0, 0.0, 1.0), font_size=28.0)
+        with_text = render.flatten(base, [S.Text((6, 6), "sk_live_9f2c", style)])
+        region = (4, 4, 240, 44)
+        self.assertGreater(self._amplitude(with_text, region), 200)
+
+        redacted = render.flatten(with_text,
+                                  [S.Obscure((0, 0, 300, 60), density=0.9)])
+        self.assertLess(self._amplitude(redacted, region), 40)
+
+    def test_a_stronger_density_leaves_less(self):
+        base = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 300, 60)
+        base.fill(0xFFFFFFFF)
+        style = S.Style(rgba=(0.0, 0.0, 0.0, 1.0), font_size=28.0)
+        with_text = render.flatten(base, [S.Text((6, 6), "sk_live_9f2c", style)])
+        region = (4, 4, 240, 44)
+        light = render.flatten(with_text, [S.Obscure((0, 0, 300, 60),
+                                                     density=0.1)])
+        heavy = render.flatten(with_text, [S.Obscure((0, 0, 300, 60),
+                                                     density=1.0)])
+        self.assertGreater(self._amplitude(light, region),
+                           self._amplitude(heavy, region))
+
+    def test_a_redaction_does_not_smear_its_own_edge_inwards(self):
+        """The blur samples a padded rect, so a region on a dark background
+        picks up that background rather than fading its own border."""
+        base = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 120, 60)
+        base.fill(0x000000FF)
+        inner = render.flatten(base, [S.Obscure((40, 20, 40, 20), density=0.9)])
+        data = inner.get_pixels()
+        stride, channels = inner.get_rowstride(), inner.get_n_channels()
+        # A uniform background blurs to the same uniform value everywhere.
+        self.assertEqual(data[30 * stride + 45 * channels], 0)
+
     def test_a_redaction_actually_changes_the_pixels(self):
         base = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 120, 60)
         base.fill(0x000000ff)

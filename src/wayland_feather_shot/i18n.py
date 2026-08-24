@@ -108,6 +108,8 @@ JA = {
         "認識したテキストをクリップボードにコピーしました。",
     "Blur/pixelate covers annotations too (flatten)":
         "ぼかし/モザイクで注釈も覆う(フラット化)",
+    "Redaction strength": "伏せ字の強さ",
+    "Blur radius and mosaic block size — applies to a selected region too": "ぼかし半径とモザイクのブロックサイズ — 選択中の領域にも適用",
     "Marker": "マーカー",
     "Highlighter pen (H)": "蛍光ペン (H)",
     "Spot": "スポット",

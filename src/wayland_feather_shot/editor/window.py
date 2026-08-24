@@ -434,6 +434,20 @@ class EditorWindow(Gtk.ApplicationWindow):
             flow.append(self._swatch(rgb, color_btn, popover))
         box.append(flow)
 
+        strength_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        strength_row.append(Gtk.Label(label=_("Redaction strength"), xalign=0.0))
+        strength = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,
+                                            0.0, 1.0, 0.05)
+        strength.set_value(self._preset.redaction_density)
+        strength.set_hexpand(True)
+        strength.set_draw_value(False)
+        strength.set_tooltip_text(
+            _("Blur radius and mosaic block size — applies to a selected region too"))
+        strength.connect("value-changed",
+                         lambda s: self.canvas.set_redaction_density(s.get_value()))
+        strength_row.append(strength)
+        box.append(strength_row)
+
         dim_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         dim_row.append(Gtk.Label(label=_("Spotlight dim"), xalign=0.0))
         dim = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.1, 0.9, 0.05)

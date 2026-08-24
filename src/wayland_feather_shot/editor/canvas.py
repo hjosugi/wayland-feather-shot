@@ -460,6 +460,10 @@ class EditorCanvas(Gtk.DrawingArea):
     def stop_editing(self) -> None:
         self.editor.stop_editing()
 
+    def set_redaction_density(self, density: float) -> None:
+        self.editor.set_redaction_density(density)
+        self.queue_draw()
+
     def set_spotlight_scrim(self, scrim: float) -> None:
         self.editor.set_spotlight_scrim(scrim)
         self.queue_draw()

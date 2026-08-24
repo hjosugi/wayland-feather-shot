@@ -171,6 +171,12 @@ msgstr "認識したテキストをクリップボードにコピーしました
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr "ぼかし/モザイクで注釈も覆う(フラット化)"
 
+msgid "Redaction strength"
+msgstr "伏せ字の強さ"
+
+msgid "Blur radius and mosaic block size — applies to a selected region too"
+msgstr "ぼかし半径とモザイクのブロックサイズ — 選択中の領域にも適用"
+
 msgid "Marker"
 msgstr "マーカー"
 

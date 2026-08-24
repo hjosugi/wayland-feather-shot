@@ -171,6 +171,12 @@ msgstr ""
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr ""
 
+msgid "Redaction strength"
+msgstr ""
+
+msgid "Blur radius and mosaic block size — applies to a selected region too"
+msgstr ""
+
 msgid "Marker"
 msgstr ""
 

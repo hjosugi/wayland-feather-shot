@@ -23,11 +23,12 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Pango", "1.0")
 gi.require_version("PangoCairo", "1.0")
-from gi.repository import Gdk, GdkPixbuf, Pango, PangoCairo  # noqa: E402
+from gi.repository import Gdk, GdkPixbuf, GLib, Pango, PangoCairo  # noqa: E402
 
 import cairo  # noqa: E402
 
 from . import arrows  # noqa: E402
+from . import blur as blur_mod  # noqa: E402
 from . import freehand  # noqa: E402
 from . import shapes as S  # noqa: E402
 
@@ -162,10 +163,66 @@ def blur_radius(density: float) -> float:
     return 2.0 + min(max(density, 0.0), 1.0) * 28.0
 
 
+def _packed_rgba(pixbuf: GdkPixbuf.Pixbuf) -> bytearray:
+    """A pixbuf's pixels as tightly packed RGBA, with the row padding gone."""
+    if not pixbuf.get_has_alpha():
+        pixbuf = pixbuf.add_alpha(False, 0, 0, 0)
+    width, height = pixbuf.get_width(), pixbuf.get_height()
+    stride = pixbuf.get_rowstride()
+    data = pixbuf.get_pixels()
+    row_bytes = width * 4
+    if stride == row_bytes:
+        return bytearray(data[:row_bytes * height])
+    packed = bytearray(row_bytes * height)
+    for y in range(height):
+        source = y * stride
+        packed[y * row_bytes:(y + 1) * row_bytes] = data[source:source + row_bytes]
+    return packed
+
+
+def _pixbuf_from_rgba(data, width: int, height: int) -> GdkPixbuf.Pixbuf:
+    return GdkPixbuf.Pixbuf.new_from_bytes(
+        GLib.Bytes.new(bytes(data)), GdkPixbuf.Colorspace.RGB, True, 8,
+        width, height, width * 4)
+
+
+def gaussian_pixbuf(pixbuf: GdkPixbuf.Pixbuf,
+                    radius: float) -> Optional[GdkPixbuf.Pixbuf]:
+    """Blur a whole pixbuf with a Gaussian of the given radius.
+
+    Downsampled first, by roughly a third of the radius.  That keeps the
+    Python-side work small, and for a redaction it is a feature rather than a
+    compromise: throwing the detail away before smoothing it is what makes the
+    result unrecoverable instead of merely smeared.
+    """
+    width, height = pixbuf.get_width(), pixbuf.get_height()
+    if width < 1 or height < 1 or radius <= 0:
+        return pixbuf
+
+    scale = max(1, int(radius / 3))
+    small_w = max(1, width // scale)
+    small_h = max(1, height // scale)
+    small = (pixbuf if scale == 1
+             else pixbuf.scale_simple(small_w, small_h,
+                                      GdkPixbuf.InterpType.BILINEAR))
+    if small is None:
+        return None
+    if not small.get_has_alpha():
+        small = small.add_alpha(False, 0, 0, 0)
+    small_w, small_h = small.get_width(), small.get_height()
+
+    blurred = blur_mod.gaussian_blur(_packed_rgba(small), small_w, small_h,
+                                     max(1.0, radius / scale))
+    result = _pixbuf_from_rgba(blurred, small_w, small_h)
+    if scale == 1:
+        return result
+    return result.scale_simple(width, height, GdkPixbuf.InterpType.BILINEAR)
+
+
 def _obscured_pixbuf(base: GdkPixbuf.Pixbuf, x: int, y: int, w: int, h: int,
                      density: float, pixelate: bool) -> Optional[GdkPixbuf.Pixbuf]:
-    sub = base.new_subpixbuf(x, y, w, h)
     if pixelate:
+        sub = base.new_subpixbuf(x, y, w, h)
         block = max(2, int(round(pixel_block_size(density))))
         small = sub.scale_simple(max(1, w // block), max(1, h // block),
                                  GdkPixbuf.InterpType.BILINEAR)
@@ -173,20 +230,21 @@ def _obscured_pixbuf(base: GdkPixbuf.Pixbuf, x: int, y: int, w: int, h: int,
             return None
         return small.scale_simple(w, h, GdkPixbuf.InterpType.NEAREST)
 
-    # Two down/up passes: one bilinear resample leaves enough stroke structure
-    # that large text stays readable, which is the one thing a redaction must
-    # never do.
-    radius = max(2, int(round(blur_radius(density))))
-    out = sub
-    for _ in range(2):
-        small = out.scale_simple(max(1, w // radius), max(1, h // radius),
-                                 GdkPixbuf.InterpType.BILINEAR)
-        if small is None:
-            return None
-        out = small.scale_simple(w, h, GdkPixbuf.InterpType.BILINEAR)
-        if out is None:
-            return None
-    return out
+    radius = blur_radius(density)
+    # Sample a padded rect so the blur pulls in the pixels that really surround
+    # the region, instead of smearing its own edge inwards.
+    pad = int(math.ceil(radius * 2))
+    px = max(0, x - pad)
+    py = max(0, y - pad)
+    pw = min(base.get_width() - px, w + (x - px) + pad)
+    ph = min(base.get_height() - py, h + (y - py) + pad)
+    if pw < 1 or ph < 1:
+        return None
+
+    blurred = gaussian_pixbuf(base.new_subpixbuf(px, py, pw, ph), radius)
+    if blurred is None:
+        return None
+    return blurred.new_subpixbuf(x - px, y - py, w, h).copy()
 
 
 # -- shape drawing -----------------------------------------------------------

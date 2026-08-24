@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Redaction finishes the job** (#22). Blur is now a real Gaussian — three
+  running-sum box passes, which converge on one — over a **padded** sample of
+  the source, so a region no longer smears its own edge inwards instead of the
+  pixels that actually surround it. It is applied to a downsampled copy, which
+  keeps it fast and, for a redaction, is the point: throwing the detail away
+  before smoothing it is what makes the result unrecoverable rather than merely
+  softened. The resample-based blur that came before left the *positions* of
+  text lines visible as banding; this does not. numpy is used when present and
+  the pure-Python path is the fallback, as the scroll stitcher already does.
+  **Redaction strength is adjustable from the toolbar**, and applies to an
+  already-drawn region as well as to new ones — "this token needs more" no
+  longer means redrawing it.
+
 - **The editor remembers where you left off** (#37). Tool, colour, stroke
   width, font, text alignment, arrowheads, redaction strength and spotlight dim
   all come back the way you last had them, instead of resetting to the

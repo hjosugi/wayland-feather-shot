@@ -646,6 +646,21 @@ class Editor:
             return None
         return self.tool
 
+    def set_redaction_density(self, density: float) -> None:
+        """How strong a redaction is, for new regions and for selected ones.
+
+        Adjustable after the fact on purpose: "this token needs more" should
+        not mean redrawing the region.
+        """
+        self.redaction_density = density
+        selected = [s for s in self.doc.selected_shapes if s.kind == "obscure"]
+        if not selected:
+            return
+        self._mark_undo()
+        self.doc.update_many([replace(s, props=replace(s.props, density=density))
+                              for s in selected])
+        self._notify()
+
     def set_spotlight_scrim(self, scrim: float) -> None:
         """How dark the surround is, for new spotlights and selected ones."""
         self.spotlight_scrim = scrim
