@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **Fixed: `wayland-feather-shot daemon` failed on GNOME with "An app id is
+  required"**. The GlobalShortcuts portal only opens a session for a client it
+  can name, and a process running outside a sandbox has no app id unless it
+  says so; xdg-desktop-portal does not derive one from the launching desktop
+  entry or the systemd scope, so the autostart entry failed the same way as a
+  terminal run. The portal helpers now open a private D-Bus connection and
+  register the app id through `org.freedesktop.host.portal.Registry` before
+  any other portal call (GTK's own settings lookup on the shared connection
+  used to get there first). The portal insists that a desktop entry named
+  after the app id exists, which a package install provides; for a git
+  checkout, the new `scripts/install-desktop-entry.sh` installs the entries
+  with `Exec=` pointing at the checkout (`--autostart` adds the daemon at
+  login). The daemon's failure message now says exactly that instead of
+  pointing at the autostart entry.
+
 ## 0.10.2 (2026-10-01)
 
 - **The overlay's annotation tools have icons** (#41). The bottom toolbar of

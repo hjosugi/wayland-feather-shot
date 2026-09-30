@@ -9,12 +9,15 @@ from __future__ import annotations
 
 import os
 import secrets
+from typing import Optional
 from urllib.parse import unquote, urlparse
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gio, GLib  # noqa: E402
+
+from . import APP_ID  # noqa: E402
 
 PORTAL_BUS = "org.freedesktop.portal.Desktop"
 PORTAL_PATH = "/org/freedesktop/portal/desktop"
@@ -24,6 +27,7 @@ IFACE_SCREENSHOT = "org.freedesktop.portal.Screenshot"
 IFACE_SCREENCAST = "org.freedesktop.portal.ScreenCast"
 IFACE_SHORTCUTS = "org.freedesktop.portal.GlobalShortcuts"
 IFACE_REMOTEDESKTOP = "org.freedesktop.portal.RemoteDesktop"
+IFACE_REGISTRY = "org.freedesktop.host.portal.Registry"
 
 
 class PortalError(Exception):
@@ -32,6 +36,69 @@ class PortalError(Exception):
 
 def uri_to_path(uri: str) -> str:
     return unquote(urlparse(uri).path)
+
+
+# -- app id ----------------------------------------------------------------
+#
+# The portal identifies a client by its D-Bus connection.  Sandboxed apps
+# (Flatpak, Snap) are recognised automatically; a process running on the host
+# has no app id unless it says so, and the GlobalShortcuts portal refuses to
+# open a session without one ("An app id is required").  xdg-desktop-portal
+# 1.18+ offers org.freedesktop.host.portal.Registry for exactly this, with two
+# rules: Register must be the first portal call on the connection, and a
+# desktop entry named <app id>.desktop must exist where the portal can see it.
+# GTK talks to the portal (Settings) on the shared session connection as soon
+# as it initialises, so the helpers below use a private connection and
+# register before anything else touches it.
+
+_BUS = {"conn": None, "app_id_error": None}
+
+
+def register_app_id(bus, app_id: str) -> Optional[str]:
+    """Tell the portal which desktop entry this host process belongs to.
+
+    Returns None on success, otherwise the portal's error message.  Failure is
+    not fatal: sandboxed apps are identified by the portal itself, older
+    portals lack the interface, and every portal except GlobalShortcuts works
+    without an app id.
+    """
+    try:
+        bus.call_sync(PORTAL_BUS, PORTAL_PATH, IFACE_REGISTRY, "Register",
+                      GLib.Variant("(sa{sv})", (app_id, {})), None,
+                      Gio.DBusCallFlags.NONE, 5000, None)
+    except GLib.Error as e:
+        return e.message
+    return None
+
+
+def _new_private_connection():
+    addr = Gio.dbus_address_get_for_bus_sync(Gio.BusType.SESSION, None)
+    conn = Gio.DBusConnection.new_for_address_sync(
+        addr,
+        Gio.DBusConnectionFlags.AUTHENTICATION_CLIENT
+        | Gio.DBusConnectionFlags.MESSAGE_BUS_CONNECTION,
+        None, None)
+    conn.set_exit_on_close(False)
+    return conn
+
+
+def portal_bus():
+    """The process-wide portal connection, registered with the app id once."""
+    if _BUS["conn"] is None:
+        try:
+            conn = _new_private_connection()
+        except GLib.Error:
+            conn = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        if conn is None:
+            raise PortalError("Cannot connect to the session D-Bus bus")
+        _BUS["app_id_error"] = register_app_id(conn, APP_ID)
+        _BUS["conn"] = conn
+    return _BUS["conn"]
+
+
+def app_id_error() -> Optional[str]:
+    """Why the app id could not be registered with the portal, or None."""
+    return _BUS["app_id_error"]
 
 
 def cleanup_portal_file(path: str) -> None:
@@ -50,9 +117,7 @@ class Portal:
     """Thin wrapper implementing the portal Request/Response dance."""
 
     def __init__(self):
-        self.bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
-        if self.bus is None:
-            raise PortalError("Cannot connect to the session D-Bus bus")
+        self.bus = portal_bus()
         unique = self.bus.get_unique_name() or ":0.0"
         self._sender_token = unique[1:].replace(".", "_")
 

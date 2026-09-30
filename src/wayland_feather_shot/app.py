@@ -385,11 +385,18 @@ class FeatherShotApp(Gtk.Application):
                 exit_code["value"] = 2
                 finished_before_loop["value"] = True
                 if error and "app id is required" in error.lower():
+                    from .portal import app_id_error
+                    why = app_id_error()
                     reason = (
-                        "The GlobalShortcuts portal needs a desktop app id; "
-                        "a source-tree terminal run does not provide one. "
-                        "Use the installed autostart entry, or bind the key "
-                        "natively instead:")
+                        "The GlobalShortcuts portal needs the app id, and "
+                        "registering it failed"
+                        + (f" ({why})" if why else "") + ".\n"
+                        "The portal looks the id up as a desktop entry, so "
+                        f"{APP_ID}.desktop must be in an applications "
+                        "directory it can see. A package install provides "
+                        "it; from a git checkout run\n"
+                        "    scripts/install-desktop-entry.sh\n"
+                        "Or bind the key natively instead:")
                 else:
                     reason = (
                         "Your desktop probably does not implement the "
