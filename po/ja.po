@@ -54,9 +54,6 @@ msgstr "無効な値: {keys}"
 msgid "Could not save settings: {error}"
 msgstr "設定を保存できませんでした: {error}"
 
-msgid "Move"
-msgstr "移動"
-
 msgid "Pen"
 msgstr "ペン"
 
@@ -71,9 +68,6 @@ msgstr "矩形"
 
 msgid "Ellipse"
 msgstr "楕円"
-
-msgid "High"
-msgstr "蛍光"
 
 msgid "Text"
 msgstr "文字"

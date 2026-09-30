@@ -1,0 +1,11 @@
+[Icon Theme]
+Name=Feather Shot bundled icons
+Comment=Symbolic annotation tools
+Directories=scalable/actions
+
+[scalable/actions]
+Size=20
+Type=Scalable
+MinSize=16
+MaxSize=32
+Context=Actions

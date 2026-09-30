@@ -76,8 +76,8 @@ JA = {
     "Invalid value for: {keys}": "無効な値: {keys}",
     "Could not save settings: {error}": "設定を保存できませんでした: {error}",
     # tool labels
-    "Move": "移動", "Pen": "ペン", "Line": "直線", "Arrow": "矢印",
-    "Rect": "矩形", "Ellipse": "楕円", "High": "蛍光", "Text": "文字",
+    "Pen": "ペン", "Line": "直線", "Arrow": "矢印",
+    "Rect": "矩形", "Ellipse": "楕円", "Text": "文字",
     "Blur": "ぼかし", "Pixel": "モザイク", "Crop": "切抜", "Select": "選択",
     "Step": "手順", "Bubble": "吹出", "Emoji": "絵文字",
     # tool tooltips

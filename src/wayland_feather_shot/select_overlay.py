@@ -37,17 +37,17 @@ HANDLE_HIT = 14.0     # hit-test radius
 OVERLAY_DIM_ALPHA = 0.32
 
 OVERLAY_TOOLS = [
-    ("move", "Move", "Move / resize selection (V)"),
-    ("pen", "Pen", "Freehand pen (P)"),
-    ("line", "Line", "Straight line (L)"),
-    ("arrow", "Arrow", "Arrow (A)"),
-    ("rect", "Rect", "Rectangle (R)"),
-    ("ellipse", "Ellipse", "Ellipse (E)"),
-    ("highlight", "High", "Highlighter (H)"),
-    ("text", "Text", "Text — click to place (T)"),
-    ("blur", "Blur", "Blur region (B)"),
-    ("pixelate", "Pixel", "Pixelate region (X)"),
-    ("marker", "①②③", "Numbered marker — click (M)"),
+    ("move", "wfs-tool-move-symbolic", "Move / resize selection (V)"),
+    ("pen", "wfs-tool-pen-symbolic", "Freehand pen (P)"),
+    ("line", "wfs-tool-line-symbolic", "Straight line (L)"),
+    ("arrow", "wfs-tool-arrow-symbolic", "Arrow (A)"),
+    ("rect", "wfs-tool-rect-symbolic", "Rectangle (R)"),
+    ("ellipse", "wfs-tool-ellipse-symbolic", "Ellipse (E)"),
+    ("highlight", "wfs-tool-highlight-symbolic", "Highlighter (H)"),
+    ("text", "wfs-tool-text-symbolic", "Text — click to place (T)"),
+    ("blur", "wfs-tool-blur-symbolic", "Blur region (B)"),
+    ("pixelate", "wfs-tool-pixelate-symbolic", "Pixelate region (X)"),
+    ("marker", "wfs-tool-marker-symbolic", "Numbered marker — click (M)"),
 ]
 
 TOOL_KEYS = {
@@ -150,16 +150,19 @@ class OverlayWindow(Gtk.ApplicationWindow):
     def _build_toolbar(self) -> Gtk.Widget:
         bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         bar.add_css_class("wfs-bar")
+        bar.add_css_class("wfs-toolbar")
         bar.set_halign(Gtk.Align.START)
         bar.set_valign(Gtk.Align.START)
         bar.set_visible(False)
 
         self._tool_buttons = {}
         first = None
-        for tid, label, tip in OVERLAY_TOOLS:
-            btn = Gtk.ToggleButton(label=_(label))
+        for tid, icon, tip in OVERLAY_TOOLS:
+            btn = Gtk.ToggleButton()
+            btn.set_icon_name(icon)
             btn.add_css_class("wfs-round")
             btn.set_tooltip_text(_(tip))
+            btn.update_property([Gtk.AccessibleProperty.LABEL], [_(tip)])
             if first is None:
                 first = btn
                 btn.set_active(True)

@@ -54,9 +54,6 @@ msgstr ""
 msgid "Could not save settings: {error}"
 msgstr ""
 
-msgid "Move"
-msgstr ""
-
 msgid "Pen"
 msgstr ""
 
@@ -70,9 +67,6 @@ msgid "Rect"
 msgstr ""
 
 msgid "Ellipse"
-msgstr ""
-
-msgid "High"
 msgstr ""
 
 msgid "Text"

@@ -40,7 +40,11 @@ wayland-feather-shot = "wayland_feather_shot.cli:main"
 package-dir = { "" = "src" }
 
 [tool.setuptools.package-data]
-wayland_feather_shot = ["locale/*/LC_MESSAGES/*.mo"]
+wayland_feather_shot = [
+  "locale/*/LC_MESSAGES/*.mo",
+  "icons/hicolor/index.theme",
+  "icons/hicolor/scalable/actions/*.svg",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

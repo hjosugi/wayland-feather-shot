@@ -28,7 +28,7 @@ from .lifecycle import release_on_window_removed
 from .portal import Portal, PortalError, cleanup_portal_file
 from .select_overlay import OverlayWindow
 from .settings import Settings
-from .theme import apply_system_color_scheme
+from .theme import apply_system_color_scheme, register_bundled_icons
 
 
 def _die_dialog(app, message: str):
@@ -72,6 +72,7 @@ class FeatherShotApp(Gtk.Application):
     def do_startup(self):
         Gtk.Application.do_startup(self)
         apply_system_color_scheme()
+        register_bundled_icons()
 
     def do_activate(self):
         self.hold()  # stay alive while portal dialogs are up, windows closed

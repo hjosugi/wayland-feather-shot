@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -11,6 +13,17 @@ from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
 
 _STYLE_PROVIDERS = []
 _STYLE_DISPLAY_IDS = set()
+
+
+def register_bundled_icons() -> None:
+    """Make bundled symbolic tool icons available before windows are built."""
+    display = Gdk.Display.get_default()
+    if display is None:
+        return
+    icon_theme = Gtk.IconTheme.get_for_display(display)
+    icon_path = str(Path(__file__).resolve().parent / "icons")
+    if icon_path not in icon_theme.get_search_path():
+        icon_theme.add_search_path(icon_path)
 
 
 def _read_portal_color_scheme() -> int | None:
@@ -118,6 +131,18 @@ def install_custom_css() -> None:
         background-image: none;
         background-color: #d7dbe0;
         color: #7b828c;
+    }
+    .wfs-bar.wfs-toolbar button.wfs-round {
+        min-width: 20px;
+        min-height: 20px;
+        padding: 6px;
+    }
+    .wfs-bar.wfs-toolbar button.wfs-round image {
+        -gtk-icon-size: 18px;
+    }
+    .wfs-bar.wfs-toolbar button.wfs-round:focus {
+        outline: 2px solid #fbbf24;
+        outline-offset: 1px;
     }
     .wfs-bar spinbutton {
         background-image: none;
