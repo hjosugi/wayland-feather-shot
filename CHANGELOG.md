@@ -2,6 +2,43 @@
 
 ## Unreleased
 
+- **The overlay's annotation tools have icons** (#41). The bottom toolbar of
+  the region overlay mixed text buttons for the drawing tools with the icon
+  buttons for undo and redo, and short labels like "High" and "Pixel" were
+  hard to read at a glance. The eleven tool buttons now use symbolic SVG icons
+  drawn in one visual language, matching undo/redo and the action bar. The
+  icons ship inside the package and are registered with `Gtk.IconTheme` at
+  startup, so they do not depend on a system icon theme — many wlroots
+  desktops have none installed. Tooltips still name the tool and its shortcut,
+  every button carries an accessible label, and the colour and line-width
+  controls are unchanged. The standalone editor keeps its text labels for now.
+  Thanks to [@Vssblt](https://github.com/Vssblt) for the proposal and the
+  implementation (#45).
+- **Double-click a selection to copy it** (#42). Copying a finished region
+  meant reaching for the action bar or a keyboard shortcut. With the
+  move/resize tool active, double-clicking inside the completed selection now
+  does what the Copy button does: copy the image to the clipboard and close
+  the overlay. The gesture ignores resize handles, annotation tools, clicks
+  outside the selection and any press that turns into a drag, so single clicks
+  and the existing shortcuts behave exactly as before.
+  Thanks to [@Vssblt](https://github.com/Vssblt) for the proposal and the
+  implementation (#46).
+- **Fixed: creating, moving and resizing a selection stuttered** (#47). Every
+  pointer move repainted the whole screenshot through Cairo — once dimmed,
+  then again inside the selection — which on a 2560 × 1440 display capped
+  selection updates at about 21–23 per second. The overlay is now a
+  snapshot-based canvas: the screenshot lives in a persistent GTK texture, the
+  composite of completed annotations is rebuilt only when the annotation
+  history changes, and the dim mask, selection border and handles are GTK
+  render nodes. Only the live annotation preview and the small labels still go
+  through Cairo. Per-frame drawing time fell from about 20 ms to under 1 ms in
+  the contributor's measurements. A new CI job runs the rendering regressions
+  under Xvfb, covering scales from 1 to 2, mask seams, handle positions,
+  letterboxing and undo/redo invalidation. Fractional compositor scaling and
+  mixed-scale multi-monitor setups have not been verified by hand yet.
+  Thanks to [@Vssblt](https://github.com/Vssblt) for the investigation, the
+  measurements and the fix (#48).
+
 ## 0.10.1 (2026-09-29)
 
 - **Fixed: GUI processes lingered after the last window closed** (#43). Every
