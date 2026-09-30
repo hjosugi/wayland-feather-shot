@@ -18,15 +18,18 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
+gi.require_version("Gsk", "4.0")
+from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gsk, Gtk  # noqa: E402
 
 import cairo  # noqa: E402
 
 from . import save as save_mod
+from .editor import arrows
 from .editor import shapes as shape_model
 from .editor.shapes import (Arrow, EllipseShape, Highlight, Line, Marker,
                             Obscure, Pen, RectShape, Style, Text)
 from .i18n import _, tr
+from .overlay_canvas import OverlayCanvas, OverlayScene, color, dim_outside, rect
 from .overlay_layout import layout_controls, position_label
 from .theme import install_custom_css
 
@@ -72,6 +75,7 @@ class OverlayWindow(Gtk.ApplicationWindow):
                  open_editor: Optional[Callable] = None):
         super().__init__(application=app, title="Feather Shot")
         self.pixbuf = pixbuf
+        self._scene = OverlayScene(pixbuf)
         self.settings = settings
         self.open_editor = open_editor
 
@@ -112,8 +116,7 @@ class OverlayWindow(Gtk.ApplicationWindow):
         self._bar_rects = ()
         self._action_sizes = None
 
-        self.area = Gtk.DrawingArea()
-        self.area.set_draw_func(self._draw, None)
+        self.area = OverlayCanvas(self._snapshot)
         self.area.set_cursor(Gdk.Cursor.new_from_name("crosshair"))
         self._root.set_child(self.area)
 
@@ -797,84 +800,108 @@ class OverlayWindow(Gtk.ApplicationWindow):
 
     # ------------------------------------------------------------ drawing --
 
-    def _draw(self, area, cr, w, h, _data):
-        cr.set_source_rgb(0, 0, 0)
-        cr.paint()
+    def _snapshot(self, area, snapshot, w, h):
+        snapshot.append_color(color(0, 0, 0), rect(0, 0, w, h))
         scale, ox, oy = self._view_params()
-
-        def paint_content():
-            cr.save()
+        image_bounds = rect(ox, oy, self.pixbuf.get_width() * scale,
+                            self.pixbuf.get_height() * scale)
+        snapshot.append_texture(self._scene.content(self.shapes), image_bounds)
+        if self._preview is not None:
+            # Keep the existing annotation renderer, restricted to its preview.
+            box = self._preview.page_bounds
+            padding = max(2, self.style.width * scale)
+            if self._preview.kind == "arrow":
+                # The model's bounds describe the shaft, not its arrowheads.
+                props = self._preview.props
+                padding = max(padding, scale * max(
+                    arrows.head_size(props.head_start, props.style.width),
+                    arrows.head_size(props.head_end, props.style.width)))
+            bounds = rect(ox + box.x * scale - padding,
+                          oy + box.y * scale - padding,
+                          box.w * scale + 2 * padding,
+                          box.h * scale + 2 * padding)
+            snapshot.push_clip(image_bounds)
+            cr = snapshot.append_cairo(bounds)
             cr.translate(ox, oy)
             cr.scale(scale, scale)
-            Gdk.cairo_set_source_pixbuf(cr, self.pixbuf, 0, 0)
-            cr.paint()
-            for shape in self.shapes:
-                shape.draw(cr, self.pixbuf)
-            if self._preview is not None:
-                self._preview.draw(cr, self.pixbuf)
-            cr.restore()
+            self._preview.draw(cr, self.pixbuf)
+            del cr
+            snapshot.pop()
 
-        paint_content()
-        cr.set_source_rgba(0, 0, 0, OVERLAY_DIM_ALPHA)
-        cr.paint()
-
+        selection = None
         if self.sel:
             x, y, sw, sh = self.sel
             wx0, wy0 = self._to_widget(x, y)
             wx1, wy1 = self._to_widget(x + sw, y + sh)
-            # Under fractional scaling, align the 1px hairline to a device-pixel
-            # boundary so it stays crisp (integer scale is left untouched — #11).
             ds = self._device_scale()
             if abs(ds - round(ds)) > 0.01:
                 wx0 = round(wx0 * ds) / ds
                 wy0 = round(wy0 * ds) / ds
                 wx1 = round(wx1 * ds) / ds
                 wy1 = round(wy1 * ds) / ds
-            cr.save()
-            cr.rectangle(wx0, wy0, wx1 - wx0, wy1 - wy0)
-            cr.clip()
-            paint_content()
-            cr.restore()
+            selection = wx0, wy0, wx1, wy1
+        dim_outside(snapshot, w, h, selection, OVERLAY_DIM_ALPHA)
 
-            cr.set_source_rgba(0.55, 0.07, 0.68, 0.95)  # flameshot purple
-            cr.set_line_width(1.5)
-            cr.rectangle(wx0 + 0.5, wy0 + 0.5, wx1 - wx0, wy1 - wy0)
-            cr.stroke()
+        if selection is not None:
+            purple = color(0.55, 0.07, 0.68, 0.95)
+            outline = Gsk.RoundedRect()
+            outline.init_from_rect(rect(wx0 - .25, wy0 - .25,
+                                        wx1 - wx0 + 1.5, wy1 - wy0 + 1.5), 0)
+            snapshot.append_border(outline, [1.5] * 4, [purple] * 4)
             for hx, hy in self._handles().values():
-                cr.arc(hx, hy, HANDLE_R, 0, 6.2832)
-                cr.fill()
+                bounds = rect(hx - HANDLE_R, hy - HANDLE_R,
+                              HANDLE_R * 2, HANDLE_R * 2)
+                circle = Gsk.RoundedRect()
+                circle.init_from_rect(bounds, HANDLE_R)
+                snapshot.push_rounded_clip(circle)
+                snapshot.append_color(purple, bounds)
+                snapshot.pop()
 
             label = f"{sw} × {sh}"
-            cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL,
-                                cairo.FONT_WEIGHT_BOLD)
-            cr.set_font_size(13)
-            ext = cr.text_extents(label)
+            ext = self._text_extents(label, 13, True)
             label_x, label_y = position_label(
-                (w, h), (wx0, wy0, wx1, wy1),
+                (w, h), selection,
                 (math.ceil(ext.width + 10), math.ceil(ext.height + 9)),
                 self._bar_rects if self.mode == "edit" else (),
             )
-            lx = label_x + 5
-            ly = label_y + ext.height + 4
-            cr.set_source_rgba(0, 0, 0, 0.7)
-            cr.rectangle(label_x, label_y, ext.width + 10,
-                         ext.height + 9)
+            bounds = rect(label_x, label_y,
+                          math.ceil(ext.width + 10), math.ceil(ext.height + 9))
+            cr = snapshot.append_cairo(bounds)
+            cr.set_source_rgba(0, 0, 0, .7)
+            cr.rectangle(label_x, label_y, ext.width + 10, ext.height + 9)
             cr.fill()
-            cr.set_source_rgb(1, 1, 1)
-            cr.move_to(lx, ly)
-            cr.show_text(label)
+            self._paint_text(cr, label, label_x + 5,
+                             label_y + ext.height + 4, 13, True)
+            del cr
         elif self.mode == "select":
             hint = _("Drag: select area   •   Click / Enter: full screen   •   Esc: cancel")
-            cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL,
-                                cairo.FONT_WEIGHT_NORMAL)
-            cr.set_font_size(15)
-            ext = cr.text_extents(hint)
-            hx = (w - ext.width) / 2
-            hy = 42.0
-            cr.set_source_rgba(0, 0, 0, 0.65)
-            cr.rectangle(hx - 14, hy - ext.height - 8, ext.width + 28,
-                         ext.height + 18)
+            ext = self._text_extents(hint, 15, False)
+            hx, hy = (w - ext.width) / 2, 42.0
+            bounds = rect(hx - 14, hy - ext.height - 8,
+                          math.ceil(ext.width + 28), math.ceil(ext.height + 18))
+            cr = snapshot.append_cairo(bounds)
+            cr.set_source_rgba(0, 0, 0, .65)
+            cr.rectangle(hx - 14, hy - ext.height - 8,
+                         ext.width + 28, ext.height + 18)
             cr.fill()
-            cr.set_source_rgb(1, 1, 1)
-            cr.move_to(hx, hy)
-            cr.show_text(hint)
+            self._paint_text(cr, hint, hx, hy, 15, False)
+            del cr
+
+    @staticmethod
+    def _text_extents(text, size, bold):
+        cr = cairo.Context(cairo.ImageSurface(cairo.FORMAT_ARGB32, 1, 1))
+        cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL,
+                            cairo.FONT_WEIGHT_BOLD if bold
+                            else cairo.FONT_WEIGHT_NORMAL)
+        cr.set_font_size(size)
+        return cr.text_extents(text)
+
+    @staticmethod
+    def _paint_text(cr, text, x, y, size, bold):
+        cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL,
+                            cairo.FONT_WEIGHT_BOLD if bold
+                            else cairo.FONT_WEIGHT_NORMAL)
+        cr.set_font_size(size)
+        cr.set_source_rgb(1, 1, 1)
+        cr.move_to(x, y)
+        cr.show_text(text)
