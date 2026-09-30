@@ -96,6 +96,8 @@ class OverlayWindow(Gtk.ApplicationWindow):
         self._drag_start_img: Optional[Tuple[float, float]] = None
         self._pen_points: List[Tuple[float, float]] = []
         self._preview = None
+        self._copy_first_click = False
+        self._copy_press_inside = False
         self._mon_rects = self._monitor_rects_image()  # for edge snapping (#6)
 
         self._build_ui()
@@ -124,6 +126,7 @@ class OverlayWindow(Gtk.ApplicationWindow):
 
         click = Gtk.GestureClick()
         click.set_button(1)
+        click.connect("pressed", self._on_click_pressed)
         click.connect("released", self._on_click)
         self.area.add_controller(click)
 
@@ -453,6 +456,8 @@ class OverlayWindow(Gtk.ApplicationWindow):
     def _on_drag_update(self, gesture, dx, dy):
         if self._drag_kind is None or self._drag_start_img is None:
             return
+        self._copy_first_click = False
+        self._copy_press_inside = False
         ok, sx, sy = gesture.get_start_point()
         if not ok:
             return
@@ -550,7 +555,27 @@ class OverlayWindow(Gtk.ApplicationWindow):
                 self._preview = Obscure(rect, self.redaction_density,
                                         pixelate=True)
 
+    def _copy_hit(self, x, y):
+        return (self.mode == "edit" and self.tool == "move"
+                and self._inside_sel(*self._to_image(x, y))
+                and not self._handle_at(x, y))
+
+    def _on_click_pressed(self, gesture, n_press, x, y):
+        if n_press == 1:
+            self._copy_first_click = False
+        self._copy_press_inside = self._copy_hit(x, y)
+
     def _on_click(self, gesture, n_press, x, y):
+        eligible = self._copy_press_inside and self._copy_hit(x, y)
+        self._copy_press_inside = False
+        if n_press == 1:
+            self._copy_first_click = eligible
+        elif n_press == 2 and self._copy_first_click and eligible:
+            self._copy_first_click = False
+            self.copy_and_close()
+            return
+        else:
+            self._copy_first_click = False
         if self.mode != "edit" or self.tool not in ("text", "marker"):
             return
         ix, iy = self._to_image(x, y)
