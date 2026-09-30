@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.10.2 (2026-10-01)
+
 - **The overlay's annotation tools have icons** (#41). The bottom toolbar of
   the region overlay mixed text buttons for the drawing tools with the icon
   buttons for undo and redo, and short labels like "High" and "Pixel" were

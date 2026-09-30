@@ -52,6 +52,20 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.10.2" date="2026-10-01">
+      <description>
+        <p>
+          Three contributions from the community. The region overlay's
+          annotation tools now use bundled symbolic icons instead of text
+          labels, registered with GTK at startup so they work without a
+          system icon theme. Double-clicking inside a finished selection
+          copies it to the clipboard and closes the overlay. Creating, moving
+          and resizing a selection no longer stutters: the screenshot stays
+          in a GTK texture and only the selection overlay is redrawn while
+          dragging.
+        </p>
+      </description>
+    </release>
     <release version="0.10.1" date="2026-09-29">
       <description>
         <p>
