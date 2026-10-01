@@ -33,7 +33,29 @@ upload button, no accounts, no telemetry, no network code at all.**
 
 ## Install
 
-On Arch / CachyOS, install the packaged release from the AUR once published:
+On Arch / CachyOS, install the packaged release from the project's signed
+pacman repository. Trust its signing key once:
+
+```console
+$ curl -fsSLO https://raw.githubusercontent.com/hjosugi/wayland-feather-shot/main/packaging/pacman/wayland-feather-shot.asc
+$ sudo pacman-key --add wayland-feather-shot.asc
+$ sudo pacman-key --lsign-key A9C10C8ABD51260035B8EA525FEC84546891A5E4
+```
+
+Add the repository to `/etc/pacman.conf`:
+
+```ini
+[wayland-feather-shot]
+Server = https://github.com/hjosugi/wayland-feather-shot/releases/download/pacman-repo
+```
+
+Then install it; later releases arrive with `pacman -Syu`:
+
+```console
+$ sudo pacman -Syu wayland-feather-shot
+```
+
+Or from the AUR once published:
 
 ```console
 $ yay -S wayland-feather-shot

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Signed pacman repository for Arch / CachyOS.** The AUR is not accepting
+  new accounts, so the package is now also served as a pacman repository from
+  the assets of the `pacman-repo` GitHub release: trust the signing key, add
+  the repository to `pacman.conf`, and `pacman -S wayland-feather-shot` installs
+  it and `pacman -Syu` keeps it current. `scripts/publish-pacman-repo.sh`
+  builds and signs the package and database, and the release workflow
+  publishes them when `PACMAN_REPO_GPG_PRIVATE_KEY` is set.
+
 - **Hotkey guide.** `docs/HOTKEYS.md` (English and Japanese) explains how to
   bind the capture keys on each desktop, what the portal daemon needs, and
   lists every in-app key. A shared `.vscode/` adds launch configurations for

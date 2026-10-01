@@ -56,6 +56,36 @@ secret `AUR_SSH_PRIVATE_KEY` is set to a private SSH key whose public key is
 registered on the maintainer's AUR account. If the secret is absent, the
 workflow skips AUR publishing and still creates the GitHub release.
 
+## pacman repository
+
+The same `aur/PKGBUILD` is also built into a binary package and served as a
+signed pacman repository from the assets of the `pacman-repo` GitHub release,
+so Arch users can install with plain `pacman` (see the Install section of the
+top-level README for the `pacman.conf` entry). The package and the database are
+signed with the key in `pacman/wayland-feather-shot.asc`, fingerprint
+`A9C10C8ABD51260035B8EA525FEC84546891A5E4`.
+
+To build the repository for an existing release tag on Arch:
+
+```console
+$ scripts/publish-pacman-repo.sh vX.Y.Z --sign-key A9C10C8ABD51260035B8EA525FEC84546891A5E4
+```
+
+This writes the package, the database and their signatures to
+`dist/pacman-repo-vX.Y.Z` and checks the signatures against the committed
+public key. Add `--push` to upload them to the `pacman-repo` release; the
+package from the previous version is removed from the release afterwards.
+
+The release workflow does this automatically when the repository secret
+`PACMAN_REPO_GPG_PRIVATE_KEY` holds the armored private key
+(`gpg --armor --export-secret-keys A9C10C8ABD51260035B8EA525FEC84546891A5E4`). If the secret is absent, the
+workflow skips the pacman repository. The `Pacman repository` workflow can
+also be run by hand to publish a tag again.
+
+The package installs into the site-packages directory of the Python version it
+was built with, so it has to be rebuilt (a new release, or a `pkgrel` bump)
+when Arch moves to a new Python minor version.
+
 ## AppImage
 
 The AppImage is intentionally a host-runtime wrapper. It carries the app code,

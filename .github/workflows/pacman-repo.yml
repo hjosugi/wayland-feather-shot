@@ -1,0 +1,58 @@
+name: Pacman repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Released tag to package (e.g. v0.2.0)"
+        required: true
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+    secrets:
+      PACMAN_REPO_GPG_PRIVATE_KEY:
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Install tools
+        run: pacman -Syu --noconfirm --needed git github-cli python
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Publish pacman repository
+        shell: bash
+        env:
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PACMAN_REPO_GPG_PRIVATE_KEY: ${{ secrets.PACMAN_REPO_GPG_PRIVATE_KEY }}
+          MAKEPKG_ARGS: --noconfirm
+          PACKAGER: wayland-feather-shot release <hjosugi@users.noreply.github.com>
+        run: |
+          if [ -z "${PACMAN_REPO_GPG_PRIVATE_KEY:-}" ]; then
+            echo "PACMAN_REPO_GPG_PRIVATE_KEY is not set; skipping pacman repository publish"
+            exit 0
+          fi
+
+          # makepkg refuses to run as root.
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
+          chown -R builder: .
+          as_builder() { runuser -u builder -- env HOME=/home/builder "$@"; }
+
+          printf '%s\n' "$PACMAN_REPO_GPG_PRIVATE_KEY" | as_builder gpg --batch --import
+          key="$(as_builder gpg --batch --list-secret-keys --with-colons |
+            awk -F: '$1 == "fpr" { print $10; exit }')"
+
+          as_builder scripts/publish-pacman-repo.sh "$TAG" --sign-key "$key" --push

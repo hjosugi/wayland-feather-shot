@@ -33,7 +33,28 @@ Flameshot風のWayland専用スクリーンショットツール。クラウド�
 
 ## インストール
 
-Arch / CachyOSでは、AURにリリースされたパッケージをインストールできます:
+Arch / CachyOSでは、プロジェクトの署名付きpacmanリポジトリからインストールできます。最初に一度だけ署名鍵を信頼します:
+
+```console
+$ curl -fsSLO https://raw.githubusercontent.com/hjosugi/wayland-feather-shot/main/packaging/pacman/wayland-feather-shot.asc
+$ sudo pacman-key --add wayland-feather-shot.asc
+$ sudo pacman-key --lsign-key A9C10C8ABD51260035B8EA525FEC84546891A5E4
+```
+
+`/etc/pacman.conf`にリポジトリを追加します:
+
+```ini
+[wayland-feather-shot]
+Server = https://github.com/hjosugi/wayland-feather-shot/releases/download/pacman-repo
+```
+
+インストールします。以降のリリースは`pacman -Syu`で更新されます:
+
+```console
+$ sudo pacman -Syu wayland-feather-shot
+```
+
+AURに公開された後は、AURからもインストールできます:
 
 ```console
 $ yay -S wayland-feather-shot

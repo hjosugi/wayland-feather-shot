@@ -118,3 +118,10 @@ jobs:
           if ! scripts/publish-aur.sh "$TAG" --push; then
             echo "::warning::AUR publish failed; GitHub release assets were published."
           fi
+
+  pacman-repo:
+    needs: release
+    uses: ./.github/workflows/pacman-repo.yml
+    with:
+      tag: ${{ inputs.tag }}
+    secrets: inherit
