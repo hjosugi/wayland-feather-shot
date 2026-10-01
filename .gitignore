@@ -10,3 +10,9 @@ build/
 .codex/skills/graphify/
 .codex/hooks.json
 graphify-out/
+# personal editor state; the four shared files are tracked
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json
+!.vscode/extensions.json

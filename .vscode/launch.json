@@ -1,0 +1,88 @@
+{
+  // Shared launch configurations. Press F5 and pick one; they all run the
+  // git checkout through bin/wayland-feather-shot, so no install is needed.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Region capture (gui)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin/wayland-feather-shot",
+      "args": ["gui"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Full screen into the editor (full)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin/wayland-feather-shot",
+      "args": ["full"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Editor on an image file (edit)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin/wayland-feather-shot",
+      "args": ["edit", "${input:imagePath}"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Scrolling capture (scroll)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin/wayland-feather-shot",
+      "args": ["scroll"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Hotkey daemon (bind once and exit)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin/wayland-feather-shot",
+      "args": ["daemon", "--bind-once"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Diagnose",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin/wayland-feather-shot",
+      "args": ["diagnose"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Tests: whole suite",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "unittest",
+      "args": ["discover", "-s", "tests", "-p", "test_*.py", "-v"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Tests: current file",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ],
+  "inputs": [
+    {
+      "id": "imagePath",
+      "type": "promptString",
+      "description": "Image to open in the editor",
+      "default": ""
+    }
+  ]
+}

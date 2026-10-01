@@ -1,0 +1,24 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "tests",
+      "type": "shell",
+      "command": "python3 -m unittest discover -s tests -p 'test_*.py' -v",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "translations: regenerate po/.mo",
+      "type": "shell",
+      "command": "python3 scripts/gen-po.py",
+      "problemMatcher": []
+    },
+    {
+      "label": "run: region capture",
+      "type": "shell",
+      "command": "./bin/wayland-feather-shot gui",
+      "problemMatcher": []
+    }
+  ]
+}

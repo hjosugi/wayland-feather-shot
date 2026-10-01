@@ -1,0 +1,11 @@
+{
+  "python.analysis.extraPaths": ["src"],
+  "python.testing.unittestEnabled": true,
+  "python.testing.pytestEnabled": false,
+  "python.testing.unittestArgs": ["-v", "-s", "tests", "-p", "test_*.py"],
+  "editor.rulers": [100],
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "[python]": { "editor.tabSize": 4, "editor.insertSpaces": true },
+  "files.exclude": { "**/__pycache__": true, "graphify-out": true }
+}
