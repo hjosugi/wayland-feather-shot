@@ -37,34 +37,16 @@ leaves the machine. Changes that need otherwise are out of scope.
 
 ## Install
 
-On Arch / CachyOS, install the packaged release from the project's signed
-pacman repository. Trust its signing key once:
+On Arch / CachyOS, install from the project's signed pacman repository.
+These four commands trust the signing key, add the repository to
+`/etc/pacman.conf` (the `grep` guard skips the append when it is already
+there), and install; later releases then arrive with `pacman -Syu`:
 
 ```console
-$ curl -fsSLO https://raw.githubusercontent.com/hjosugi/wayland-feather-shot/main/packaging/pacman/wayland-feather-shot.asc
-$ sudo pacman-key --add wayland-feather-shot.asc
-$ sudo pacman-key --lsign-key A9C10C8ABD51260035B8EA525FEC84546891A5E4
-```
-
-Add the repository to `/etc/pacman.conf`:
-
-```ini
-[wayland-feather-shot]
-Server = https://github.com/hjosugi/wayland-feather-shot/releases/download/pacman-repo
-```
-
-Then install it; later releases arrive with `pacman -Syu`:
-
-```console
+$ curl -fsSLo /tmp/wayland-feather-shot.asc https://raw.githubusercontent.com/hjosugi/wayland-feather-shot/main/packaging/pacman/wayland-feather-shot.asc
+$ sudo pacman-key --add /tmp/wayland-feather-shot.asc && sudo pacman-key --lsign-key A9C10C8ABD51260035B8EA525FEC84546891A5E4
+$ grep -q '^\[wayland-feather-shot\]' /etc/pacman.conf || printf '\n[wayland-feather-shot]\nServer = https://github.com/hjosugi/wayland-feather-shot/releases/download/pacman-repo\n' | sudo tee -a /etc/pacman.conf >/dev/null
 $ sudo pacman -Syu wayland-feather-shot
-```
-
-Or from the AUR once published:
-
-```console
-$ yay -S wayland-feather-shot
-# or
-$ paru -S wayland-feather-shot
 ```
 
 Dependencies (the only hard ones are GTK4 + PyGObject + pycairo):
