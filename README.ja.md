@@ -192,6 +192,9 @@ Waylandではアプリがグローバルキーを取得する汎用的な方法�
 | Sway / wlroots | ネイティブショートカット | `bindsym Ctrl+Print exec wayland-feather-shot gui` |
 | その他 | ネイティブショートカット | 設定で`wayland-feather-shot gui`をバインド |
 
+デスクトップ別の設定手順、ポータル daemon に必要なもの、アプリ内の全キー:
+[docs/HOTKEYS.ja.md](docs/HOTKEYS.ja.md)
+
 **キーを押しても何も起きない場合**、まずキャプチャ自体が動作するか確認してください:
 
 ```console

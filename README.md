@@ -198,6 +198,9 @@ desktop and prints the exact command):
 | Sway / wlroots | native shortcut | `bindsym Ctrl+Print exec wayland-feather-shot gui` |
 | other | native shortcut | bind `wayland-feather-shot gui` in your settings |
 
+Step-by-step setup for each desktop, what the portal daemon needs, and
+every in-app key: [docs/HOTKEYS.md](docs/HOTKEYS.md).
+
 **If pressing the key does nothing**, first check the capture itself works:
 
 ```console

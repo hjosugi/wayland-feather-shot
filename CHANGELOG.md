@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Hotkey guide.** `docs/HOTKEYS.md` (English and Japanese) explains how to
+  bind the capture keys on each desktop, what the portal daemon needs, and
+  lists every in-app key. A shared `.vscode/` adds launch configurations for
+  debugging.
+
 - **Fixed: `wayland-feather-shot daemon` failed on GNOME with "An app id is
   required"**. The GlobalShortcuts portal only opens a session for a client it
   can name, and a process running outside a sandbox has no app id unless it

@@ -1,0 +1,197 @@
+# Hotkeys
+
+Two different things get called "shortcut" around a screenshot tool:
+
+- **Global keys** such as Ctrl+PrtSc, which launch a capture from anywhere.
+  On Wayland an application cannot grab a key by itself; the desktop decides.
+- **In-app keys** that work while the region overlay or the editor is open.
+
+This page covers both. `wayland-feather-shot diagnose` detects your desktop
+and prints the exact commands for it.
+
+## Global keys
+
+Feather Shot ships two mechanisms; pick one per desktop.
+
+| Mechanism | How it works | Best for |
+| --- | --- | --- |
+| Native binding | Your desktop's own keyboard settings run `wayland-feather-shot gui`. Nothing needs to stay running. | GNOME, Hyprland, Sway, anything |
+| Portal daemon | `wayland-feather-shot daemon` registers the keys through the GlobalShortcuts portal and stays running. The desktop shows the binding in its own settings and may ask for approval once. | KDE Plasma, GNOME 46+ |
+
+Default keys with either mechanism:
+
+| Key | Action |
+| --- | --- |
+| Ctrl+PrtSc | region capture (`gui`) |
+| Ctrl+Shift+PrtSc | scrolling capture (`scroll`) |
+| Ctrl+Shift+F12 | full screen (`full`), portal daemon only |
+
+### GNOME
+
+**Native (recommended).** Run the helper once:
+
+```console
+$ ./scripts/setup-hotkey.sh
+```
+
+It adds two custom keybindings through `gsettings` (Settings → Keyboard →
+Custom Shortcuts, named "Feather Shot (region)" and "Feather Shot (scroll)")
+and is safe to rerun. The command is the installed `wayland-feather-shot`, or
+this checkout's `bin/wayland-feather-shot` when nothing is installed. To
+undo, delete the two entries in that settings page.
+
+GNOME keeps Print, Shift+Print and Alt+Print for its own screenshot UI;
+Ctrl+Print is free by default, which is why it is the default here.
+
+**Portal daemon (GNOME 46 or newer).** The daemon needs two things:
+
+1. It must be running. A package install adds an autostart entry
+   (`io.github.hjosugi.WaylandFeatherShot.Daemon.desktop`) that starts it at
+   login. From a git checkout, install the entries with
+   `scripts/install-desktop-entry.sh --autostart`, then log out and in, or
+   start it by hand once with `./bin/wayland-feather-shot daemon`.
+2. The portal must know the app id. Feather Shot registers it at start-up
+   through `org.freedesktop.host.portal.Registry` (xdg-desktop-portal 1.18 or
+   newer), and the portal accepts that only when a desktop entry named
+   `io.github.hjosugi.WaylandFeatherShot.desktop` exists in an applications
+   directory it can see. Packages install it; `scripts/install-desktop-entry.sh`
+   installs it for a checkout.
+
+GNOME binds the keys without a dialog. They appear under Settings → Keyboard
+→ Applications once the daemon has registered them.
+
+### KDE Plasma
+
+Plasma implements the GlobalShortcuts portal. Start the daemon (the autostart
+entry does this at login), approve the shortcut dialog once, and the keys show
+up under System Settings → Shortcuts → Feather Shot, where you can change them.
+Alternatively add a custom shortcut by hand: command `wayland-feather-shot gui`,
+key Ctrl+PrtSc.
+
+### Hyprland
+
+```ini
+# ~/.config/hypr/hyprland.conf
+bind = CTRL, Print, exec, wayland-feather-shot gui
+bind = CTRL SHIFT, Print, exec, wayland-feather-shot scroll
+```
+
+### Sway and other wlroots compositors
+
+```
+# ~/.config/sway/config
+bindsym Ctrl+Print exec wayland-feather-shot gui
+bindsym Ctrl+Shift+Print exec wayland-feather-shot scroll
+```
+
+`xdg-desktop-portal-wlr` does not implement the GlobalShortcuts portal, so the
+daemon reports failure there; the native binding is the way.
+
+### Other desktops
+
+Bind `wayland-feather-shot gui` and `wayland-feather-shot scroll` in your
+desktop's keyboard settings. If the desktop implements the GlobalShortcuts
+portal, `wayland-feather-shot daemon` works too.
+
+### Changing the daemon's keys
+
+The region key can be overridden on the command line, in the portal's
+trigger syntax:
+
+```console
+$ wayland-feather-shot daemon --shortcut "CTRL+SHIFT+s"
+```
+
+For a permanent change, edit the `Exec=` line of the autostart entry, or use
+the desktop's own shortcut settings once the keys are registered.
+
+### Checking that it works
+
+```console
+$ wayland-feather-shot gui                 # the capture path itself
+$ wayland-feather-shot diagnose            # portals, detected desktop, the binding for it
+$ wayland-feather-shot daemon --bind-once  # portal path: register the keys, then exit
+$ wayland-feather-shot daemon              # stay running and log every key press
+```
+
+In the foreground the daemon logs each activation and the exact command it
+launches. The autostarted daemon logs to the journal:
+
+```console
+$ journalctl --user -b -g "feather-shot daemon"
+```
+
+### Troubleshooting
+
+- **`could not bind shortcuts (... An app id is required)`** — the portal
+  does not know which application is asking. Either the desktop entry named
+  after the app id is missing (git checkout: run
+  `scripts/install-desktop-entry.sh`; AppImage integrated under a different
+  file name: install the entry from `data/` under its proper name), or
+  xdg-desktop-portal is older than 1.18 and has no Registry. The native
+  binding does not need any of this.
+- **The daemon says "shortcuts bound" but the key does nothing** — make sure
+  only one daemon is running, and look for `activated` lines in its log. On
+  GNOME, check Settings → Keyboard → Applications for the binding, and that
+  no custom shortcut uses the same key.
+- **Ctrl+PrtSc opens the desktop's own screenshot tool** — the desktop has its
+  own binding on that key; change or remove it in the keyboard settings.
+- **`gui` works but no key does** — the binding mechanism is the problem, not
+  the capture. Re-read the section for your desktop above.
+
+## In-app keys
+
+### Region overlay (`gui`)
+
+Before a region is selected:
+
+| Key | Action |
+| --- | --- |
+| drag | select a region |
+| Enter | select the whole screen and start editing |
+| Esc | quit |
+
+With a region selected:
+
+| Key | Action |
+| --- | --- |
+| V | move / resize the selection |
+| P, L, A | pen, line, arrow |
+| R, E, H | rectangle, ellipse, highlighter |
+| T, M | text (click to place), numbered marker (click to place) |
+| B, X | blur, pixelate |
+| W | open the selection in the editor |
+| Enter, Ctrl+C, double-click inside the selection | copy to the clipboard and close |
+| Ctrl+S | save and close |
+| Ctrl+Shift+S | save as… |
+| Ctrl+O | open the save folder |
+| Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y | undo, redo |
+| Esc | quit without saving |
+
+### Editor (`full`, `edit`, or W from the overlay)
+
+| Key | Tool |
+| --- | --- |
+| V | select / move a shape |
+| P, L, A, G | pen, line, arrow, numbered step arrow |
+| R, E, H, S | rectangle, ellipse, highlighter, spotlight |
+| T, U, J | text, speech bubble, emoji sticker |
+| B, X, M | blur, pixelate, numbered marker |
+| C | crop (Enter applies, Esc cancels) |
+
+| Key | Action |
+| --- | --- |
+| Ctrl+S | quick save |
+| Ctrl+Shift+S | save as… |
+| Ctrl+C | copy the image to the clipboard |
+| Ctrl+Shift+C | copy the saved file's path |
+| Ctrl+O | open the save folder |
+| Ctrl+P | pin the image to the screen |
+| Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y | undo, redo |
+| Ctrl+A | select all shapes |
+| Ctrl++, Ctrl+- | zoom in, zoom out |
+| Ctrl+1, Ctrl+0 | fit to window, 100 % |
+| Ctrl+Up, Ctrl+Down | raise, lower the selected shape |
+| arrows, Shift+arrows | nudge the selection by 1 px, by 10 px |
+| Delete, Backspace | delete the selected shapes |
+| Esc | close |
