@@ -49,17 +49,20 @@ $ grep -q '^\[wayland-feather-shot\]' /etc/pacman.conf || printf '\n[wayland-fea
 $ sudo pacman -Syu wayland-feather-shot
 ```
 
-Dependencies (the only hard ones are GTK4 + PyGObject + pycairo):
+Dependencies for a source install (`install.sh` or pip): GTK 4, PyGObject and
+pycairo are all it needs.
 
 | Distro | Command |
 | --- | --- |
-| Arch / CachyOS | `sudo pacman -S --needed python-gobject gtk4 python-cairo wl-clipboard gst-plugins-base gst-plugin-pipewire python-numpy` |
-| Debian / Ubuntu | `sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 wl-clipboard gstreamer1.0-pipewire gir1.2-gst-plugins-base-1.0 python3-numpy` |
-| Fedora | `sudo dnf install python3-gobject gtk4 python3-cairo wl-clipboard pipewire-gstreamer python3-numpy` |
+| Arch / CachyOS | `sudo pacman -S --needed python-gobject gtk4 python-cairo` |
+| Debian / Ubuntu | `sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0` |
+| Fedora | `sudo dnf install python3-gobject gtk4 python3-cairo` |
 
-`wl-clipboard`, GStreamer and numpy are optional but recommended:
-`wl-clipboard` lets a copy outlive the app window; GStreamer powers the
-scrolling capture; numpy makes stitching fast.
+Optional: GStreamer's PipeWire plugin turns on the automatic scrolling capture
+(`gst-plugin-pipewire gst-plugins-base`, `gstreamer1.0-pipewire
+gir1.2-gst-plugins-base-1.0`, or `pipewire-gstreamer`), and numpy makes
+stitching faster. Without them scrolling capture still works in manual mode,
+and a copy outlives the window with or without `wl-clipboard`.
 
 Then:
 

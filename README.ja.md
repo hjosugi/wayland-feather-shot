@@ -47,17 +47,19 @@ $ grep -q '^\[wayland-feather-shot\]' /etc/pacman.conf || printf '\n[wayland-fea
 $ sudo pacman -Syu wayland-feather-shot
 ```
 
-依存パッケージ（必須はGTK4 + PyGObject + pycairoのみ）:
+ソースからのインストール（`install.sh`またはpip）に必要なのはGTK 4、PyGObject、pycairoの3つだけです。
 
 | ディストリビューション | コマンド |
 | --- | --- |
-| Arch / CachyOS | `sudo pacman -S --needed python-gobject gtk4 python-cairo wl-clipboard gst-plugins-base gst-plugin-pipewire python-numpy` |
-| Debian / Ubuntu | `sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 wl-clipboard gstreamer1.0-pipewire gir1.2-gst-plugins-base-1.0 python3-numpy` |
-| Fedora | `sudo dnf install python3-gobject gtk4 python3-cairo wl-clipboard pipewire-gstreamer python3-numpy` |
+| Arch / CachyOS | `sudo pacman -S --needed python-gobject gtk4 python-cairo` |
+| Debian / Ubuntu | `sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0` |
+| Fedora | `sudo dnf install python3-gobject gtk4 python3-cairo` |
 
-`wl-clipboard`, GStreamer, numpyはオプションですが推奨です：
-`wl-clipboard`はコピーをウィンドウ終了後も保持、GStreamerはスクロールキャプチャを、
-numpyは合成を高速化します。
+オプション: GStreamerのPipeWireプラグイン（`gst-plugin-pipewire gst-plugins-base`、
+`gstreamer1.0-pipewire gir1.2-gst-plugins-base-1.0`、または`pipewire-gstreamer`）を入れると
+自動スクロールキャプチャが有効になり、numpyがあると合成が速くなります。無くても
+スクロールキャプチャは手動モードで動き、コピーは`wl-clipboard`の有無に関わらず
+ウィンドウを閉じても残ります。
 
 次に:
 
