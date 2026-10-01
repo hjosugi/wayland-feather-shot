@@ -6,6 +6,10 @@
 **Flameshot-style screenshot tool, built Wayland-first. 100% local — no
 upload button, no accounts, no telemetry, no network code at all.**
 
+Those are design rules, not just the current state: every capture goes
+through the desktop portal, nothing works around the compositor, and nothing
+leaves the machine. Changes that need otherwise are out of scope.
+
 ![tools](data/icons/io.github.hjosugi.WaylandFeatherShot.svg)
 
 ## Features
