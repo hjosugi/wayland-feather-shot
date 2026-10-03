@@ -1,8 +1,9 @@
 """Typing text in place on the region overlay.
 
 A TextView on a layer over the canvas shows the words at the size, colour
-and style the annotation will have; they become a Text shape when the text
-is finished. A mixin of overlay.window.OverlayWindow.
+and style the annotation will have; they become a Text shape, or a speech
+bubble around them, when the text is finished. A mixin of
+overlay.window.OverlayWindow.
 """
 
 from __future__ import annotations
@@ -14,10 +15,11 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("Pango", "1.0")
 from gi.repository import Gdk, Gtk, Pango  # noqa: E402
 
+from ..editor import render
 from ..editor import shapes as shape_model
-from ..editor.shapes import Text
+from ..editor.shapes import SpeechBubble, Text
 from ..i18n import _
-from ..theme import style_live_text
+from ..theme import style_live_bubble, style_live_text
 
 
 class TextLayer(Gtk.Fixed):
@@ -33,14 +35,16 @@ class TextLayer(Gtk.Fixed):
 
 
 class OverlayTextMixin:
-    """One text at a time: ``_text_edit`` holds its view and image position
-    from _begin_text until _end_text turns it into a shape (or drops it)."""
+    """One text at a time: ``_text_edit`` holds its view, image position
+    and kind ("text" or "bubble") from _begin_text until _end_text turns it
+    into a shape (or drops it)."""
 
-    def _begin_text(self, ix, iy):
+    def _begin_text(self, ix, iy, kind="text"):
         """Type the text on the canvas, at the size and colour it will have.
 
         The editor window does the same (#31); a popover showed the words but
-        not how big they would come out.
+        not how big they would come out. A bubble is typed inside a live
+        bubble whose top-left corner is at (ix, iy).
         """
         self._end_text(commit=True)
         view = Gtk.TextView()
@@ -56,7 +60,7 @@ class OverlayTextMixin:
         self._place(self._text_layer, self._text_host)
         self._text_layer.put(view, 0, 0)
         self._text_layer.set_visible(True)
-        self._text_edit = {"view": view, "pos": (ix, iy)}
+        self._text_edit = {"view": view, "pos": (ix, iy), "kind": kind}
         self._position_text_view()
         self._style_text_view()
         view.grab_focus()
@@ -83,26 +87,46 @@ class OverlayTextMixin:
         view = self._text_edit["view"]
         buffer = view.get_buffer()
         start, end = buffer.get_bounds()
+        text = buffer.get_text(start, end, False)
         with self._looking_through(self._text_host):
             scale = self._view_params()[0]
-        font = self.style.font_size
-        w, h = shape_model.measure_text(buffer.get_text(start, end, False),
-                                        self.style)
-        view.set_size_request(int(max(w, font * 3) * scale) + 12,
-                              int(max(h, font * 1.3) * scale) + 6)
+        bubble = self._text_edit["kind"] == "bubble"
+        if bubble:
+            # Dark, regular-weight words inside a padded white body, as
+            # render._draw_bubble draws them.
+            font = render.bubble_text_size(self.style)
+            rgba = render.BUBBLE_TEXT_RGBA
+            w, h = render.bubble_body(text, self.style)
+            border = max(1.5, self.style.width) * scale
+            # The CSS border sits inside the view and pushes the words in;
+            # take it off the padding so they land where they will be drawn.
+            pad = max(0, int(round(render.BUBBLE_PAD * scale - border)))
+            for side in ("left", "right", "top", "bottom"):
+                getattr(view, f"set_{side}_margin")(pad)
+            view.set_size_request(
+                int(max(w, font * 3 + 2 * render.BUBBLE_PAD) * scale),
+                int(max(h, font * 1.3 + 2 * render.BUBBLE_PAD) * scale))
+            style_live_bubble(view, self.style.rgba, border,
+                              min(14.0, w / 3, h / 3) * scale)
+        else:
+            font = self.style.font_size
+            rgba = self.style.rgba
+            w, h = shape_model.measure_text(text, self.style)
+            view.set_size_request(int(max(w, font * 3) * scale) + 12,
+                                  int(max(h, font * 1.3) * scale) + 6)
+            style_live_text(view, self.text_style, rgba, font * scale)
         tag = buffer.get_tag_table().lookup("wfs-live")
         if tag is None:
             tag = buffer.create_tag("wfs-live")
         desc = Pango.FontDescription()
         desc.set_family(self.style.font_family)
-        desc.set_weight(Pango.Weight.BOLD)
+        desc.set_weight(Pango.Weight.NORMAL if bubble else Pango.Weight.BOLD)
         desc.set_absolute_size(max(6.0, font * scale) * Pango.SCALE)
         tag.set_property("font-desc", desc)
         colour = Gdk.RGBA()
-        colour.red, colour.green, colour.blue, colour.alpha = self.style.rgba
+        colour.red, colour.green, colour.blue, colour.alpha = rgba
         tag.set_property("foreground-rgba", colour)
         buffer.apply_tag(tag, start, end)
-        style_live_text(view, self.text_style, self.style.rgba, font * scale)
 
     def _refocus_text(self):
         """Back to typing after a toolbar control took the focus."""
@@ -111,8 +135,9 @@ class OverlayTextMixin:
 
     def _end_text(self, commit: bool):
         """Finish the text being typed, if any: with *commit* (and some
-        non-blank text) it becomes a Text shape and an undo step; either
-        way the view goes. Safe to call when nothing is being typed."""
+        non-blank text) it becomes a Text shape or a bubble, and an undo
+        step; either way the view goes. Safe to call when nothing is being
+        typed."""
         edit, self._text_edit = self._text_edit, None
         if not edit:
             return
@@ -123,9 +148,14 @@ class OverlayTextMixin:
         self._text_layer.set_visible(False)
         if commit and text.strip():
             self._push_history()
-            self.shapes.append(Text(edit["pos"], text, self.style,
-                                    **shape_model.text_style_flags(
-                                        self.text_style)))
+            if edit["kind"] == "bubble":
+                w, h = render.bubble_body(text, self.style)
+                self.shapes.append(
+                    SpeechBubble((*edit["pos"], w, h), text, self.style))
+            else:
+                self.shapes.append(Text(edit["pos"], text, self.style,
+                                        **shape_model.text_style_flags(
+                                            self.text_style)))
         self._redraw()
 
     def _on_text_key(self, _controller, keyval, _keycode, state):

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+  <circle class="transparent-fill foreground-stroke" cx="10" cy="10" r="7.5" fill="none" stroke="#2e3436" stroke-width="1.5"/>
+  <circle class="foreground-fill" cx="7.3" cy="8" r="1.2" fill="#2e3436"/>
+  <circle class="foreground-fill" cx="12.7" cy="8" r="1.2" fill="#2e3436"/>
+  <path class="transparent-fill foreground-stroke" d="M6.5 11.8a4 4 0 0 0 7 0" fill="none" stroke="#2e3436" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

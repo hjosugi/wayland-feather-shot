@@ -97,6 +97,12 @@ JA = {
     "Pixelate region (X)": "モザイク (X)",
     "Numbered marker — click (M)": "番号マーカー — クリックで配置 (M)",
     "Numbered marker — click to place (M)": "番号マーカー — クリックで配置 (M)",
+    "Numbered step arrow (G)": "番号付き矢印 (G)",
+    "Speech bubble (U)": "吹き出し (U)",
+    "Speech bubble — click to type (U)": "吹き出し — クリックして入力 (U)",
+    "Emoji sticker (J)": "絵文字スタンプ (J)",
+    "Emoji sticker — click (J)": "絵文字スタンプ — クリックで配置 (J)",
+    "Spotlight — dim everything outside (O)": "スポットライト — 範囲外を暗く (O)",
     "Crop image (C)": "画像を切り抜き (C)",
     "Select / move a shape (V)": "図形を選択・移動 (V)",
     # header/toolbar buttons

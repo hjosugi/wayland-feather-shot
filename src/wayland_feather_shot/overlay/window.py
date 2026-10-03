@@ -27,13 +27,15 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 import cairo  # noqa: E402
 
 from .. import save as save_mod
+from ..editor import render
 from ..editor import shapes as shape_model
-from ..editor.shapes import (Arrow, EllipseShape, Highlight, Line, Marker,
-                            Obscure, Pen, RectShape, Style)
+from ..editor.shapes import (EMOJI_CHOICES, Arrow, EllipseShape, EmojiSticker,
+                            Highlight, Line, Marker, Obscure, Pen, RectShape,
+                            Spotlight, StepArrow, Style)
 from ..i18n import _, tr
 from ..theme import install_custom_css
 from .canvas import OverlayCanvas, OverlayScene
-from .controls import OVERLAY_TOOLS, OverlayControlsMixin
+from .controls import OVERLAY_TOOLS, OverlayControlsMixin, menu_popover
 from .draw import OverlayDrawMixin
 from .text import OverlayTextMixin, TextLayer
 from .view import ZOOM_MAX, ZOOM_STEP, MonitorView, OverlayViewMixin, Rect
@@ -46,9 +48,15 @@ TOOL_KEYS = {
     Gdk.KEY_a: "arrow", Gdk.KEY_r: "rect", Gdk.KEY_e: "ellipse",
     Gdk.KEY_h: "highlight", Gdk.KEY_t: "text", Gdk.KEY_b: "blur",
     Gdk.KEY_x: "pixelate", Gdk.KEY_m: "marker", Gdk.KEY_s: "hand",
+    Gdk.KEY_g: "steparrow", Gdk.KEY_u: "bubble", Gdk.KEY_o: "spotlight",
+    Gdk.KEY_j: "emoji",
 }
 
-RECT_TOOLS = {"rect", "ellipse", "highlight", "blur", "pixelate"}
+# Tools that drag out a box, tools that drag from one point to another, and
+# tools that act on a click.
+RECT_TOOLS = {"rect", "ellipse", "highlight", "blur", "pixelate", "spotlight"}
+LINE_TOOLS = {"pen", "line", "arrow", "steparrow"}
+CLICK_TOOLS = {"text", "bubble", "marker", "emoji"}
 
 
 class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
@@ -91,6 +99,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
                            font_size=float(settings.font_size))
         self.redaction_density = shape_model.density_from_factor(
             settings.blur_factor)
+        self.spotlight_scrim = 0.55      # how dark a spotlight's outside goes
         self.text_style = "plain"        # one of shape_model.TEXT_STYLES
         self._size_kind = "width"        # what the spinner sizes: width|text
         self._size_syncing = False       # set while the spinner is re-ranged
@@ -147,10 +156,10 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         Each view's canvas draws its part of the screenshot, the selection
         and the annotations (see draw.py). Two gestures share its button 1:
         the drag gesture selects, moves, resizes and draws; the click
-        gesture places text and markers and turns a double-click inside the
-        selection into a copy. The widgets over the canvases (the in-place
-        text layer, the toolbar and action bar, the toast) exist once and
-        move to the view they are needed in (_place).
+        gesture places text, bubbles, markers and stickers and turns a
+        double-click inside the selection into a copy. The widgets over the
+        canvases (the in-place text layer, the toolbar and action bar, the
+        toast) exist once and move to the view they are needed in (_place).
         """
         self._bar_rects = ()
         self._action_sizes = None
@@ -417,8 +426,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
                     self._drag_kind = "select"   # start a fresh selection
                     self._prev_sel = self.sel
                     self._set_bars_visible(False)
-            elif self.tool in RECT_TOOLS or self.tool in ("pen", "line",
-                                                          "arrow"):
+            elif self.tool in RECT_TOOLS or self.tool in LINE_TOOLS:
                 self._drag_kind = "draw"
                 if self.tool == "pen":
                     self._pen_points = [(ix, iy)]
@@ -539,6 +547,10 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             self._preview = Line(start, cur, self.style)
         elif tool == "arrow":
             self._preview = Arrow(start, cur, self.style)
+        elif tool == "steparrow":
+            self._preview = StepArrow(start, cur,
+                                      shape_model.next_number(self.shapes),
+                                      self.style)
         elif tool in RECT_TOOLS:
             rect = shape_model.norm_rect(start[0], start[1], cur[0], cur[1])
             if tool == "rect":
@@ -553,6 +565,8 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             elif tool == "pixelate":
                 self._preview = Obscure(rect, self.redaction_density,
                                         pixelate=True)
+            elif tool == "spotlight":
+                self._preview = Spotlight(rect, scrim=self.spotlight_scrim)
 
     def _copy_hit(self, x, y):
         """Whether a click here can count towards the double-click copy:
@@ -571,9 +585,9 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     def _on_click(self, gesture, n_press, x, y):
         """A click (press and release without a drag).
 
-        Two clicks inside the selection copy it and close. Otherwise, with
-        the text tool a click starts typing there and with the marker tool
-        it places the next numbered marker.
+        Two clicks inside the selection copy it and close. Otherwise the
+        click tools act: text and bubble start typing there, the marker
+        places the next number, and emoji offers stickers to place.
         """
         eligible = self._copy_press_inside and self._copy_hit(x, y)
         self._copy_press_inside = False
@@ -585,17 +599,47 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             return
         else:
             self._copy_first_click = False
-        if self.sel is None or self.tool not in ("text", "marker"):
+        if self.sel is None or self.tool not in CLICK_TOOLS:
             return
         ix, iy = self._to_image(x, y)
         if self.tool == "marker":
-            self._push_history()
-            self.shapes.append(
+            self._add_shape(
                 Marker((ix, iy), shape_model.next_number(self.shapes),
                        self.style))
-            self._redraw()
+        elif self.tool == "emoji":
+            self._pick_emoji(x, y, ix, iy)
         else:
-            self._begin_text(ix, iy)
+            self._begin_text(ix, iy, kind=self.tool)
+
+    def _add_shape(self, shape):
+        """Add one finished annotation, as an undo step."""
+        self._push_history()
+        self.shapes.append(shape)
+        self._redraw()
+
+    def _pick_emoji(self, x, y, ix, iy):
+        """Offer the stickers at the click; the one picked goes there."""
+        grid = Gtk.FlowBox()
+        grid.set_max_children_per_line(6)
+        grid.set_selection_mode(Gtk.SelectionMode.NONE)
+        popover = menu_popover(grid)
+        popover.set_parent(self.area)
+        point = Gdk.Rectangle()
+        point.x, point.y, point.width, point.height = int(x), int(y), 1, 1
+        popover.set_pointing_to(point)
+        popover.connect("closed", lambda p: GLib.idle_add(p.unparent))
+
+        def pick(_button, char):
+            popover.popdown()
+            self._add_shape(EmojiSticker((ix, iy), char, self.style))
+
+        for char in EMOJI_CHOICES:
+            button = Gtk.Button(label=char)
+            button.add_css_class("flat")
+            button.add_css_class("wfs-emoji")
+            button.connect("clicked", pick, char)
+            grid.append(button)
+        popover.popup()
 
     def _on_key(self, _ctrl, keyval, _keycode, state):
         """The overlay's keys (docs/HOTKEYS.md has the full list).
@@ -704,10 +748,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
         cr = cairo.Context(surface)
         cr.translate(-x, -y)
-        Gdk.cairo_set_source_pixbuf(cr, self.pixbuf, 0, 0)
-        cr.paint()
-        for shape in self.shapes:
-            shape.draw(cr, self.pixbuf)
+        render.draw_scene(cr, self.pixbuf, self.shapes)
         surface.flush()
         return Gdk.pixbuf_get_from_surface(surface, 0, 0, w, h)
 

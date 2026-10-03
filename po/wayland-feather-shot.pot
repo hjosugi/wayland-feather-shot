@@ -141,6 +141,24 @@ msgstr ""
 msgid "Numbered marker — click to place (M)"
 msgstr ""
 
+msgid "Numbered step arrow (G)"
+msgstr ""
+
+msgid "Speech bubble (U)"
+msgstr ""
+
+msgid "Speech bubble — click to type (U)"
+msgstr ""
+
+msgid "Emoji sticker (J)"
+msgstr ""
+
+msgid "Emoji sticker — click (J)"
+msgstr ""
+
+msgid "Spotlight — dim everything outside (O)"
+msgstr ""
+
 msgid "Crop image (C)"
 msgstr ""
 

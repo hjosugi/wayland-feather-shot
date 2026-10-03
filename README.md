@@ -106,8 +106,9 @@ $ wayland-feather-shot diagnose   # check portals/GTK/GStreamer availability
 $ wayland-feather-shot updater remove  # remove install.sh-managed files
 ```
 
-The editor toolbar adds a **step-arrow** (numbered), **speech bubble** and
-**emoji sticker**, colour/width **presets**, a **flatten-blur** toggle, and —
+The overlay and the editor both have a **step-arrow** (numbered), **speech
+bubble**, **spotlight** and **emoji sticker**. The editor toolbar adds
+colour/width **presets**, a **flatten-blur** toggle, and —
 when `tesseract` / `zbarimg` are installed — **OCR / QR** extraction that
 copies recognized text to the clipboard. `Ctrl+Shift+C` copies the saved file
 path; `Ctrl+O` opens the save folder; images save as PNG/JPEG/WebP/AVIF by

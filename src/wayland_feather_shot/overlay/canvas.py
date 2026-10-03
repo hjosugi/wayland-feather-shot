@@ -11,6 +11,8 @@ gi.require_version("Graphene", "1.0")
 gi.require_version("Gsk", "4.0")
 from gi.repository import Gdk, GLib, Graphene, Gsk, Gtk  # noqa: E402
 
+from ..editor import render  # noqa: E402
+
 
 def rect(x, y, width, height):
     bounds = Graphene.Rect()
@@ -73,10 +75,8 @@ class OverlayScene:
             cr = cairo.Context(surface)
             cr.set_source_rgb(0, 0, 0)
             cr.paint()
-            Gdk.cairo_set_source_pixbuf(cr, self.pixbuf, 0, 0)
-            cr.paint()
-            for shape in shapes:
-                shape.draw(cr, self.pixbuf)
+            # The screenshot, a spotlight's scrim, then the annotations.
+            render.draw_scene(cr, self.pixbuf, shapes)
             surface.flush()
             fmt = (Gdk.MemoryFormat.B8G8R8A8_PREMULTIPLIED
                    if sys.byteorder == 'little'

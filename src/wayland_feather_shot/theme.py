@@ -203,6 +203,16 @@ def install_custom_css() -> None:
     .wfs-popover button.wfs-menu-item:hover {
         background-color: rgba(255, 255, 255, 0.12);
     }
+    .wfs-popover button.wfs-emoji {
+        font-size: 20px;
+        min-width: 36px;
+        min-height: 36px;
+        padding: 2px;
+        border-radius: 8px;
+    }
+    .wfs-popover button.wfs-emoji:hover {
+        background-color: rgba(255, 255, 255, 0.12);
+    }
     .wfs-popover button.wfs-chip {
         background-image: none;
         background-color: transparent;
@@ -295,6 +305,34 @@ def install_custom_css() -> None:
 _LIVE_TEXT_PROVIDER = None
 
 
+def _load_live_css(view, css: str) -> None:
+    """Replace the in-place text view's sizing CSS. One text is typed at a
+    time, so one provider, reloaded per keystroke, serves them all."""
+    global _LIVE_TEXT_PROVIDER
+    if _LIVE_TEXT_PROVIDER is None:
+        _LIVE_TEXT_PROVIDER = Gtk.CssProvider()
+        Gtk.StyleContext.add_provider_for_display(
+            view.get_display(), _LIVE_TEXT_PROVIDER,
+            Gtk.STYLE_PROVIDER_PRIORITY_USER + 1)
+    if hasattr(_LIVE_TEXT_PROVIDER, "load_from_string"):     # GTK 4.12+
+        _LIVE_TEXT_PROVIDER.load_from_string(css)
+    else:
+        _LIVE_TEXT_PROVIDER.load_from_data(css.encode())
+
+
+def style_live_bubble(view, rgba, border_px: float, radius_px: float) -> None:
+    """Dress the in-place text view as the speech bubble it will become: a
+    white body with a border in the annotation colour (the tail is left
+    out while typing)."""
+    r, g, b = (round(c * 255) for c in rgba[:3])
+    a = rgba[3]
+    _load_live_css(view, (
+        f".wfs-live-bubble {{ background-color: rgba(255, 255, 255, 0.96);"
+        f" border: {border_px:.1f}px solid rgba({r}, {g}, {b}, {a:.3f});"
+        f" border-radius: {radius_px:.1f}px; }}\n"))
+    view.add_css_class("wfs-live-bubble")
+
+
 def style_live_text(view, style_name: str, rgba, font_px: float) -> None:
     """Dress the in-place text view like the text it will become.
 
@@ -302,12 +340,6 @@ def style_live_text(view, style_name: str, rgba, font_px: float) -> None:
     of CSS text shadows in the same contrasting colour and about the same
     width as the real one; boxed text gets the same dark box behind it.
     """
-    global _LIVE_TEXT_PROVIDER
-    display = view.get_display()
-    if _LIVE_TEXT_PROVIDER is None:
-        _LIVE_TEXT_PROVIDER = Gtk.CssProvider()
-        Gtk.StyleContext.add_provider_for_display(
-            display, _LIVE_TEXT_PROVIDER, Gtk.STYLE_PROVIDER_PRIORITY_USER + 1)
     r, g, b, a = rgba
     halo = 0 if 0.299 * r + 0.587 * g + 0.114 * b > 0.5 else 255
     colour = f"rgba({halo}, {halo}, {halo}, {a:.3f})"
@@ -316,13 +348,10 @@ def style_live_text(view, style_name: str, rgba, font_px: float) -> None:
     rings = ", ".join(f"{dx:.2f}px {dy:.2f}px 0 {colour}" for dx, dy in (
         (radius, 0), (-radius, 0), (0, radius), (0, -radius),
         (d, d), (-d, -d), (d, -d), (-d, d)))
-    css = (f".wfs-live-outline {{ text-shadow: {rings}; }}\n"
-           f".wfs-live-box {{ background-color: rgba(0, 0, 0, 0.45);"
-           f" border-radius: {max(2.0, font_px * 0.25):.1f}px; }}\n")
-    if hasattr(_LIVE_TEXT_PROVIDER, "load_from_string"):     # GTK 4.12+
-        _LIVE_TEXT_PROVIDER.load_from_string(css)
-    else:
-        _LIVE_TEXT_PROVIDER.load_from_data(css.encode())
+    _load_live_css(view, (
+        f".wfs-live-outline {{ text-shadow: {rings}; }}\n"
+        f".wfs-live-box {{ background-color: rgba(0, 0, 0, 0.45);"
+        f" border-radius: {max(2.0, font_px * 0.25):.1f}px; }}\n"))
     for name in ("outline", "box"):
         if style_name == name:
             view.add_css_class(f"wfs-live-{name}")

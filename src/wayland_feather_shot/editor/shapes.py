@@ -676,6 +676,11 @@ def SpeechBubble(rect, text: str, style: Style) -> Shape:
     return Shape(x, y, BubbleProps(w, h, text, style))
 
 
+# The stickers both windows offer.
+EMOJI_CHOICES = ("✅", "❌", "⭐", "❤️", "👍", "👎", "⚠️", "🔥", "💡", "➡️",
+                 "🎯", "🚀")
+
+
 def EmojiSticker(pos: Point, char: str, style: Style,
                  size: Optional[float] = None) -> Shape:
     return Shape(pos[0], pos[1],

@@ -170,11 +170,12 @@ With a region selected:
 | --- | --- |
 | V | move the selection (the resize handles work with every tool) |
 | S | hand: grab a placed shape and move it |
-| P, L, A | pen, line, arrow |
+| P, L, A, G | pen, line, arrow, numbered step arrow |
 | R, E, H | rectangle, ellipse, highlighter |
-| T, M | text (click, then type on the canvas: Enter is a newline, Ctrl+Enter finishes, Esc cancels), numbered marker (click to place) |
-| [ , ] | smaller or larger line width, or text size while the text tool is active |
-| B, X | blur, pixelate |
+| T, U | text, speech bubble (click, then type on the canvas: Enter is a newline, Ctrl+Enter finishes, Esc cancels) |
+| M, J | numbered marker, emoji sticker (click to place) |
+| B, X, O | blur, pixelate, spotlight (dims everything outside it) |
+| [ , ] | smaller or larger line width, or text size while the text, bubble or emoji tool is active |
 | W | open the selection in the editor |
 | Enter, Ctrl+C, double-click inside the selection | copy to the clipboard and close |
 | Ctrl+S | save and close |

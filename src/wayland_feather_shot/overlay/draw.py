@@ -45,11 +45,15 @@ class OverlayDrawMixin:
         snapshot.append_texture(self._scene.content(self.shapes), image_bounds)
 
         # 2. The shape in progress.
-        if (self._preview is not None and self._preview.kind == "obscure"
-                and not self._preview.props.pixelate):
+        if self._preview is not None and (
+                self._preview.kind == "spotlight"
+                or (self._preview.kind == "obscure"
+                    and not self._preview.props.pixelate)):
             # A blur re-samples the screenshot on every frame, which made
             # dragging one out or carrying it with the hand stutter; show its
             # footprint while it moves and render the real thing on release.
+            # A spotlight's scrim covers the whole screenshot, so it too is
+            # rendered on release.
             box = self._preview.page_bounds
             footprint = rect(ox + box.x * scale, oy + box.y * scale,
                              box.w * scale, box.h * scale)

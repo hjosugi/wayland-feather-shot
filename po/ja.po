@@ -141,6 +141,24 @@ msgstr "番号マーカー — クリックで配置 (M)"
 msgid "Numbered marker — click to place (M)"
 msgstr "番号マーカー — クリックで配置 (M)"
 
+msgid "Numbered step arrow (G)"
+msgstr "番号付き矢印 (G)"
+
+msgid "Speech bubble (U)"
+msgstr "吹き出し (U)"
+
+msgid "Speech bubble — click to type (U)"
+msgstr "吹き出し — クリックして入力 (U)"
+
+msgid "Emoji sticker (J)"
+msgstr "絵文字スタンプ (J)"
+
+msgid "Emoji sticker — click (J)"
+msgstr "絵文字スタンプ — クリックで配置 (J)"
+
+msgid "Spotlight — dim everything outside (O)"
+msgstr "スポットライト — 範囲外を暗く (O)"
+
 msgid "Crop image (C)"
 msgstr "画像を切り抜き (C)"
 

@@ -515,6 +515,22 @@ def _draw_marker(cr, shape, base):
     _badge(cr, r, r, r, str(props.number), props.style)
 
 
+# A speech bubble's text: dark, not bold, a little smaller than the style's
+# text size, inset by the padding.
+BUBBLE_PAD = 8.0
+BUBBLE_TEXT_RGBA = (0.1, 0.1, 0.12, 1.0)
+
+
+def bubble_text_size(style: S.Style) -> float:
+    return style.font_size * 0.8
+
+
+def bubble_body(text: str, style: S.Style) -> Tuple[float, float]:
+    """The width and height of a bubble's body that just fits *text*."""
+    w, h = measure(text, style, bold=False, size=bubble_text_size(style))
+    return (w + 2 * BUBBLE_PAD, h + 2 * BUBBLE_PAD)
+
+
 def _draw_bubble(cr, shape, base):
     props = shape.props
     w, h = props.w, props.h
@@ -536,9 +552,9 @@ def _draw_bubble(cr, shape, base):
     _set_color(cr, props.style)
     cr.set_line_width(max(1.5, props.style.width))
     cr.stroke()
-    pad = 8.0
-    draw_text(cr, props.text, pad, pad, props.style, bold=False,
-              size=props.style.font_size * 0.8, rgba=(0.1, 0.1, 0.12, 1.0))
+    draw_text(cr, props.text, BUBBLE_PAD, BUBBLE_PAD, props.style,
+              bold=False, size=bubble_text_size(props.style),
+              rgba=BUBBLE_TEXT_RGBA)
 
 
 def _draw_spotlight(cr, shape, base):

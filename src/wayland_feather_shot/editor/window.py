@@ -23,7 +23,7 @@ from . import preset as preset_mod
 from . import shapes as S
 from . import sidecar
 from .canvas import EditorCanvas
-from .shapes import TEXT_STYLE_BUTTONS, Style
+from .shapes import EMOJI_CHOICES, TEXT_STYLE_BUTTONS, Style
 
 TOOLS = [
     # (id, label, tooltip incl. shortcut key)
@@ -58,9 +58,6 @@ _NUDGE_KEYS = {
     Gdk.KEY_Left: (-1.0, 0.0), Gdk.KEY_Right: (1.0, 0.0),
     Gdk.KEY_Up: (0.0, -1.0), Gdk.KEY_Down: (0.0, 1.0),
 }
-
-EMOJI_CHOICES = ["✅", "❌", "⭐", "❤️", "👍", "👎", "⚠️", "🔥", "💡", "➡️",
-                 "🎯", "🚀"]
 
 PRESET_COLORS = [(0.90, 0.15, 0.12), (0.95, 0.55, 0.10), (0.98, 0.85, 0.10),
                  (0.20, 0.70, 0.25), (0.15, 0.50, 0.95), (0.60, 0.20, 0.80),

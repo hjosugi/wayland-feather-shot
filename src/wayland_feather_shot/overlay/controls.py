@@ -24,13 +24,19 @@ OVERLAY_TOOLS = [
     ("pen", "wfs-tool-pen-symbolic", "Freehand pen (P)"),
     ("line", "wfs-tool-line-symbolic", "Straight line (L)"),
     ("arrow", "wfs-tool-arrow-symbolic", "Arrow (A)"),
+    ("steparrow", "wfs-tool-steparrow-symbolic", "Numbered step arrow (G)"),
     ("rect", "wfs-tool-rect-symbolic", "Rectangle (R)"),
     ("ellipse", "wfs-tool-ellipse-symbolic", "Ellipse (E)"),
     ("highlight", "wfs-tool-highlight-symbolic", "Highlighter (H)"),
     ("text", "wfs-tool-text-symbolic", "Text — click to place (T)"),
+    ("bubble", "wfs-tool-bubble-symbolic",
+     "Speech bubble — click to type (U)"),
     ("blur", "wfs-tool-blur-symbolic", "Blur region (B)"),
     ("pixelate", "wfs-tool-pixelate-symbolic", "Pixelate region (X)"),
+    ("spotlight", "wfs-tool-spotlight-symbolic",
+     "Spotlight — dim everything outside (O)"),
     ("marker", "wfs-tool-marker-symbolic", "Numbered marker — click (M)"),
+    ("emoji", "wfs-tool-emoji-symbolic", "Emoji sticker — click (J)"),
 ]
 TOOL_INFO = {tid: (icon, tip) for tid, icon, tip in OVERLAY_TOOLS}
 
@@ -38,12 +44,17 @@ TOOL_INFO = {tid: (icon, tip) for tid, icon, tip in OVERLAY_TOOLS}
 # ▾ lists the others, and the button shows the one last picked. One-member
 # families are plain buttons.
 TOOL_FAMILIES = (
-    ("move",), ("hand",), ("pen",), ("line",), ("arrow",),
+    ("move",), ("hand",), ("pen",), ("line",),
+    ("arrow", "steparrow"),
     ("rect", "ellipse", "highlight"),
-    ("text",),
-    ("blur", "pixelate"),
-    ("marker",),
+    ("text", "bubble"),
+    ("blur", "pixelate", "spotlight"),
+    ("marker", "emoji"),
 )
+
+# Tools whose size is a text size (the spinner shows it instead of the line
+# width); the text style buttons are for "text" alone.
+TEXT_SIZED_TOOLS = ("text", "bubble", "emoji")
 
 # The style button's palette (the editor window's presets).
 PALETTE = ((0.90, 0.15, 0.12), (0.95, 0.55, 0.10), (0.98, 0.85, 0.10),
@@ -78,7 +89,8 @@ def _round(menu_button):
     return menu_button
 
 
-def _popover(child):
+def menu_popover(child):
+    """A popover in the bars' dark style, holding *child*."""
     popover = Gtk.Popover()
     popover.add_css_class("wfs-popover")
     popover.set_child(child)
@@ -141,7 +153,7 @@ class OverlayControlsMixin:
             more.add_css_class("wfs-more")
             more.set_tooltip_text(_("More tools like this"))
             menu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-            popover = _popover(menu)
+            popover = menu_popover(menu)
             for tid in members:
                 icon, tip = TOOL_INFO[tid]
                 content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,
@@ -259,7 +271,7 @@ class OverlayControlsMixin:
             self._text_style_buttons[name] = btn
         menu.append(self._text_style_box)
 
-        button.set_popover(_popover(menu))
+        button.set_popover(menu_popover(menu))
         self._update_style_face()
         return button
 
@@ -294,7 +306,7 @@ class OverlayControlsMixin:
         more.set_icon_name("view-more-horizontal-symbolic")
         more.set_tooltip_text(_("More"))
         menu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        popover = _popover(menu)
+        popover = menu_popover(menu)
         entries = [("document-save-as-symbolic", "Save as… (Ctrl+Shift+S)",
                     self.save_as),
                    ("folder-open-symbolic", "Open save folder (Ctrl+O)",
@@ -416,8 +428,8 @@ class OverlayControlsMixin:
         spin = getattr(self, "_size_spin", None)
         if spin is None:
             return
-        kind = "text" if self.tool == "text" else "width"
-        self._text_style_box.set_visible(kind == "text")
+        kind = "text" if self.tool in TEXT_SIZED_TOOLS else "width"
+        self._text_style_box.set_visible(self.tool == "text")
         self._size_kind = kind
         self._size_syncing = True
         try:
