@@ -19,6 +19,12 @@
   how strongly blur and pixelate hide what is under them, and how dark a
   spotlight leaves the rest. For a redaction or a spotlight the button
   shows that strength.
+- **Read the selection from the overlay.** With `tesseract` or `zbarimg`
+  installed, the "…" menu copies the selection's text (OCR) or a QR code
+  or barcode, and proposes blurs over text that looks sensitive, as the
+  editor window does. The proposals arrive picked, so the hand moves them
+  together, and Ctrl+Z drops them. The recognition runs in the
+  background, so the overlay stays responsive.
 - **Move several shapes at once.** With the hand tool, Shift+click or
   Ctrl+click picks more shapes (or drops a picked one), and dragging any
   of them moves them all as one undo step. Picked shapes are framed; a

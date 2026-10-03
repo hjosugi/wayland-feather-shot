@@ -258,6 +258,9 @@ msgstr "機密らしいテキストを探してぼかし領域を提案します
 msgid "Scanning for sensitive text…"
 msgstr "機密テキストを走査中…"
 
+msgid "Reading the selection…"
+msgstr "選択範囲を読み取り中…"
+
 msgid "Nothing recognised as sensitive. Check the image yourself before sharing it."
 msgstr "機密と判定されたものはありません。共有前にご自身でも確認してください。"
 

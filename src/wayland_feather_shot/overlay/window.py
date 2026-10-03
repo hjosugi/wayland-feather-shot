@@ -9,7 +9,7 @@ a floating toolbar attached to the selection, then Ctrl+S / Ctrl+C.
 This module holds the window, its pointer and key input, the undo history
 and the outputs (save, copy, pin, editor). The rest is split by concern into
 mixins: view (coordinates, zoom, handles), controls (the bars), text (typing
-in place) and draw (each frame).
+in place), draw (each frame) and extract (OCR, QR, smart redaction).
 """
 
 from __future__ import annotations
@@ -37,6 +37,7 @@ from ..theme import install_custom_css
 from .canvas import OverlayCanvas, OverlayScene
 from .controls import OVERLAY_TOOLS, OverlayControlsMixin, menu_popover
 from .draw import OverlayDrawMixin
+from .extract import OverlayExtractMixin
 from .text import OverlayTextMixin, TextLayer
 from .view import ZOOM_MAX, ZOOM_STEP, MonitorView, OverlayViewMixin, Rect
 
@@ -60,7 +61,8 @@ CLICK_TOOLS = {"text", "bubble", "marker", "emoji"}
 
 
 class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
-                    OverlayDrawMixin, Gtk.ApplicationWindow):
+                    OverlayDrawMixin, OverlayExtractMixin,
+                    Gtk.ApplicationWindow):
     """Fullscreen frozen-image capture UI.
 
     Everything follows from ``sel``: with no selection the overlay waits for
@@ -142,6 +144,8 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
 
         self._bars_visible = False
         self._text_edit = None           # {"view", "pos"} while typing
+        self._recognizing = False        # an OCR or QR run is going
+        self._toast_timer = None
 
         self._build_ui(monitor_layout)
         self.set_decorated(False)

@@ -222,6 +222,11 @@ def install_custom_css() -> None:
     .wfs-popover fontbutton > button label {
         color: inherit;
     }
+    popover.wfs-popover separator.horizontal {
+        background-color: rgba(255, 255, 255, 0.18);
+        min-height: 1px;
+        margin: 2px 6px;
+    }
     .wfs-popover label.wfs-caption {
         color: rgba(255, 255, 255, 0.78);
     }

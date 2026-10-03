@@ -107,12 +107,13 @@ $ wayland-feather-shot updater remove  # remove install.sh-managed files
 ```
 
 The overlay and the editor both have a **step-arrow** (numbered), **speech
-bubble**, **spotlight** and **emoji sticker**. The editor toolbar adds
-colour/width **presets**, a **flatten-blur** toggle, and —
-when `tesseract` / `zbarimg` are installed — **OCR / QR** extraction that
-copies recognized text to the clipboard. `Ctrl+Shift+C` copies the saved file
-path; `Ctrl+O` opens the save folder; images save as PNG/JPEG/WebP/AVIF by
-extension.
+bubble**, **spotlight** and **emoji sticker**, and — when `tesseract` /
+`zbarimg` are installed — **OCR / QR** extraction that copies recognized
+text to the clipboard and **smart redaction** that proposes blurs over text
+that looks sensitive (the overlay has them under "…"). The editor toolbar
+adds colour/width **presets** and a **flatten-blur** toggle. `Ctrl+Shift+C`
+copies the saved file path; `Ctrl+O` opens the save folder; images save as
+PNG/JPEG/WebP/AVIF by extension.
 
 Annotations stay editable after they are drawn. With the **select** tool (`V`)
 you can click a shape — precisely: a click inside a hollow rectangle or beside

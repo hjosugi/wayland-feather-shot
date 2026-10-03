@@ -258,6 +258,9 @@ msgstr ""
 msgid "Scanning for sensitive text…"
 msgstr ""
 
+msgid "Reading the selection…"
+msgstr ""
+
 msgid "Nothing recognised as sensitive. Check the image yourself before sharing it."
 msgstr ""
 

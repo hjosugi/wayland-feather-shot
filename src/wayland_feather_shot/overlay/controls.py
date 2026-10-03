@@ -434,14 +434,23 @@ class OverlayControlsMixin:
         more.set_tooltip_text(_("More"))
         menu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         popover = menu_popover(menu)
+        # None: a separator between groups.
         entries = [("document-save-as-symbolic", "Save as… (Ctrl+Shift+S)",
                     self.save_as),
                    ("folder-open-symbolic", "Open save folder (Ctrl+O)",
                     self.open_save_folder)]
+        recognition = self._recognition_entries()
+        if recognition:
+            entries += [None] + recognition
         if self.open_editor:
-            entries.append(("window-new-symbolic", "Open in editor window (W)",
-                            self._to_editor))
-        for icon, tip, cb in entries:
+            entries += [None, ("window-new-symbolic",
+                               "Open in editor window (W)", self._to_editor)]
+        for entry in entries:
+            if entry is None:
+                menu.append(Gtk.Separator(
+                    orientation=Gtk.Orientation.HORIZONTAL))
+                continue
+            icon, tip, cb = entry
             content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
             content.append(Gtk.Image.new_from_icon_name(icon))
             content.append(Gtk.Label(label=_(tip), xalign=0))
@@ -476,8 +485,15 @@ class OverlayControlsMixin:
         self._place(self._toast, self._view)
         self._toast.set_text(message)
         self._toast.set_visible(True)
-        GLib.timeout_add(int(seconds * 1000),
-                         lambda: (self._toast.set_visible(False), False)[1])
+        # A newer message gets its own time; the older one's timer goes.
+        if self._toast_timer is not None:
+            GLib.source_remove(self._toast_timer)
+
+        def hide():
+            self._toast_timer = None
+            self._toast.set_visible(False)
+            return False
+        self._toast_timer = GLib.timeout_add(int(seconds * 1000), hide)
 
     # -- reacting ----------------------------------------------------------
 
