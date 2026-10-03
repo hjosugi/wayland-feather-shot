@@ -5,14 +5,14 @@
 ## 0.11.0 (2026-10-03)
 
 - **Faster from key press to overlay.** The portal needs about a second to
-  take the screenshot; the request is now sent before the GTK stack loads,
-  so our own start-up overlaps with the portal's work instead of preceding
-  it. The editor window's modules load only when the editor opens, and the
-  screenshot reaches the overlay without being copied twice on the way
-  (about 40 ms on a 4K screen). Blurred
-  regions are remembered per image, so adding or undoing annotations after a
-  blur no longer redoes the blur (tens of milliseconds each without numpy),
-  and a blur being dragged out is shown as a footprint until release.
+  take the screenshot; the request is now sent before the GTK stack loads, so
+  our own start-up overlaps with the portal's work instead of preceding it.
+  The editor window's modules load only when the editor opens, and the
+  screenshot reaches the overlay without being copied twice on the way (about
+  40 ms on a 4K screen). Blurred regions are remembered per image, so adding
+  or undoing annotations after a blur no longer redoes the blur (tens of
+  milliseconds each without numpy), and a blur being dragged out is shown as a
+  footprint until release.
 
 - **Text is typed on the canvas.** The overlay's text tool opened a popover,
   so the words were visible but their size on the capture was anyone's guess.
