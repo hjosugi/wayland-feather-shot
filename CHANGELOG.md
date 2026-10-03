@@ -55,7 +55,9 @@
   them (Shift: 10 px; a held key undoes in one go), and Ctrl+Up and
   Ctrl+Down raise and lower them. A placed text or bubble is typed into
   again with a click of its tool or a double-click with the hand, in its
-  own style; emptied, it goes.
+  own style; emptied, it goes. The style button's controls apply to the
+  picked shapes, as the editor's do to its selection, and its menu offers
+  what they use.
 - **Each monitor keeps its own picture.** With several monitors the
   overlay squeezed all of them into one screen. It now opens on every
   monitor, each showing its own part of the screenshot at its own scale;

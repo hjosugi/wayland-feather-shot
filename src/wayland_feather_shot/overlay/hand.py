@@ -13,6 +13,7 @@ overlay.window.OverlayWindow.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Optional
 
 import gi
@@ -40,6 +41,38 @@ NUDGES = {
     Gdk.KEY_Up: (0, -1), Gdk.KEY_Down: (0, 1),
 }
 DELETE_KEYS = (Gdk.KEY_Delete, Gdk.KEY_KP_Delete, Gdk.KEY_BackSpace)
+
+# The kinds whose look a line width changes.
+WIDTH_KINDS = ("pen", "arrow", "geo", "highlight", "bubble")
+SIMPLE_TOOLS = {"text": "text", "bubble": "bubble", "spotlight": "spotlight",
+                "marker": "marker", "emoji": "emoji", "pen": "pen",
+                "highlight": "highlight", "geo": "rect"}
+
+
+def tool_of(shape) -> str:
+    """The tool that draws *shape*, for the style rows it uses."""
+    if shape.kind == "arrow":
+        return "steparrow" if shape.props.number is not None else "arrow"
+    if shape.kind == "obscure":
+        return "pixelate" if shape.props.pixelate else "blur"
+    return SIMPLE_TOOLS.get(shape.kind, "pen")
+
+
+def restyled(shape, kinds=None, **fields):
+    """*shape* with the given fields of its style changed, or None when it
+    has no style or is not of one of *kinds*."""
+    if shape.style is None or (kinds is not None and shape.kind not in kinds):
+        return None
+    return shape.restyled(replace(shape.style, **fields))
+
+
+def with_props(shape, kinds, remeasure=False, **fields):
+    """*shape* with the given fields of its payload changed, or None when
+    it is not of one of *kinds*."""
+    if shape.kind not in kinds:
+        return None
+    props = replace(shape.props, **fields)
+    return replace(shape, props=props.remeasured() if remeasure else props)
 
 
 class OverlayHandMixin:
@@ -249,6 +282,37 @@ class OverlayHandMixin:
                     and shapes[i + other].sid not in picked):
                 shapes[i], shapes[i + other] = shapes[i + other], shapes[i]
         return shapes
+
+    # -- the style of the picked shapes --
+
+    def _style_tools(self):
+        """The tools whose rows the style menu shows: the current one, or
+        with the hand, those of the picked shapes."""
+        if self.tool == "hand" and self._picked:
+            return {tool_of(s) for s in self.shapes if s.sid in self._picked}
+        return {self.tool}
+
+    def _restyle_picked(self, what, change, sliding=False):
+        """Apply *change* (a shape, or None where it does not apply) to the
+        picked shapes, as the editor applies its controls to its selection.
+        One undo step; for a *sliding* control (a spinner, a slider) merged
+        with the same change just before it, so a whole slide undoes at
+        once."""
+        if (self.tool != "hand" or not self._picked
+                or getattr(self, "_showing_style", False)):
+            return
+        changed = {}
+        for shape in self.shapes:
+            if shape.sid in self._picked:
+                new = change(shape)
+                if new is not None and new != shape:
+                    changed[shape.sid] = new
+        if not changed:
+            return
+        self._push_history(merge=("restyle", what, frozenset(self._picked))
+                           if sliding else None)
+        self.shapes = [changed.get(s.sid, s) for s in self.shapes]
+        self._redraw()
 
     def _live_shapes(self):
         """What is drawn live over the cached composite: the shape being

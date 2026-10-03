@@ -370,6 +370,75 @@ class OverlayHandToolTests(unittest.TestCase):
         self.assertFalse(self.key(Gdk.KEY_Delete))
         self.assertEqual(self.window.shapes, [self.rect])
 
+    # -- the style controls on the picked shapes --
+
+    def test_a_colour_goes_to_the_picked_shapes_one_step_each(self):
+        second = self.add_second_rect()
+        self.drag(100, 100, 100, 100)
+        history_before = len(self.window._undo)
+        self.window._set_colour((0.1, 0.2, 0.3, 1.0))
+        self.window._set_colour((0.4, 0.5, 0.6, 1.0))
+        first, other = self.window.shapes
+        self.assertEqual(first.style.rgba, (0.4, 0.5, 0.6, 1.0))
+        self.assertEqual(other, second)                 # not picked
+        self.assertEqual(len(self.window._undo), history_before + 2)
+
+    def test_a_slide_of_the_width_is_one_step(self):
+        self.drag(100, 100, 100, 100)
+        history_before = len(self.window._undo)
+        for value in (5, 6, 7):
+            self.window._size_spin.set_value(value)
+        self.assertEqual(len(self.window._undo), history_before + 1)
+        self.assertEqual(self.window.shapes[0].style.width,
+                         self.window._page_width(7))
+        self.window.undo()
+        self.assertEqual(self.window.shapes, [self.rect])
+
+    def test_the_menu_shows_what_the_picked_shapes_use(self):
+        text = Text((200, 150), "hello", self.window.style)
+        self.window.shapes.append(text)
+        self.drag(202, 152, 202, 152)                   # pick the text
+        self.window._refresh_style_menu()
+        rows = {n for n, r in self.window._style_rows.items()
+                if r.get_visible()}
+        self.assertTrue({"align", "font", "text_style"} <= rows)
+        self.assertEqual(self.window._size_kind, "text")
+        self.window._align_buttons["center"].set_active(True)
+        self.assertEqual(self.window.shapes[-1].props.align, "center")
+
+    def test_heads_strength_and_dim_reach_their_kinds(self):
+        from wayland_feather_shot.editor import arrows
+        self.window.shapes.clear()
+        for tool, a, b in (("arrow", (100, 200), (200, 200)),
+                           ("blur", (220, 80), (300, 140)),
+                           ("spotlight", (220, 160), (330, 240))):
+            self.window.select_tool(tool)
+            self.drag(*a, *b)
+        self.window._on_key(None, Gdk.KEY_a, 0, CTRL)  # pick them all
+        self.window._head_choosers["head_start"].set_selected(
+            arrows.HEADS.index("dot"))
+        self.window._strength_scale.set_value(0.9)
+        self.window._dim_scale.set_value(0.2)
+        arrow, blur, spot = self.window.shapes
+        self.assertEqual(arrow.props.head_start, "dot")
+        self.assertAlmostEqual(blur.props.density, 0.9)
+        self.assertAlmostEqual(spot.props.scrim, 0.2)
+
+    def test_without_a_pick_the_controls_leave_placed_shapes_alone(self):
+        self.window._set_colour((0.1, 0.2, 0.3, 1.0))
+        self.assertEqual(self.window.shapes, [self.rect])
+
+    def test_typing_into_a_picked_text_leaves_the_other_picks_as_they_are(
+            self):
+        boxed = Text((200, 150), "boxed", self.window.style,
+                     outline=False, background=True)
+        plain = Text((200, 200), "plain", self.window.style, outline=False)
+        self.window.shapes = [boxed, plain]
+        self.window._on_key(None, Gdk.KEY_a, 0, CTRL)
+        self.window._edit_placed_text(0)                # takes "box"
+        self.assertEqual(self.window.text_style, "box")
+        self.assertFalse(self.window.shapes[0].props.background)
+
     def test_s_selects_the_hand_tool(self):
         self.window.select_tool("pen")
         self.window._on_key(None, Gdk.KEY_s, 0, 0)

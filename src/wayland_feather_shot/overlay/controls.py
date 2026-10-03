@@ -19,6 +19,7 @@ from gi.repository import Gdk, GLib, Gtk, Pango  # noqa: E402
 from ..editor import arrows
 from ..editor import shapes as shape_model
 from ..i18n import _
+from .hand import WIDTH_KINDS, restyled, with_props
 from .layout import layout_controls
 
 OVERLAY_TOOLS = [
@@ -324,7 +325,11 @@ class OverlayControlsMixin:
             menu.append(row)
             self._style_rows[name] = row
 
-        button.set_popover(menu_popover(menu))
+        popover = menu_popover(menu)
+        # With the hand the rows follow the picked shapes, which change
+        # with every click; look again each time the menu opens.
+        popover.connect("show", lambda *_: self._refresh_style_menu())
+        button.set_popover(popover)
         self._update_style_face()
         return button
 
@@ -573,8 +578,10 @@ class OverlayControlsMixin:
         return shape_model.page_stroke_width(slider_value, longest)
 
     def _set_colour(self, rgba):
-        """The colour for new shapes (and the text being typed)."""
+        """The colour for new shapes, the text being typed and the picked
+        shapes."""
         self.style = replace(self.style, rgba=tuple(rgba))
+        self._restyle_picked("colour", lambda s: restyled(s, rgba=tuple(rgba)))
         self._update_style_face()
         self._style_text_view()
         self._refocus_text()
@@ -600,10 +607,11 @@ class OverlayControlsMixin:
         if getattr(self, "_style_swatch", None) is None:
             return
         self._style_swatch.queue_draw()
-        if self.tool in ("blur", "pixelate"):
+        tools = self._style_tools()
+        if tools and tools <= {"blur", "pixelate"}:
             self._style_size_label.set_text(
                 f"{round(self.redaction_density * 100)}%")
-        elif self.tool == "spotlight":
+        elif tools == {"spotlight"}:
             self._style_size_label.set_text(
                 f"{round(self.spotlight_scrim * 100)}%")
         elif getattr(self, "_size_spin", None) is not None:
@@ -612,15 +620,19 @@ class OverlayControlsMixin:
 
     def _show_style(self):
         """Set the controls to the current style, after it was taken from
-        a placed shape."""
-        for name, button in self._text_style_buttons.items():
-            button.set_active(name == self.text_style)
-        for name, button in self._align_buttons.items():
-            button.set_active(name == self.text_align)
-        desc = Pango.FontDescription()
-        desc.set_family(self.style.font_family)
-        self._font_button.set_font_desc(desc)
-        self._refresh_style_menu()
+        a placed shape; the picked shapes keep theirs."""
+        self._showing_style = True
+        try:
+            for name, button in self._text_style_buttons.items():
+                button.set_active(name == self.text_style)
+            for name, button in self._align_buttons.items():
+                button.set_active(name == self.text_align)
+            desc = Pango.FontDescription()
+            desc.set_family(self.style.font_family)
+            self._font_button.set_font_desc(desc)
+            self._refresh_style_menu()
+        finally:
+            self._showing_style = False
 
     def _refresh_style_menu(self):
         """Show the style menu's rows for the current tool, and point the
@@ -628,12 +640,13 @@ class OverlayControlsMixin:
         spin = getattr(self, "_size_spin", None)
         if spin is None:
             return
+        tools = self._style_tools()
         for name, row in self._style_rows.items():
             if name in STYLE_ROWS_FOR:
-                row.set_visible(self.tool in STYLE_ROWS_FOR[name])
+                row.set_visible(bool(tools & set(STYLE_ROWS_FOR[name])))
             else:
-                row.set_visible(self.tool not in STYLE_ROWS_NOT_FOR[name])
-        kind = "text" if self.tool in TEXT_SIZED_TOOLS else "width"
+                row.set_visible(bool(tools - set(STYLE_ROWS_NOT_FOR[name])))
+        kind = ("text" if tools <= set(TEXT_SIZED_TOOLS) else "width")
         self._size_kind = kind
         self._size_syncing = True
         try:
@@ -658,24 +671,35 @@ class OverlayControlsMixin:
         if self._size_syncing:
             return
         if self._size_kind == "text":
-            self.style = replace(self.style,
-                                 font_size=float(spin.get_value()))
+            size = float(spin.get_value())
+            self.style = replace(self.style, font_size=size)
+            self._restyle_picked("size", lambda s: (
+                with_props(s, ("emoji",), size=max(8.0, size * 2.2))
+                or restyled(s, ("text", "bubble"), font_size=size)),
+                sliding=True)
             self._style_text_view()
             self._refocus_text()
         else:
             self._pen_width = spin.get_value()
-            self.style = replace(self.style,
-                                 width=self._page_width(self._pen_width))
+            width = self._page_width(self._pen_width)
+            self.style = replace(self.style, width=width)
+            self._restyle_picked("width", lambda s: restyled(
+                s, WIDTH_KINDS, width=width), sliding=True)
 
     def _on_text_style_toggled(self, button, name):
         if button.get_active():
             self.text_style = name
+            self._restyle_picked("text style", lambda s: with_props(
+                s, ("text",), remeasure=True,
+                **shape_model.text_style_flags(name)))
             self._style_text_view()
             self._refocus_text()
 
     def _on_align_toggled(self, button, name):
         if button.get_active():
             self.text_align = name
+            self._restyle_picked("align", lambda s: with_props(
+                s, ("text",), remeasure=True, align=name))
             self._style_text_view()
             self._refocus_text()
 
@@ -685,18 +709,29 @@ class OverlayControlsMixin:
         if not family:
             return
         self.style = replace(self.style, font_family=family)
+        self._restyle_picked("font", lambda s: restyled(
+            s, ("text", "bubble"), font_family=family))
         self._style_text_view()
         self._refocus_text()
 
     def _on_head_changed(self, chooser, _pspec, end):
-        self.arrow_heads[end] = arrows.HEADS[chooser.get_selected()]
+        head = arrows.HEADS[chooser.get_selected()]
+        self.arrow_heads[end] = head
+        self._restyle_picked(end, lambda s: with_props(
+            s, ("arrow",), **{end: head}))
 
     def _on_strength_changed(self, scale):
-        self.redaction_density = scale.get_value()
+        density = scale.get_value()
+        self.redaction_density = density
+        self._restyle_picked("strength", lambda s: with_props(
+            s, ("obscure",), density=density), sliding=True)
         self._update_style_face()
 
     def _on_dim_changed(self, scale):
-        self.spotlight_scrim = scale.get_value()
+        scrim = scale.get_value()
+        self.spotlight_scrim = scrim
+        self._restyle_picked("dim", lambda s: with_props(
+            s, ("spotlight",), scrim=scrim), sliding=True)
         self._update_style_face()
 
     def step_size(self, direction: int) -> None:
