@@ -30,6 +30,7 @@ import cairo  # noqa: E402
 
 from .. import save as save_mod
 from ..editor import background as bg
+from ..editor import preset as preset_mod
 from ..editor import render
 from ..editor import shapes as shape_model
 from ..editor.shapes import (EMOJI_CHOICES, Arrow, EllipseShape, EmojiSticker,
@@ -81,6 +82,10 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     editor window" button; it receives the cropped base image and the
     annotation shapes translated into its coordinates.
 
+    With remember_style the overlay starts from the style the last session
+    (overlay or editor) ended with, and saves its own on closing
+    (editor/preset.py). The tests leave it off.
+
     With copy_on_select (the `copy` mode, Ctrl+Shift+PrtSc) the first
     selection is copied to the clipboard and the overlay closes: selecting
     a region is the whole job.
@@ -89,7 +94,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     def __init__(self, app, pixbuf: GdkPixbuf.Pixbuf, settings,
                  open_editor: Optional[Callable] = None,
                  copy_on_select: bool = False, select_all: bool = False,
-                 monitor_layout=None):
+                 monitor_layout=None, remember_style: bool = False):
         super().__init__(application=app, title="Feather Shot")
         self.pixbuf = pixbuf
         self._scene = OverlayScene(pixbuf)
@@ -101,16 +106,33 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         # screen-ish units; Style.width is in image pixels (_page_width).
         rgba = Gdk.RGBA()
         rgba.parse(settings.pen_color)
-        self._pen_width = float(settings.pen_width)
-        self.style = Style(rgba=(rgba.red, rgba.green, rgba.blue, rgba.alpha),
-                           width=self._page_width(self._pen_width),
-                           font_size=float(settings.font_size))
-        self.redaction_density = shape_model.density_from_factor(
-            settings.blur_factor)
-        self.spotlight_scrim = 0.55      # how dark a spotlight's outside goes
-        self.text_style = "plain"        # one of shape_model.TEXT_STYLES
-        self.text_align = "left"         # left, center or right
-        self.arrow_heads = {"head_start": "none", "head_end": "arrow"}
+        rgba = (rgba.red, rgba.green, rgba.blue, rgba.alpha)
+        self._preset = (preset_mod.starting_point(settings, rgba)
+                        if remember_style else None)
+        if self._preset is not None:
+            preset = self._preset
+            self._pen_width = float(preset.width)
+            self.style = Style(rgba=tuple(preset.rgba),
+                               width=self._page_width(self._pen_width),
+                               font_size=float(preset.font_size),
+                               font_family=preset.font_family)
+            self.redaction_density = preset.redaction_density
+            self.spotlight_scrim = preset.spotlight_scrim
+            self.text_style = preset.text_style
+            self.text_align = preset.text_align
+            self.arrow_heads = {"head_start": preset.head_start,
+                                "head_end": preset.head_end}
+        else:
+            self._pen_width = float(settings.pen_width)
+            self.style = Style(rgba=rgba,
+                               width=self._page_width(self._pen_width),
+                               font_size=float(settings.font_size))
+            self.redaction_density = shape_model.density_from_factor(
+                settings.blur_factor)
+            self.spotlight_scrim = 0.55  # how dark a spotlight's outside goes
+            self.text_style = "plain"    # one of shape_model.TEXT_STYLES
+            self.text_align = "left"     # left, center or right
+            self.arrow_heads = {"head_start": "none", "head_end": "arrow"}
         self._size_kind = "width"        # what the spinner sizes: width|text
         self._size_syncing = False       # set while the spinner is re-ranged
 
@@ -161,6 +183,9 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             monitor_layout = [(None, (0, 0, pixbuf.get_width(),
                                       pixbuf.get_height()))]
         self._build_ui(monitor_layout)
+        if self._preset is not None:
+            self.connect("close-request",
+                         lambda *_: (self._remember_style(), False)[1])
         self.set_decorated(False)
         monitor = self._views[0].monitor
         if monitor is not None:
@@ -172,6 +197,24 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             # to. The bars are placed again once the window has its size.
             self.sel = (0, 0, pixbuf.get_width(), pixbuf.get_height())
             self._selection_made()
+
+    def _remember_style(self):
+        """Save the style for the next session, when it changed; best
+        effort (preset.save never raises)."""
+        preset = self._preset
+        before = preset.to_dict()
+        preset.rgba = tuple(self.style.rgba)
+        preset.width = self._pen_width
+        preset.font_size = self.style.font_size
+        preset.font_family = self.style.font_family
+        preset.redaction_density = self.redaction_density
+        preset.spotlight_scrim = self.spotlight_scrim
+        preset.text_style = self.text_style
+        preset.text_align = self.text_align
+        preset.head_start = self.arrow_heads["head_start"]
+        preset.head_end = self.arrow_heads["head_end"]
+        if preset.to_dict() != before:
+            preset_mod.save(preset)
 
     # ---------------------------------------------------------------- UI --
 

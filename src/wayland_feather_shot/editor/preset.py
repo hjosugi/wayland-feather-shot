@@ -104,8 +104,10 @@ def _decode(data: Any) -> EditorPreset:
     return preset
 
 
-def load(path: str = PRESET_PATH) -> EditorPreset:
-    """The last session's style, or the defaults when there isn't one."""
+def load(path: str | None = None) -> EditorPreset:
+    """The last session's style, or the defaults when there isn't one.
+    *path* defaults to PRESET_PATH as it is when called."""
+    path = path or PRESET_PATH
     try:
         with open(path, "r", encoding="utf-8") as fh:
             return _decode(json.load(fh))
@@ -113,9 +115,11 @@ def load(path: str = PRESET_PATH) -> EditorPreset:
         return EditorPreset()
 
 
-def save(preset: EditorPreset, path: str = PRESET_PATH) -> bool:
+def save(preset: EditorPreset, path: str | None = None) -> bool:
     """Best effort — failing to remember a colour must never surface as an
-    error in front of someone who just wanted to save a screenshot."""
+    error in front of someone who just wanted to save a screenshot.
+    *path* defaults to PRESET_PATH as it is when called."""
+    path = path or PRESET_PATH
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         temporary = path + ".tmp"
@@ -127,6 +131,17 @@ def save(preset: EditorPreset, path: str = PRESET_PATH) -> bool:
         # ValueError covers a path the OS cannot even be asked about (an
         # embedded NUL); "best effort" has to mean it.
         return False
+
+
+def starting_point(settings, rgba) -> EditorPreset:
+    """Where a session starts: the last one's style, or on a machine that
+    has never saved one the configured defaults, with the configured colour
+    *rgba* (parsed by the caller, which has GTK)."""
+    if os.path.exists(PRESET_PATH):
+        return load()
+    preset = from_settings(settings)
+    preset.rgba = tuple(rgba)
+    return preset
 
 
 def from_settings(settings) -> EditorPreset:

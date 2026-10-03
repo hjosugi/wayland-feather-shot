@@ -27,6 +27,11 @@
   how strongly blur and pixelate hide what is under them, and how dark a
   spotlight leaves the rest. For a redaction or a spotlight the button
   shows that strength.
+- **The overlay remembers the style.** Colour, line width, text size and
+  font, text style and alignment, arrowheads, redaction strength and
+  spotlight dimming carry over to the next capture, shared with the editor
+  window. The style menu also has the editor's width presets (2, 4, 8,
+  12).
 - **Read the selection from the overlay.** With `tesseract` or `zbarimg`
   installed, the "…" menu copies the selection's text (OCR) or a QR code
   or barcode, and proposes blurs over text that looks sensitive, as the

@@ -74,7 +74,9 @@ STYLE_ROWS_FOR = {
 STYLE_ROWS_NOT_FOR = {
     "palette": ("blur", "pixelate", "spotlight", "emoji"),
     "size": ("blur", "pixelate", "spotlight"),
+    "widths": ("blur", "pixelate", "spotlight") + TEXT_SIZED_TOOLS,
 }
+WIDTH_PRESETS = (2, 4, 8, 12)
 ALIGN_BUTTONS = (
     ("left", "format-justify-left-symbolic", "Align left"),
     ("center", "format-justify-center-symbolic", "Align centre"),
@@ -272,12 +274,23 @@ class OverlayControlsMixin:
             "wfs-size-width-symbolic")
         size_row.append(self._size_icon)
         self._size_spin = Gtk.SpinButton.new_with_range(1, 24, 1)
-        self._size_spin.set_value(float(self.settings.pen_width))
+        self._size_spin.set_value(self._pen_width)
         self._size_spin.set_tooltip_text(_("Line width ([ / ])"))
         self._size_spin.connect("value-changed", self._on_size_changed)
         size_row.append(self._size_spin)
         menu.append(size_row)
         self._style_rows["size"] = size_row
+
+        # The editor window's width presets, one click each.
+        widths = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        for width in WIDTH_PRESETS:
+            btn = Gtk.Button(label=str(width))
+            btn.add_css_class("wfs-round")
+            btn.connect("clicked", lambda _b, w=width:
+                        self._size_spin.set_value(w))
+            widths.append(btn)
+        menu.append(widths)
+        self._style_rows["widths"] = widths
 
         # Plain, outlined or boxed text; shown while the text tool is in use.
         self._text_style_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,

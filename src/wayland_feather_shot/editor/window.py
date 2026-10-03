@@ -77,12 +77,10 @@ class EditorWindow(Gtk.ApplicationWindow):
 
         # Where the editor left off last time, falling back to the configured
         # defaults on a machine that has never opened it.
-        self._preset = preset_mod.load()
-        if not os.path.exists(preset_mod.PRESET_PATH):
-            rgba = Gdk.RGBA()
-            rgba.parse(settings.pen_color)
-            self._preset = preset_mod.from_settings(settings)
-            self._preset.rgba = (rgba.red, rgba.green, rgba.blue, rgba.alpha)
+        rgba = Gdk.RGBA()
+        rgba.parse(settings.pen_color)
+        self._preset = preset_mod.starting_point(
+            settings, (rgba.red, rgba.green, rgba.blue, rgba.alpha))
 
         style = Style(rgba=self._preset.rgba, width=self._preset.width,
                       font_size=self._preset.font_size,

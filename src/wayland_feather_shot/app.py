@@ -226,7 +226,8 @@ class FeatherShotApp(Gtk.Application):
             win = OverlayWindow(self, pixbuf, self.settings,
                                 open_editor=self._open_editor,
                                 copy_on_select=self.mode == "copy",
-                                select_all=self.mode == "full")
+                                select_all=self.mode == "full",
+                                remember_style=True)
         else:
             from .editor.window import EditorWindow
             win = EditorWindow(self, pixbuf, self.settings,

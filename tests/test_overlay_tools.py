@@ -169,11 +169,11 @@ class OverlayStyleMenuTests(OverlayCase, unittest.TestCase):
 
     def test_each_tool_shows_its_own_rows(self):
         for tool, rows in (
-                ("pen", {"palette", "size"}),
+                ("pen", {"palette", "size", "widths"}),
                 ("text", {"palette", "size", "text_style", "align", "font"}),
                 ("bubble", {"palette", "size", "font"}),
-                ("arrow", {"palette", "size", "heads"}),
-                ("steparrow", {"palette", "size", "heads"}),
+                ("arrow", {"palette", "size", "widths", "heads"}),
+                ("steparrow", {"palette", "size", "widths", "heads"}),
                 ("blur", {"strength"}),
                 ("spotlight", {"dim"}),
                 ("emoji", {"size"})):
