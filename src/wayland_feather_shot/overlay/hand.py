@@ -34,6 +34,14 @@ HANDLE_CURSORS = {
 FRAME_RGB = (0.25, 0.6, 1.0)
 
 
+# Arrow keys: which way a nudge moves the picked shapes.
+NUDGES = {
+    Gdk.KEY_Left: (-1, 0), Gdk.KEY_Right: (1, 0),
+    Gdk.KEY_Up: (0, -1), Gdk.KEY_Down: (0, 1),
+}
+DELETE_KEYS = (Gdk.KEY_Delete, Gdk.KEY_KP_Delete, Gdk.KEY_BackSpace)
+
+
 class OverlayHandMixin:
     """``_picked`` holds the picked shapes' sids; ``_lifted`` the shapes on
     the move, with their places in the stacking order; ``_engine`` the
@@ -192,6 +200,55 @@ class OverlayHandMixin:
         self._pick_on_click = None
         self._lift_offset = (0.0, 0.0)
         self.area.set_cursor(Gdk.Cursor.new_from_name("grab"))
+
+    # -- keys --
+
+    def _picked_key(self, keyval, ctrl, shift) -> bool:
+        """The editor window's keys for its selection, on the picked
+        shapes: Ctrl+A picks them all (with the hand), Delete removes them,
+        the arrows nudge them by a pixel (ten with Shift), Ctrl+Up and
+        Ctrl+Down raise and lower them. True when the key was used."""
+        if ctrl and Gdk.keyval_to_lower(keyval) == Gdk.KEY_a:
+            self.select_tool("hand")
+            self._picked = {shape.sid for shape in self.shapes}
+            self._redraw()
+            return True
+        if self.tool != "hand" or not self._picked:
+            return False
+        picked = self._picked
+        if keyval in DELETE_KEYS and not ctrl:
+            self._push_history()
+            self.shapes = [s for s in self.shapes if s.sid not in picked]
+            self._picked = set()
+        elif ctrl and keyval in (Gdk.KEY_Up, Gdk.KEY_Down):
+            restacked = self._restacked(up=keyval == Gdk.KEY_Up)
+            if restacked != self.shapes:
+                self._push_history()
+                self.shapes = restacked
+        elif keyval in NUDGES and not ctrl:
+            step = 10 if shift else 1
+            dx, dy = NUDGES[keyval]
+            self._push_history(merge=("nudge", frozenset(picked)))
+            self.shapes = [s.translate(dx * step, dy * step)
+                           if s.sid in picked else s for s in self.shapes]
+        else:
+            return False
+        self._redraw()
+        return True
+
+    def _restacked(self, up: bool):
+        """The shapes with each picked one a step higher (or lower) in the
+        stacking order; picked neighbours move as a block."""
+        shapes = list(self.shapes)
+        picked = self._picked
+        order = (range(len(shapes) - 2, -1, -1) if up
+                 else range(1, len(shapes)))
+        other = 1 if up else -1
+        for i in order:
+            if (shapes[i].sid in picked
+                    and shapes[i + other].sid not in picked):
+                shapes[i], shapes[i + other] = shapes[i + other], shapes[i]
+        return shapes
 
     def _live_shapes(self):
         """What is drawn live over the cached composite: the shape being

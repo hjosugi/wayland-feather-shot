@@ -144,6 +144,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         self.shapes: List = []
         self._undo: List[tuple] = []     # (selection, shapes) to go back to
         self._redo: List[tuple] = []
+        self._history_merge = None       # see _push_history
 
         # The drag in progress, if any. _drag_kind says what it does:
         # select, move, resize, draw, shape (the hand), or None.
@@ -408,9 +409,17 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     # None is taken; it means "no selection" and is a state worth restoring.
     _CURRENT = object()
 
-    def _push_history(self, prev_sel=_CURRENT):
+    def _push_history(self, prev_sel=_CURRENT, merge=None):
         """Record the state to return to: the shapes as they are now, and the
-        selection as it was before the change (*prev_sel*, default: as now)."""
+        selection as it was before the change (*prev_sel*, default: as now).
+
+        A change with the same *merge* key as the one just before it adds
+        no step of its own: holding an arrow key to nudge, or sliding a
+        control over picked shapes, undoes in one go.
+        """
+        if merge is not None and merge == self._history_merge:
+            return
+        self._history_merge = merge
         sel = self.sel if prev_sel is self._CURRENT else prev_sel
         self._undo.append((sel, tuple(self.shapes)))
         if len(self._undo) > 100:
@@ -418,6 +427,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         self._redo.clear()
 
     def undo(self):
+        self._history_merge = None
         if self._undo:
             self._redo.append((self.sel, tuple(self.shapes)))
             self.sel, shapes = self._undo.pop()
@@ -425,6 +435,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             self._after_history()
 
     def redo(self):
+        self._history_merge = None
         if self._redo:
             self._undo.append((self.sel, tuple(self.shapes)))
             self.sel, shapes = self._redo.pop()
@@ -760,6 +771,8 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
                 self._selection_made()
             else:
                 self.copy_and_close()
+            return True
+        if self.sel is not None and self._picked_key(keyval, ctrl, shift):
             return True
         if self.sel is not None and not ctrl and not shift:
             if key in TOOL_KEYS:

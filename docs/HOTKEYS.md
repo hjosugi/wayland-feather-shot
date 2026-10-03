@@ -176,6 +176,10 @@ With a region selected:
 | M, J | numbered marker, emoji sticker (click to place) |
 | B, X, O | blur, pixelate, spotlight (dims everything outside it) |
 | [ , ] | smaller or larger line width, or text size while the text, bubble or emoji tool is active |
+| Ctrl+A | pick every shape with the hand |
+| Delete, Backspace | delete the picked shapes |
+| arrows, Shift+arrows | nudge the picked shapes by 1 px, by 10 px |
+| Ctrl+Up, Ctrl+Down | raise, lower the picked shapes |
 | W | open the selection in the editor |
 | Enter, Ctrl+C, double-click inside the selection | copy to the clipboard and close |
 | Ctrl+S | save and close |

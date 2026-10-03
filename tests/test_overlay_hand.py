@@ -310,6 +310,66 @@ class OverlayHandToolTests(unittest.TestCase):
         self.window._on_drag_end(gesture, 10, 10)
         self.assertEqual(len(self.window.shapes), 1)
 
+    # -- keys for the picked shapes --
+
+    def key(self, keyval, state=0):
+        return self.window._on_key(None, keyval, 0, state)
+
+    def test_delete_removes_the_picked_shapes(self):
+        second = self.add_second_rect()
+        self.drag(100, 100, 100, 100)
+        self.assertTrue(self.key(Gdk.KEY_Delete))
+        self.assertEqual(self.window.shapes, [second])
+        self.assertEqual(self.picked(), set())
+        self.window.undo()
+        self.assertEqual(self.window.shapes, [self.rect, second])
+
+    def test_arrows_nudge_and_a_held_key_undoes_in_one_go(self):
+        self.drag(100, 100, 100, 100)
+        history_before = len(self.window._undo)
+        for _ in range(3):
+            self.key(Gdk.KEY_Right)
+        self.key(Gdk.KEY_Down, SHIFT)
+        moved = self.window.shapes[0]
+        self.assertEqual((moved.x - self.rect.x, moved.y - self.rect.y),
+                         (3, 10))
+        self.assertEqual(len(self.window._undo), history_before + 1)
+        self.window.undo()
+        self.assertEqual(self.window.shapes, [self.rect])
+
+    def test_a_nudge_after_another_change_is_a_step_of_its_own(self):
+        self.drag(100, 100, 100, 100)
+        self.key(Gdk.KEY_Right)
+        self.drag(100, 100, 110, 100)                   # a move between
+        self.key(Gdk.KEY_Right)
+        self.window.undo()
+        self.assertEqual(self.window.shapes[0].x - self.rect.x, 11)
+
+    def test_ctrl_a_picks_every_shape_with_the_hand(self):
+        second = self.add_second_rect()
+        self.window.select_tool("pen")
+        self.assertTrue(self.key(Gdk.KEY_a, CTRL))
+        self.assertEqual(self.window.tool, "hand")
+        self.assertEqual(self.picked(), {self.rect.sid, second.sid})
+
+    def test_ctrl_up_and_down_restack_the_picked_shapes(self):
+        second = self.add_second_rect()
+        self.drag(100, 100, 100, 100)                   # the lower one
+        self.key(Gdk.KEY_Up, CTRL)
+        self.assertEqual([s.sid for s in self.window.shapes],
+                         [second.sid, self.rect.sid])
+        self.key(Gdk.KEY_Up, CTRL)                      # already on top
+        self.assertEqual(len(self.window.shapes), 2)
+        self.key(Gdk.KEY_Down, CTRL)
+        self.assertEqual([s.sid for s in self.window.shapes],
+                         [self.rect.sid, second.sid])
+
+    def test_the_keys_leave_other_tools_alone(self):
+        self.drag(100, 100, 100, 100)
+        self.window.select_tool("pen")                  # drops the pick
+        self.assertFalse(self.key(Gdk.KEY_Delete))
+        self.assertEqual(self.window.shapes, [self.rect])
+
     def test_s_selects_the_hand_tool(self):
         self.window.select_tool("pen")
         self.window._on_key(None, Gdk.KEY_s, 0, 0)
