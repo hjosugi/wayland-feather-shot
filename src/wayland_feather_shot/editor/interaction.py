@@ -281,17 +281,27 @@ class Editor:
             screen = self.viewport.to_widget(frame.unit_point(u, v))
             if math.dist(screen, widget_point) <= HANDLE_HIT_RADIUS:
                 return handle
+        for handle, out in self.rotate_handle_points().items():
+            if math.dist(out, widget_point) <= HANDLE_HIT_RADIUS:
+                return handle
+        return None
+
+    def rotate_handle_points(self) -> Dict[str, Point]:
+        """The rotation handles, in widget space: just outside each corner
+        of the selection frame, away from its centre."""
+        frame = self.selection_frame
+        if frame is None or self.lone_arrow is not None:
+            return {}
         center = self.viewport.to_widget(frame.page_center)
+        points = {}
         for handle, corner in zip(ROTATE_HANDLES, CORNER_HANDLES):
             u, v = HANDLE_UNIT[corner]
             screen = self.viewport.to_widget(frame.unit_point(u, v))
             dx, dy = screen[0] - center[0], screen[1] - center[1]
             length = math.hypot(dx, dy) or 1.0
-            out = (screen[0] + dx / length * ROTATE_HANDLE_OFFSET,
-                   screen[1] + dy / length * ROTATE_HANDLE_OFFSET)
-            if math.dist(out, widget_point) <= HANDLE_HIT_RADIUS:
-                return handle
-        return None
+            points[handle] = (screen[0] + dx / length * ROTATE_HANDLE_OFFSET,
+                              screen[1] + dy / length * ROTATE_HANDLE_OFFSET)
+        return points
 
     def hit_margin(self) -> float:
         return max(3.0, self.viewport.page_distance(8.0))

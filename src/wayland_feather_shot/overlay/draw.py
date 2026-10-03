@@ -67,16 +67,8 @@ class OverlayDrawMixin:
             selection = wx0, wy0, wx1, wy1
         dim_outside(snapshot, w, h, selection, OVERLAY_DIM_ALPHA)
 
-        # 4. The hand's picked shapes.
-        for shape in self._picked_shapes():
-            box = shape.page_bounds
-            outline = Gsk.RoundedRect()
-            outline.init_from_rect(rect(ox + box.x * scale - 4,
-                                        oy + box.y * scale - 4,
-                                        box.w * scale + 8,
-                                        box.h * scale + 8), 3)
-            snapshot.append_border(outline, [1.5] * 4,
-                                   [color(0.25, 0.6, 1.0, 0.95)] * 4)
+        # 4. The hand's picked shapes: their frame and handles.
+        self._draw_pick_frame(snapshot)
 
         # 5. The selection's frame, handles and size, or the hint.
         if selection:

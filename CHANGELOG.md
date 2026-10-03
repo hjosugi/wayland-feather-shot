@@ -44,10 +44,13 @@
   a watermark, with a preview on the same page. Copy, save and pin take
   the framed result, and the size label shows its size next to the
   selection's.
-- **Move several shapes at once.** With the hand tool, Shift+click or
-  Ctrl+click picks more shapes (or drops a picked one), and dragging any
-  of them moves them all as one undo step. Picked shapes are framed; a
-  click on empty space clears the pick.
+- **Move, resize and rotate placed shapes.** With the hand tool,
+  Shift+click or Ctrl+click picks more shapes (or drops a picked one), and
+  dragging any of them moves them all as one undo step; a click on empty
+  space clears the pick. Picked shapes get the editor window's frame: its
+  handles resize them, the ones beyond the corners rotate them (Shift
+  keeps the proportions or snaps the angle), and a lone arrow's handles
+  move its ends and bend it.
 - **Each monitor keeps its own picture.** With several monitors the
   overlay squeezed all of them into one screen. It now opens on every
   monitor, each showing its own part of the screenshot at its own scale;

@@ -238,6 +238,78 @@ class OverlayHandToolTests(unittest.TestCase):
         self.window.select_tool("hand")
         self.assertEqual(self.picked(), set())
 
+    # -- reshaping a picked shape by its handles --
+
+    def test_a_corner_handle_resizes_the_picked_shape(self):
+        self.drag(100, 100, 100, 100)                   # pick the rectangle
+        self.assertEqual(self.window._pick_handle_at(140, 120), "se")
+        history_before = len(self.window._undo)
+        self.drag(140, 120, 170, 140)
+        (resized,) = self.window.shapes
+        self.assertEqual((resized.x, resized.y), (self.rect.x, self.rect.y))
+        self.assertAlmostEqual(resized.props.w, self.rect.props.w + 30)
+        self.assertAlmostEqual(resized.props.h, self.rect.props.h + 20)
+        self.assertEqual(len(self.window._undo), history_before + 1)
+        self.window.undo()
+        self.assertEqual(self.window.shapes, [self.rect])
+
+    def test_shift_keeps_the_proportions(self):
+        self.drag(100, 100, 100, 100)
+        self.drag(140, 120, 200, 125, SHIFT)
+        (resized,) = self.window.shapes
+        self.assertAlmostEqual(resized.props.w / resized.props.h,
+                               self.rect.props.w / self.rect.props.h)
+
+    def test_the_handle_beyond_a_corner_rotates(self):
+        self.drag(100, 100, 100, 100)
+        engine = self.window._pick_engine()
+        x, y = engine.rotate_handle_points()["rot-se"]
+        self.drag(x, y, x - 30, y + 30)
+        self.assertNotEqual(self.window.shapes[0].rotation, 0)
+
+    def test_a_lone_arrows_end_follows_its_handle(self):
+        self.window.shapes.clear()
+        self.window.select_tool("arrow")
+        self.drag(100, 200, 200, 200)
+        arrow = self.window.shapes[0]
+        self.window.select_tool("hand")
+        self.drag(150, 200, 150, 200)                   # pick it
+        self.assertEqual(self.window._pick_handle_at(200, 200), "arrow-end")
+        self.drag(200, 200, 220, 160)
+        moved = self.window.shapes[0]
+        end = moved.to_page(moved.props.end)
+        self.assertEqual((round(end[0]), round(end[1])), (220, 160))
+        self.assertEqual((moved.x, moved.y), (arrow.x, arrow.y))
+
+    def test_inside_the_frame_of_a_picked_ellipse_moves_it(self):
+        self.window.shapes.clear()
+        self.window.select_tool("ellipse")
+        self.drag(70, 70, 330, 230)
+        ellipse = self.window.shapes[0]
+        self.window.select_tool("hand")
+        self.drag(200, 70, 200, 70)                     # on its outline
+        # Near the frame's corner: inside the frame, outside the ellipse,
+        # clear of the handles.
+        self.assertIsNone(self.window._shape_at(88, 84))
+        self.assertIsNone(self.window._pick_handle_at(88, 84))
+        self.drag(88, 84, 108, 94)
+        moved = self.window.shapes[0]
+        self.assertEqual((moved.x - ellipse.x, moved.y - ellipse.y), (20, 10))
+
+    def test_handles_show_their_cursor_and_the_frame_is_drawn(self):
+        self.drag(100, 100, 100, 100)
+        self.window._on_motion(None, 140, 120)
+        self.assertEqual(self.window.area.get_cursor().get_name(),
+                         "nwse-resize")
+        self.window._snapshot(self.window.area, Gtk.Snapshot.new(), 400, 300)
+        gesture = FakeDrag(140, 120)
+        self.window._on_drag_begin(gesture, 140, 120)
+        self.window._on_drag_update(gesture, 10, 10)
+        self.window._snapshot(self.window.area, Gtk.Snapshot.new(), 400, 300)
+        self.assertEqual(self.window.shapes, [])        # lifted, drawn live
+        self.window._on_drag_end(gesture, 10, 10)
+        self.assertEqual(len(self.window.shapes), 1)
+
     def test_s_selects_the_hand_tool(self):
         self.window.select_tool("pen")
         self.window._on_key(None, Gdk.KEY_s, 0, 0)

@@ -159,6 +159,8 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         # removes), and while they move: (index, original) for each, lifted
         # out of self.shapes, and how far they have gone.
         self._picked = set()
+        self._engine = None              # while a picked shape is reshaped
+        self._drag_shift = False
         self._lifted: List[tuple] = []
         self._lift_offset = (0.0, 0.0)
         self._pick_on_click = None       # what a click without a move does
@@ -386,14 +388,15 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         name = "crosshair"
         if self.sel:
             handle = self._handle_at(x, y)
-            if handle:
+            if self.tool == "hand" and self._pick_handle_at(x, y):
+                name = self._hand_cursor(x, y, *self._to_image(x, y))
+            elif handle:
                 name = self._HANDLE_CURSOR.get(handle, "crosshair")
             elif (self.tool == "move"
                   and self._inside_sel(*self._to_image(x, y))):
                 name = "move"
             elif self.tool == "hand":
-                hit = self._shape_at(*self._to_image(x, y))
-                name = "grab" if hit is not None else "default"
+                name = self._hand_cursor(x, y, *self._to_image(x, y))
         cursor = Gdk.Cursor.new_from_name(name, None)
         if cursor is None:
             cursor = Gdk.Cursor.new_from_name("crosshair", None)
@@ -456,6 +459,9 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             self._drag_kind = "select"
             self._prev_sel = None
             self.sel = self._clamp_rect(ix, iy, 1, 1)
+        elif self.tool == "hand" and self._pick_handle_at(x, y):
+            # The picked shapes' own handles come before the selection's.
+            self._drag_kind = self._press_hand(gesture, x, y, ix, iy)
         else:
             handle = self._handle_at(x, y)
             if handle:
@@ -463,8 +469,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
                 self._drag_handle = handle
                 self._drag_sel0 = self.sel
             elif self.tool == "hand":
-                self._drag_kind = self._pick(self._shape_at(ix, iy),
-                                             self._adds_to_pick(gesture))
+                self._drag_kind = self._press_hand(gesture, x, y, ix, iy)
             elif self.tool == "move":
                 if self._inside_sel(ix, iy):
                     self._drag_kind = "move"
@@ -490,6 +495,11 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         ok, sx, sy = gesture.get_start_point()
         if not ok:
             return
+        if self._drag_kind == "reshape":
+            # Shift keeps the proportions or snaps the angle, as in the
+            # editor window.
+            self._drag_shift = bool(gesture.get_current_event_state()
+                                    & Gdk.ModifierType.SHIFT_MASK)
         ix, iy = self._to_image(sx + dx, sy + dy)
         self._apply_drag(ix, iy)
         self._redraw()
@@ -526,6 +536,9 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             self.shapes.append(preview)
         elif kind == "shape":
             self._drop_lifted()
+        elif kind == "reshape":
+            self._drop_reshaped()
+            self.area.set_cursor(Gdk.Cursor.new_from_name("grab"))
         elif kind in ("move", "resize"):
             if self.sel != self._drag_sel0:
                 self._push_history(prev_sel=self._drag_sel0)
@@ -572,6 +585,8 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             self._update_preview((ix, iy))
         elif kind == "shape":
             self._lift_offset = (ix - sx, iy - sy)
+        elif kind == "reshape":
+            self._reshape(ix, iy, self._drag_shift)
 
     def _update_preview(self, cur):
         """The shape the current tool would draw from the drag's start to
