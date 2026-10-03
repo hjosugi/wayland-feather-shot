@@ -1,5 +1,5 @@
-"""Saving to disk and copying to the Wayland clipboard.
-This application has no upload, telemetry or network code whatsoever."""
+"""Saving to disk and copying to the Wayland clipboard.  Local only —
+this application has no upload, telemetry or network code whatsoever."""
 
 from __future__ import annotations
 
@@ -78,24 +78,17 @@ def copy_text(text: str) -> str:
     if wl_copy:
         try:
             proc = subprocess.Popen(
-                [wl_copy, "--type", "text/plain"],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+                [wl_copy, "--type", "text/plain"], stdin=subprocess.PIPE,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             proc.stdin.write(text.encode("utf-8"))
             proc.stdin.close()
             return "wl-copy"
         except OSError:
             pass
-
     display = Gdk.Display.get_default()
     clipboard = display.get_clipboard()
-    clipboard.set_content(
-        Gdk.ContentProvider.new_for_bytes(
-            "text/plain;charset=utf-8", GLib.Bytes.new(text.encode("utf-8"))
-        )
-    )
+    clipboard.set_content(Gdk.ContentProvider.new_for_bytes(
+        "text/plain;charset=utf-8", GLib.Bytes.new(text.encode("utf-8"))))
     return "clipboard (valid while the editor stays open)"
 
 
@@ -107,17 +100,10 @@ def _spawn_holder(png: bytes):
         fd, tmp = tempfile.mkstemp(prefix="wfs-clip-", suffix=".png")
         with os.fdopen(fd, "wb") as fh:
             fh.write(png)
-
         cmd, env = clipboard_holder.holder_command(tmp)
-        subprocess.Popen(
-            cmd,
-            env=env,
-            start_new_session=True,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-
+        subprocess.Popen(cmd, env=env, start_new_session=True,
+                         stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return "holder process"
     except OSError:
         if tmp:
@@ -132,22 +118,18 @@ def copy_pixbuf(pixbuf: GdkPixbuf.Pixbuf) -> str:
     """Copy *pixbuf* to the clipboard.  Returns a short description of the
     mechanism used.
 
-    Preferred path is wl-copy (wl-clipboard):
-    it forks a tiny process that keeps owning the clipboard,
-    so the copy survives after this app exits;
-    GTK-owned Wayland clipboards vanish with the window.
-    Falls back to the GDK clipboard when wl-copy is unavailable.
+    Preferred path is wl-copy (wl-clipboard): it forks a tiny process that
+    keeps owning the clipboard, so the copy survives after this app exits —
+    GTK-owned Wayland clipboards vanish with the window.  Falls back to the
+    GDK clipboard when wl-copy is unavailable.
     """
     png = pixbuf_to_png_bytes(pixbuf)
     wl_copy = shutil.which("wl-copy")
     if wl_copy:
         try:
             proc = subprocess.Popen(
-                [wl_copy, "--type", "image/png"],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+                [wl_copy, "--type", "image/png"], stdin=subprocess.PIPE,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             proc.stdin.write(png)
             proc.stdin.close()
             return "wl-copy"
@@ -165,11 +147,9 @@ def copy_pixbuf(pixbuf: GdkPixbuf.Pixbuf) -> str:
     clipboard = display.get_clipboard()
     texture = Gdk.Texture.new_for_pixbuf(pixbuf)
     value = GObject.Value(Gdk.Texture, texture)
-    provider = Gdk.ContentProvider.new_union(
-        [
-            Gdk.ContentProvider.new_for_value(value),
-            Gdk.ContentProvider.new_for_bytes("image/png", GLib.Bytes.new(png)),
-        ]
-    )
+    provider = Gdk.ContentProvider.new_union([
+        Gdk.ContentProvider.new_for_value(value),
+        Gdk.ContentProvider.new_for_bytes("image/png", GLib.Bytes.new(png)),
+    ])
     clipboard.set_content(provider)
     return "clipboard (valid while the editor stays open)"
