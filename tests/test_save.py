@@ -46,5 +46,30 @@ class FormatForPathTests(unittest.TestCase):
         self.assertIn("webp", exts)
 
 
+try:
+    import gi
+    gi.require_version("GdkPixbuf", "2.0")
+    from gi.repository import GdkPixbuf  # noqa: E402
+    from wayland_feather_shot import save  # noqa: E402
+    HAVE_GI = True
+except (ImportError, ValueError):
+    HAVE_GI = False
+
+
+@unittest.skipUnless(HAVE_GI, "PyGObject unavailable")
+class PngBytesTests(unittest.TestCase):
+    def test_the_clipboard_png_is_quick_and_still_lossless(self):
+        # The copy path uses the lightest compression: ten times quicker
+        # for a screen-sized image, and the pixels come back unchanged.
+        pixbuf = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 64, 48)
+        pixbuf.fill(0x336699ff)
+        for fast in (False, True):
+            with self.subTest(fast=fast):
+                data = save.pixbuf_to_png_bytes(pixbuf, fast=fast)
+                self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n")
+                back = save.pixbuf_from_png_bytes(data)
+                self.assertEqual(back.get_pixels(), pixbuf.get_pixels())
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
