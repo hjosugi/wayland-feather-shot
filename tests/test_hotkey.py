@@ -54,15 +54,18 @@ class SetupHintTests(unittest.TestCase):
     def test_uses_given_command_name(self):
         self.assertIn("myapp gui", hotkey.setup_hint("sway", cmd="myapp"))
 
-    def test_region_copy_and_full_screen_have_keys_and_scroll_does_not(self):
+    def test_full_screen_and_region_have_the_keys(self):
+        # Ctrl+PrtSc full screen, Ctrl+Shift+PrtSc region; scroll and copy
+        # have no default key.
         keys = {sid: trigger for sid, trigger, _ in hotkey.DAEMON_SHORTCUTS}
-        self.assertEqual(keys, {"capture-region": "CTRL+Print",
-                                "capture-copy": "CTRL+SHIFT+Print",
-                                "capture-full": "SHIFT+CTRL+F12"})
+        self.assertEqual(keys, {"capture-full": "CTRL+Print",
+                                "capture-region": "CTRL+SHIFT+Print"})
         for d in ("hyprland", "sway", "other"):
             hint = hotkey.setup_hint(d, cmd="wfs")
-            self.assertIn("wfs copy", hint)
+            self.assertIn("wfs full", hint)
+            self.assertIn("wfs gui", hint)
             self.assertNotIn("wfs scroll", hint)
+            self.assertNotIn("wfs copy", hint)
 
 
 class ValidTriggerTests(unittest.TestCase):

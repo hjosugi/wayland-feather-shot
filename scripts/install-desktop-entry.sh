@@ -4,7 +4,7 @@
 # portal accepts our app id: it only registers an app id that has a matching
 # <app id>.desktop in an applications directory it can see.  A package install
 # (AUR, deb/rpm, AppImage integration) provides that file; a source tree needs
-# this script before `wayland-feather-shot daemon` can bind Ctrl+PrtSc.
+# this script before `wayland-feather-shot daemon` can bind its keys.
 #
 #   scripts/install-desktop-entry.sh              app entry only
 #   scripts/install-desktop-entry.sh --autostart  also start the hotkey daemon at login

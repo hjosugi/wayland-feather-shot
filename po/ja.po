@@ -420,26 +420,8 @@ msgstr "テキストのフォント"
 msgid "Drag: select area   •   Click / Enter: full screen   •   Esc: cancel"
 msgstr "ドラッグ: 範囲選択   •   クリック / Enter: 全画面   •   Esc: キャンセル"
 
-msgid "Click a screen to take it   •   Esc: cancel"
-msgstr "画面をクリックで全体を選択   •   Esc: キャンセル"
-
 msgid "Drag: copy area   •   Click / Enter: copy full screen   •   Esc: cancel"
 msgstr "ドラッグ: 範囲をコピー   •   クリック / Enter: 全画面をコピー   •   Esc: キャンセル"
-
-msgid "Click a screen to copy it   •   Esc: cancel"
-msgstr "画面をクリックで全体をコピー   •   Esc: キャンセル"
-
-msgid "Selection"
-msgstr "範囲"
-
-msgid "Screen"
-msgstr "画面"
-
-msgid "Drag to select a region"
-msgstr "ドラッグで範囲を選択"
-
-msgid "Click a screen to take all of it"
-msgstr "クリックした画面の全体を選択"
 
 msgid "Discard this screenshot?"
 msgstr "このスクリーンショットを破棄しますか?"

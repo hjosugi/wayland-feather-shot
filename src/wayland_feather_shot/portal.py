@@ -345,10 +345,9 @@ class GlobalShortcuts:
     """
 
     SHORTCUTS = [
-        ("capture-region", "Capture a screen region (Feather Shot)", "CTRL+Print"),
-        ("capture-copy", "Copy a screen region to the clipboard (Feather Shot)",
+        ("capture-full", "Capture the full screen (Feather Shot)", "CTRL+Print"),
+        ("capture-region", "Capture a screen region (Feather Shot)",
          "CTRL+SHIFT+Print"),
-        ("capture-full", "Capture the full screen (Feather Shot)", "SHIFT+CTRL+F12"),
     ]
 
     def __init__(self, portal: Portal, on_activated, shortcuts=None):

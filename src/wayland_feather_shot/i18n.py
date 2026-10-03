@@ -203,16 +203,8 @@ JA = {
     # selector hint
     "Drag: select area   •   Click / Enter: full screen   •   Esc: cancel":
         "ドラッグ: 範囲選択   •   クリック / Enter: 全画面   •   Esc: キャンセル",
-    "Click a screen to take it   •   Esc: cancel":
-        "画面をクリックで全体を選択   •   Esc: キャンセル",
     "Drag: copy area   •   Click / Enter: copy full screen   •   Esc: cancel":
         "ドラッグ: 範囲をコピー   •   クリック / Enter: 全画面をコピー   •   Esc: キャンセル",
-    "Click a screen to copy it   •   Esc: cancel":
-        "画面をクリックで全体をコピー   •   Esc: キャンセル",
-    "Selection": "範囲",
-    "Screen": "画面",
-    "Drag to select a region": "ドラッグで範囲を選択",
-    "Click a screen to take all of it": "クリックした画面の全体を選択",
     # close confirmation
     "Discard this screenshot?": "このスクリーンショットを破棄しますか?",
     "It has not been saved or copied.": "まだ保存もコピーもされていません。",

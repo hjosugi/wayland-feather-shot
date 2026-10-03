@@ -92,9 +92,18 @@ class OverlayCanvas(Gtk.Widget):
     """A plain widget whose snapshot is drawn by a callback (draw.py), so
     the window's gesture controllers can be attached to it directly."""
 
-    def __init__(self, snapshot_func):
+    def __init__(self, snapshot_func, on_resize=None):
         super().__init__(hexpand=True, vexpand=True)
         self._snapshot_func = snapshot_func
+        self._on_resize = on_resize
+        self._size = (0, 0)
+
+    def do_size_allocate(self, width, height, baseline):
+        # Tell the window after the allocation, not during it: it moves
+        # the bars, which are siblings being allocated in the same pass.
+        if self._on_resize is not None and (width, height) != self._size:
+            self._size = (width, height)
+            GLib.idle_add(lambda: (self._on_resize(width, height), False)[1])
 
     def do_snapshot(self, snapshot):
         self._snapshot_func(self, snapshot,

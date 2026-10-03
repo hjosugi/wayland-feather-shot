@@ -17,8 +17,8 @@ src/wayland_feather_shot/
                          save/copy/pin/editor; assembled from the mixins below
     view.py              image/widget coordinates, zoom and pan, monitors,
                          resize handles
-    controls.py          toolbar, Selection/Screen bar, action bar, size and
-                         text style controls, where the bars sit
+    controls.py          toolbar, action bar, size and text style controls,
+                         where the bars sit
     text.py              typing text in place on the canvas
     draw.py              the per-frame snapshot
     canvas.py            the snapshot widget and the cached screenshot texture
@@ -56,10 +56,10 @@ tested (`tests/test_stitcher.py`).
 
 ## Shortcuts
 
-`app.run_daemon()` binds Ctrl+PrtSc (region), Ctrl+Shift+PrtSc (copy a
-region) and Shift+Ctrl+F12 (full) through
-`org.freedesktop.portal.GlobalShortcuts` where the desktop implements it;
-`scripts/setup-hotkey.sh` covers the rest with native desktop shortcuts.
+`app.run_daemon()` binds Ctrl+PrtSc (full screen) and Ctrl+Shift+PrtSc
+(region) through `org.freedesktop.portal.GlobalShortcuts` where the desktop
+implements it; `scripts/setup-hotkey.sh` covers the rest with native desktop
+shortcuts.
 Scrolling capture is a desktop-entry action, not a key.
 
 ## Design rules

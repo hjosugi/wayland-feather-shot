@@ -2,11 +2,22 @@
 
 ## Unreleased
 
-- **Ctrl+Shift+PrtSc copies a region straight to the clipboard.** A new
-  `copy` mode opens the region overlay, and selecting is the whole job:
-  releasing the drag (a click takes the whole screen, a click in Screen mode
-  a whole monitor) copies the selection and closes. The portal daemon and
-  `scripts/setup-hotkey.sh` bind it next to Ctrl+PrtSc and Ctrl+Shift+F12.
+- **Ctrl+PrtSc takes the full screen, Ctrl+Shift+PrtSc a region.** The
+  Selection/Screen bar at the bottom of the overlay is gone; the key says
+  which. Ctrl+PrtSc opens the overlay with the whole screen already
+  selected, ready to annotate or copy, and its handles still cut a part out
+  of it. Ctrl+Shift+PrtSc selects a region as before. Ctrl+Shift+F12 is no
+  longer bound. The portal daemon and `scripts/setup-hotkey.sh` use the new
+  keys; keys a desktop has already stored for the daemon stay until they are
+  changed in its settings.
+- **The toolbar stays under the selection.** With no room underneath it
+  used to flip above the selection, which read as the selection and its
+  controls swapping places. It now goes inside the selection, along its
+  bottom edge.
+- **A copy mode.** `wayland-feather-shot copy` selects a region and copies it
+  straight to the clipboard: releasing the drag (a click takes the whole
+  screen) copies and closes. It has no default key; bind it by hand if you
+  want it.
 
 ## 0.11.0 (2026-10-03)
 

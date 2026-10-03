@@ -1,8 +1,7 @@
 """The region overlay's controls.
 
 The toolbar (tools, colour, the size control, text styles, undo/redo), the
-Selection/Screen bar shown before a selection exists, the action bar, the
-toast, and where the bars sit around the selection. A mixin of
+action bar, the toast, and where the bars sit around the selection. A mixin of
 overlay.window.OverlayWindow.
 """
 
@@ -124,57 +123,6 @@ class OverlayControlsMixin:
         bar.append(redo)
         return bar
 
-    def _build_mode_bar(self) -> Gtk.Widget:
-        """Selection or Screen, as in GNOME's screenshot UI: drag out a
-        region, or click a monitor to take all of it. Only there while
-        nothing is selected."""
-        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        bar.add_css_class("wfs-bar")
-        bar.set_halign(Gtk.Align.CENTER)
-        bar.set_valign(Gtk.Align.END)
-        bar.set_margin_bottom(28)
-        self._mode_buttons = {}
-        first = None
-        for mode, icon, label, tip in (
-                ("selection", "wfs-mode-selection-symbolic", "Selection",
-                 "Drag to select a region"),
-                ("screen", "wfs-mode-screen-symbolic", "Screen",
-                 "Click a screen to take all of it")):
-            content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,
-                              spacing=6)
-            content.append(Gtk.Image.new_from_icon_name(icon))
-            content.append(Gtk.Label(label=_(label)))
-            btn = Gtk.ToggleButton()
-            btn.set_child(content)
-            btn.add_css_class("wfs-round")
-            btn.set_tooltip_text(_(tip))
-            # The only focusable widgets on the empty overlay: with the focus
-            # they would take Enter (a toggle button's own shortcut) away
-            # from "Enter: full screen".
-            btn.set_focusable(False)
-            if first is None:
-                first = btn
-                btn.set_active(True)
-            else:
-                btn.set_group(first)
-            btn.connect("toggled", self._on_mode_toggled, mode)
-            bar.append(btn)
-            self._mode_buttons[mode] = btn
-        return bar
-
-    def _on_mode_toggled(self, button, mode):
-        # Grouped toggle buttons: only the one becoming active matters.
-        if button.get_active():
-            self.capture_mode = mode
-            self.area.queue_draw()
-
-    def _sync_mode_bar(self):
-        """Show the Selection/Screen bar exactly while nothing is selected."""
-        visible = self.sel is None
-        self._mode_bar.set_visible(visible)
-        # Bottom-centred too: the toast goes above the bar while it is there.
-        self._toast.set_margin_bottom(96 if visible else 48)
-
     def _build_action_bar(self) -> Gtk.Widget:
         """Copy, save, save as, open folder, editor, pin, cancel.
 
@@ -210,6 +158,21 @@ class OverlayControlsMixin:
                self.pin_to_screen)
         button("window-close-symbolic", "Cancel (Esc)", self.close)
         return bar
+
+    @staticmethod
+    def _keep_keys_on_the_overlay(bar):
+        """Clicking a button in *bar* must not give it the keyboard focus:
+        a focused button takes Enter (its own shortcut) away from the
+        overlay's "Enter: copy". Tab can still reach the buttons."""
+        stack = [bar]
+        while stack:
+            widget = stack.pop()
+            if isinstance(widget, Gtk.Button):
+                widget.set_focus_on_click(False)
+            child = widget.get_first_child()
+            while child is not None:
+                stack.append(child)
+                child = child.get_next_sibling()
 
     def toast(self, message: str, seconds: float = 2.2):
         """A short message at the bottom of the screen."""

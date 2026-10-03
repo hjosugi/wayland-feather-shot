@@ -2,10 +2,11 @@
 
 Modes (parsed in cli.py, which imports this module lazily):
   gui     frozen-screen region capture with in-place annotation (default)
-  full    capture the whole screen straight into the editor window
+  copy    select a region and copy it straight to the clipboard
+  full    the whole screen in the overlay, already selected
   scroll  scrolling capture (record while you scroll, auto-stitch)
   edit    open an existing image file in the editor
-  daemon  bind Ctrl+PrtSc etc. via the GlobalShortcuts portal
+  daemon  bind Ctrl+PrtSc and Ctrl+Shift+PrtSc via the GlobalShortcuts portal
 """
 
 from __future__ import annotations
@@ -126,9 +127,9 @@ class FeatherShotApp(Gtk.Application):
             # relying on the version-3 `target` key that backends vary on.
             self._start_screenshot(overlay=False, force_interactive=True)
         else:
-            # Overlay region-select only in interactive gui mode; a scripted
-            # capture (--region / --output / --no-editor) is non-interactive.
-            overlay = (self.mode in ("gui", "copy")
+            # The overlay for the interactive captures; a scripted capture
+            # (--region / --output / --no-editor) is non-interactive.
+            overlay = (self.mode in ("gui", "copy", "full")
                        and not self._scripted())
             self._start_screenshot(overlay=overlay)
         return False  # one-shot timeout
@@ -224,7 +225,8 @@ class FeatherShotApp(Gtk.Application):
         if overlay:
             win = OverlayWindow(self, pixbuf, self.settings,
                                 open_editor=self._open_editor,
-                                copy_on_select=self.mode == "copy")
+                                copy_on_select=self.mode == "copy",
+                                select_all=self.mode == "full")
         else:
             from .editor.window import EditorWindow
             win = EditorWindow(self, pixbuf, self.settings,
@@ -389,7 +391,7 @@ class FeatherShotApp(Gtk.Application):
                    bind_once: bool = False) -> int:
         """Blocking daemon using the GlobalShortcuts portal (no GTK window).
 
-        *shortcut* overrides the region trigger (default Ctrl+PrtSc).
+        *shortcut* overrides the region trigger (default Ctrl+Shift+PrtSc).
         *bind_once* binds the shortcuts and exits, for testing the binding.
         """
         from . import hotkey
@@ -406,8 +408,7 @@ class FeatherShotApp(Gtk.Application):
             print(f"feather-shot daemon: {e}", file=sys.stderr)
             return 1
         loop = GLib.MainLoop()
-        mode_by_id = {"capture-region": "gui", "capture-copy": "copy",
-                      "capture-full": "full"}
+        mode_by_id = {"capture-full": "full", "capture-region": "gui"}
 
         # Build the shortcut set, applying the --shortcut override to region.
         defs = []

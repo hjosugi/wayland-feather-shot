@@ -2,7 +2,7 @@
 
 The screenshot with its finished annotations (a cached texture), the shape
 being drawn or moved, the dimmed outside, the selection with its handles and
-size label, the highlighted monitor in Screen mode, and the hint. A mixin of
+size label, and the hint. A mixin of
 overlay.window.OverlayWindow.
 """
 
@@ -33,8 +33,7 @@ class OverlayDrawMixin:
         1. the screenshot with the finished annotations, as one texture
            that is rebuilt only when the annotations change (canvas.py);
         2. the shape being drawn or moved, live;
-        3. the dimmed outside, with the selection (or, in Screen mode, the
-           monitor a click would take) left bright;
+        3. the dimmed outside, with the selection left bright;
         4. the selection's border, handles and size label, or the hint
            when there is no selection yet.
         """
@@ -85,9 +84,8 @@ class OverlayDrawMixin:
             del cr
             snapshot.pop()
 
-        # 3. Dim everything but the selection. `selection` ends up as its
-        # widget rectangle, None (dim it all) or False (Screen mode has
-        # already dimmed around the highlighted monitor).
+        # 3. Dim everything but the selection (its widget rectangle, or None
+        # to dim it all).
         selection = None
         if self.sel:
             x, y, sw, sh = self.sel
@@ -102,23 +100,7 @@ class OverlayDrawMixin:
                 wx1 = round(wx1 * ds) / ds
                 wy1 = round(wy1 * ds) / ds
             selection = wx0, wy0, wx1, wy1
-        elif self.capture_mode == "screen" and (
-                self._pointer is not None or not self._mon_rects):
-            # Screen mode: light up the monitor a click would take.
-            point = (self._to_image(*self._pointer) if self._pointer
-                     else (0, 0))
-            mx, my, mw, mh = self._screen_at(*point)
-            wx0, wy0 = self._to_widget(mx, my)
-            wx1, wy1 = self._to_widget(mx + mw, my + mh)
-            dim_outside(snapshot, w, h, (wx0, wy0, wx1, wy1),
-                        OVERLAY_DIM_ALPHA)
-            screen = Gsk.RoundedRect()
-            screen.init_from_rect(rect(wx0, wy0, wx1 - wx0, wy1 - wy0), 0)
-            snapshot.append_border(screen, [3] * 4,
-                                   [color(0.55, 0.07, 0.68, 0.95)] * 4)
-            selection = False
-        if selection is not False:
-            dim_outside(snapshot, w, h, selection, OVERLAY_DIM_ALPHA)
+        dim_outside(snapshot, w, h, selection, OVERLAY_DIM_ALPHA)
 
         # 4. The selection's frame, handles and size, or the hint.
         if selection:
@@ -153,16 +135,10 @@ class OverlayDrawMixin:
                              label_y + ext.height + 4, 13, True)
             del cr
         else:
-            if self.copy_on_select:
-                hint = (_("Click a screen to copy it   •   Esc: cancel")
-                        if self.capture_mode == "screen" else
-                        _("Drag: copy area   •   Click / Enter: copy full "
-                          "screen   •   Esc: cancel"))
-            else:
-                hint = (_("Click a screen to take it   •   Esc: cancel")
-                        if self.capture_mode == "screen" else
-                        _("Drag: select area   •   Click / Enter: full screen"
-                          "   •   Esc: cancel"))
+            hint = (_("Drag: copy area   •   Click / Enter: copy full "
+                      "screen   •   Esc: cancel") if self.copy_on_select else
+                    _("Drag: select area   •   Click / Enter: full screen"
+                      "   •   Esc: cancel"))
             ext = self._text_extents(hint, 15, False)
             hx, hy = (w - ext.width) / 2, 42.0
             bounds = rect(hx - 14, hy - ext.height - 8,

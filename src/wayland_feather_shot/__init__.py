@@ -7,4 +7,4 @@ __version__ = "0.11.0"
 
 APP_ID = "io.github.hjosugi.WaylandFeatherShot"
 APP_NAME = "Feather Shot"
-DEFAULT_SHORTCUT = "CTRL+Print"
+DEFAULT_SHORTCUT = "CTRL+SHIFT+Print"   # region capture

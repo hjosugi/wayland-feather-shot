@@ -2,7 +2,7 @@
 # Installer for wayland-feather-shot.
 #   ./install.sh              user install (~/.local)
 #   sudo ./install.sh         system install (/usr/local)
-#   ./install.sh --with-hotkey   also register Ctrl+PrtSc (GNOME: automatic)
+#   ./install.sh --with-hotkey   also register the hotkeys (GNOME: automatic)
 set -eu
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -95,7 +95,7 @@ if [ "$WITH_HOTKEY" = 1 ]; then
     bash "$HERE/scripts/setup-hotkey.sh"
 else
     echo ""
-    echo "Default hotkey (Ctrl+PrtSc): run  ./scripts/setup-hotkey.sh"
+    echo "Default hotkeys (Ctrl+PrtSc, Ctrl+Shift+PrtSc): run  ./scripts/setup-hotkey.sh"
     echo "(On KDE/GNOME 46+ the autostarted portal daemon also offers it.)"
 fi
 

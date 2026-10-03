@@ -28,7 +28,8 @@ leaves the machine. Changes that need otherwise are out of scope.
   `org.freedesktop.portal.Screenshot` / `ScreenCast`. No X11 fallbacks, no
   compositor-specific hacks — works on GNOME, KDE Plasma, Hyprland, Sway and
   anything else with a portal backend.
-- **Default hotkey: Ctrl+PrtSc** (see below).
+- **Default hotkeys: Ctrl+PrtSc** for the full screen and **Ctrl+Shift+PrtSc**
+  for a region (see below).
 - English / Japanese UI out of the box (follows `LANG`; override with
   `WFS_LANG`). More languages via gettext catalogs — see [po/](po/README.md).
 
@@ -65,7 +66,7 @@ Then:
 
 ```console
 $ ./install.sh                # user install into ~/.local
-$ ./install.sh --with-hotkey  # …and register Ctrl+PrtSc (GNOME: automatic)
+$ ./install.sh --with-hotkey  # …and register the hotkeys (GNOME: automatic)
 ```
 
 Remove files installed by `install.sh`:
@@ -90,7 +91,8 @@ $ wayland-feather-shot diagnose
 
 ```console
 $ wayland-feather-shot            # region capture (default)
-$ wayland-feather-shot full       # whole screen straight into the editor
+$ wayland-feather-shot full       # whole screen, already selected in the overlay
+$ wayland-feather-shot copy       # select a region, straight to the clipboard
 $ wayland-feather-shot window     # pick a window via the portal picker
 $ wayland-feather-shot scroll     # scrolling capture (you scroll)
 $ wayland-feather-shot scroll --auto  # auto-scroll via RemoteDesktop portal (experimental)
@@ -145,9 +147,9 @@ prints the saved path. Exit codes: `0` ok, `1` error, `2` bad usage,
 
 ### Region capture
 
-1. The screen freezes. Drag to select (click or Enter = full screen), or
-   switch the bar at the bottom to **Screen** and click a monitor to take
-   all of it.
+1. The screen freezes. Drag to select (click or Enter = full screen). With
+   Ctrl+PrtSc (`full`) the whole screen starts out selected; the handles
+   still cut a part out of it.
 2. Annotate right on the selection — toolbar keys:
    `V` move/resize, `P` pen, `L` line, `A` arrow, `R` rect, `E` ellipse,
    `H` highlighter, `T` text, `B` blur, `X` pixelate, `M` numbered marker,
@@ -192,7 +194,7 @@ whether `scroll --auto` will work on your machine:
 | Hyprland / wlroots (`xdg-desktop-portal-wlr`) | usually no | the checkbox stays disabled — scroll manually |
 | Sway | usually no | scroll manually |
 
-### Default hotkey: Ctrl+PrtSc
+### Default hotkeys: Ctrl+PrtSc and Ctrl+Shift+PrtSc
 
 On Wayland there is **no** portable way for an app to grab a global key — the
 compositor decides. Two mechanisms cover the field; pick the row for your
@@ -204,13 +206,14 @@ desktop and prints the exact command):
 | GNOME | native shortcut | `./scripts/setup-hotkey.sh` (gsettings, idempotent) |
 | GNOME 46+ | portal daemon | autostarted `wayland-feather-shot daemon` |
 | KDE Plasma | portal daemon | autostarted `wayland-feather-shot daemon` (approve once) |
-| Hyprland | native shortcut | `bind = CTRL, Print, exec, wayland-feather-shot gui` |
-| Sway / wlroots | native shortcut | `bindsym Ctrl+Print exec wayland-feather-shot gui` |
-| other | native shortcut | bind `wayland-feather-shot gui` in your settings |
+| Hyprland | native shortcut | `bind = CTRL, Print, exec, wayland-feather-shot full` (and `CTRL SHIFT` → `gui`) |
+| Sway / wlroots | native shortcut | `bindsym Ctrl+Print exec wayland-feather-shot full` (and `Ctrl+Shift` → `gui`) |
+| other | native shortcut | bind `wayland-feather-shot full` and `gui` in your settings |
 
-Ctrl+Shift+PrtSc (`wayland-feather-shot copy`) selects a region and copies
-it straight to the clipboard, and Ctrl+Shift+F12 takes the full screen.
-Step-by-step setup for each desktop, what the portal daemon needs, and
+Ctrl+PrtSc takes the full screen (already selected, so the handles can still
+cut a part out) and Ctrl+Shift+PrtSc selects a region. `wayland-feather-shot
+copy` (select a region, straight to the clipboard) has no default key; bind
+it by hand if you want it. Step-by-step setup for each desktop, what the portal daemon needs, and
 every in-app key: [docs/HOTKEYS.md](docs/HOTKEYS.md).
 
 **If pressing the key does nothing**, first check the capture itself works:

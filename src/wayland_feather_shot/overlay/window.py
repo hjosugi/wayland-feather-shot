@@ -56,8 +56,10 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     """Fullscreen frozen-image capture UI.
 
     Everything follows from ``sel``: with no selection the overlay waits for
-    one (dragged out, or a whole monitor in Screen mode); with one, the
+    one to be dragged out (a click takes the whole screen); with one, the
     toolbar and action bar appear and the tools draw on the screenshot.
+    With select_all (the `full` mode, Ctrl+PrtSc) it starts with the whole
+    screen selected, so the handles can still cut a part out of it.
 
     open_editor(pixbuf, shapes) is an optional callback for the "open in
     editor window" button; it receives the cropped base image and the
@@ -70,7 +72,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
 
     def __init__(self, app, pixbuf: GdkPixbuf.Pixbuf, settings,
                  open_editor: Optional[Callable] = None,
-                 copy_on_select: bool = False):
+                 copy_on_select: bool = False, select_all: bool = False):
         super().__init__(application=app, title="Feather Shot")
         self.pixbuf = pixbuf
         self._scene = OverlayScene(pixbuf)
@@ -95,7 +97,6 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         # What the overlay holds: the selection (image coordinates, None
         # until one is made), the annotations, and their undo history.
         self.tool = "move"
-        self.capture_mode = "selection"  # before a selection: selection|screen
         self.sel: Optional[Rect] = None
         self.shapes: List = []
         self._undo: List[tuple] = []     # (selection, shapes) to go back to
@@ -118,7 +119,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
 
         # The view: zoom 1 means the whole screenshot fits the window; pan
         # is in widget pixels, added to the fitted origin.
-        self._mon_rects = self._monitor_rects_image()  # snapping, Screen mode
+        self._mon_rects = self._monitor_rects_image()  # for edge snapping
         self._zoom = 1.0
         self._pan = (0.0, 0.0)
         self._pinch_zoom0 = 1.0          # zoom level when a pinch started
@@ -130,6 +131,11 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         self._build_ui()
         self.set_decorated(False)
         self.fullscreen()
+        if select_all:
+            # Not in the undo history: there is no empty overlay to go back
+            # to. The bars are placed again once the window has its size.
+            self.sel = (0, 0, pixbuf.get_width(), pixbuf.get_height())
+            self._selection_made()
 
     # ---------------------------------------------------------------- UI --
 
@@ -141,14 +147,15 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         selects, moves, resizes and draws; the click gesture places text and
         markers and turns a double-click inside the selection into a copy.
         Over the canvas, in stacking order: the in-place text layer, the
-        toolbar and action bar, the Selection/Screen bar, and the toast.
+        toolbar and action bar, and the toast.
         """
         self._root = Gtk.Overlay()
         self.set_child(self._root)
         self._bar_rects = ()
         self._action_sizes = None
 
-        self.area = OverlayCanvas(self._snapshot)
+        self.area = OverlayCanvas(self._snapshot,
+                                  on_resize=self._on_canvas_resized)
         self.area.set_cursor(Gdk.Cursor.new_from_name("crosshair"))
         self._root.set_child(self.area)
 
@@ -186,6 +193,12 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         self._install_css()
         self._toolbar = self._build_toolbar()
         self._action_bar = self._build_action_bar()
+        for bar in (self._toolbar, self._action_bar):
+            self._keep_keys_on_the_overlay(bar)
+        # GTK gives a new window's focus to its first focusable widget; with
+        # the bars already showing (full mode) that is a toolbar button,
+        # which would swallow Enter. The overlay takes the keys itself.
+        self.connect("map", lambda *_: GLib.idle_add(self._drop_initial_focus))
         self._toast = Gtk.Label()
         self._toast.add_css_class("wfs-toast")
         self._toast.set_halign(Gtk.Align.CENTER)
@@ -194,11 +207,20 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         self._toast.set_visible(False)
         self._text_layer = TextLayer()
         self._text_layer.set_visible(False)
-        self._mode_bar = self._build_mode_bar()
         for w in (self._text_layer, self._toolbar, self._action_bar,
-                  self._mode_bar, self._toast):
+                  self._toast):
             self._root.add_overlay(w)
-        self._sync_mode_bar()
+
+    def _drop_initial_focus(self):
+        if self._text_edit is None:
+            self.set_focus(None)
+        return False
+
+    def _on_canvas_resized(self, _width, _height):
+        # The bars sit around the selection in widget pixels; a selection
+        # made before the window had its size (full mode) is placed now.
+        if self.sel is not None and self._bars_visible:
+            self._update_control_layout()
 
     def _install_css(self):
         install_custom_css()      # once per display; a no-op after that
@@ -231,8 +253,6 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         """Track the pointer, and let the cursor say what a press would do:
         resize at a handle, move inside the selection, grab over a shape."""
         self._pointer = (x, y)
-        if self.sel is None and self.capture_mode == "screen":
-            self.area.queue_draw()          # the highlighted screen follows
         name = "crosshair"
         if self.sel:
             handle = self._handle_at(x, y)
@@ -286,7 +306,6 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         else:
             self._set_bars_visible(True)
             self._update_control_layout()
-        self._sync_mode_bar()
         self.area.queue_draw()
 
     # ------------------------------------------------------------- input --
@@ -294,8 +313,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     def _on_drag_begin(self, gesture, x, y):
         """Decide what this drag does, from where it starts and the tool.
 
-        With nothing selected it starts the selection (or, in Screen mode,
-        takes a whole monitor at once). With a selection: a handle resizes
+        With nothing selected it starts the selection. With a selection: a handle resizes
         it, the hand picks up the shape under the pointer, the move tool
         moves the selection (or starts a new one outside it), and the
         drawing tools draw. The press also finishes any text being typed.
@@ -303,17 +321,10 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         self._end_text(commit=True)
         ix, iy = self._to_image(x, y)
         self._drag_start_img = (ix, iy)
-        if self.sel is None and self.capture_mode == "screen":
-            # Screen mode: the press takes the monitor under it, whole.
-            self._drag_kind = None
-            self.sel = self._screen_at(ix, iy)
-            self._push_history(prev_sel=None)
-            self._selection_made()
-        elif self.sel is None:
+        if self.sel is None:
             self._drag_kind = "select"
             self._prev_sel = None
             self.sel = self._clamp_rect(ix, iy, 1, 1)
-            self._sync_mode_bar()        # out of the way of the region
         else:
             handle = self._handle_at(x, y)
             if handle:
@@ -577,11 +588,8 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             return True
         if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
             if self.sel is None:
-                if self.capture_mode == "screen" and self._pointer:
-                    self.sel = self._screen_at(*self._to_image(*self._pointer))
-                else:
-                    self.sel = (0, 0, self.pixbuf.get_width(),
-                                self.pixbuf.get_height())
+                self.sel = (0, 0, self.pixbuf.get_width(),
+                            self.pixbuf.get_height())
                 self._push_history(prev_sel=None)
                 self._selection_made()
             else:
@@ -606,7 +614,6 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         """
         self.select_tool("move")
         self._set_bars_visible(True)
-        self._sync_mode_bar()
         self._update_control_layout()
         if self.copy_on_select:
             # Copy mode: the selection is the result. Deferred to idle, so

@@ -114,14 +114,6 @@ class OverlaySelectionTests(unittest.TestCase):
         self.assertEqual(self.window._clamp_rect(10.7, 20.5, 339.3, 179.5),
                          (10, 20, 340, 180))
 
-    def test_the_mode_bar_is_there_only_while_nothing_is_selected(self):
-        self.assertTrue(self.window._mode_bar.get_visible())
-        self.drag(50, 50, 250, 200)
-        self.assertFalse(self.window._mode_bar.get_visible())
-        self.window.undo()
-        self.assertIsNone(self.window.sel)
-        self.assertTrue(self.window._mode_bar.get_visible())
-
     def copied_after(self, act):
         """Run *act* in copy mode and count the copies it leads to."""
         copies = []
@@ -145,12 +137,6 @@ class OverlaySelectionTests(unittest.TestCase):
             lambda: self.window._on_key(None, Gdk.KEY_Return, 0, 0)),
             [(0, 0, 400, 300)])
 
-    def test_copy_mode_screen_click_copies_that_monitor(self):
-        self.window._mon_rects = [(0, 0, 200, 300), (200, 0, 200, 300)]
-        self.window._mode_buttons["screen"].set_active(True)
-        self.assertEqual(self.copied_after(lambda: self.drag(300, 100, 300, 100)),
-                         [(200, 0, 200, 300)])
-
     def test_the_ordinary_overlay_does_not_copy_on_select(self):
         copies = []
         self.window.copy_and_close = lambda: copies.append(True)
@@ -160,49 +146,58 @@ class OverlaySelectionTests(unittest.TestCase):
             pass
         self.assertEqual(copies, [])
 
-    def test_the_mode_bar_gets_out_of_the_way(self):
-        # Of the region being dragged out, and of the toast.
-        self.assertGreater(self.window._toast.get_margin_bottom(), 48)
-        gesture = FakeDrag(50, 50)
-        self.window._on_drag_begin(gesture, 50, 50)
-        self.assertFalse(self.window._mode_bar.get_visible())
-        self.window._on_drag_update(gesture, 100, 100)
-        self.window._on_drag_end(gesture, 100, 100)
-        self.assertEqual(self.window._toast.get_margin_bottom(), 48)
+    def full_overlay(self):
+        pixbuf = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 400, 300)
+        pixbuf.fill(0xffffffff)
+        window = OverlayWindow(self.app, pixbuf, Settings(), select_all=True)
+        self.addCleanup(window.destroy)
+        window.area.allocate(400, 300, -1, None)
+        return window
 
-    def test_the_mode_bar_leaves_the_keyboard_to_the_overlay(self):
-        # A focused toggle button swallows Enter before the window sees it.
-        for button in self.window._mode_buttons.values():
-            self.assertFalse(button.get_focusable())
+    def test_full_screen_starts_with_everything_selected(self):
+        window = self.full_overlay()
+        self.assertEqual(window.sel, (0, 0, 400, 300))
+        self.assertTrue(window._bars_visible)
+        # Nothing to undo back to: the whole screen stays selected.
+        window.undo()
+        self.assertEqual(window.sel, (0, 0, 400, 300))
 
-    def test_screen_mode_takes_the_monitor_under_the_press(self):
-        self.window._mon_rects = [(0, 0, 200, 300), (200, 0, 200, 300)]
-        self.window._mode_buttons["screen"].set_active(True)
-        self.drag(300, 100, 320, 120)          # a click, or a small drag
-        self.assertEqual(self.window.sel, (200, 0, 200, 300))
-        self.assertTrue(self.window._bars_visible)
-        self.window.undo()
-        self.assertIsNone(self.window.sel)
+    def test_full_screen_can_still_be_cut_down_with_a_handle(self):
+        window = self.full_overlay()
+        gesture = FakeDrag(400, 300)              # the "se" handle
+        window._on_drag_begin(gesture, 400, 300)
+        window._on_drag_update(gesture, -100, -80)
+        window._on_drag_end(gesture, -100, -80)
+        self.assertEqual(window.sel, (0, 0, 300, 220))
+        window.undo()
+        self.assertEqual(window.sel, (0, 0, 400, 300))
 
-    def test_screen_mode_with_one_monitor_takes_everything(self):
-        self.window._mon_rects = []
-        self.window._mode_buttons["screen"].set_active(True)
-        self.drag(120, 80, 200, 150)
-        self.assertEqual(self.window.sel, (0, 0, 400, 300))
+    def test_clicking_the_bars_leaves_enter_to_the_overlay(self):
+        # A focused button takes Enter for itself; with the toolbar showing
+        # from the start (full mode) Enter did nothing.
+        window = self.full_overlay()
+        buttons, stack = [], [window._toolbar, window._action_bar]
+        while stack:
+            widget = stack.pop()
+            if isinstance(widget, Gtk.Button):
+                buttons.append(widget)
+            child = widget.get_first_child()
+            while child is not None:
+                stack.append(child)
+                child = child.get_next_sibling()
+        self.assertGreater(len(buttons), 10)
+        self.assertFalse(any(b.get_focus_on_click() for b in buttons))
 
-    def test_enter_in_screen_mode_takes_the_screen_under_the_pointer(self):
-        self.window._mon_rects = [(0, 0, 200, 300), (200, 0, 200, 300)]
-        self.window._mode_buttons["screen"].set_active(True)
-        self.window._on_motion(None, 50, 50)
-        self.window._on_key(None, Gdk.KEY_Return, 0, 0)
-        self.assertEqual(self.window.sel, (0, 0, 200, 300))
-
-    def test_selection_mode_still_drags_out_a_region(self):
-        self.window._mon_rects = [(0, 0, 200, 300), (200, 0, 200, 300)]
-        self.window._mode_buttons["screen"].set_active(True)
-        self.window._mode_buttons["selection"].set_active(True)
-        self.drag(60, 60, 160, 140)
-        self.assertEqual(self.window.sel, (60, 60, 100, 80))
+    def test_the_bars_follow_the_window_size(self):
+        # A selection made before the window has its size (full mode) gets
+        # its bars placed once the canvas is allocated.
+        window = self.full_overlay()
+        context = GLib.MainContext.default()
+        while context.iteration(False):
+            pass
+        toolbar_y = window._toolbar.get_margin_top()
+        self.assertGreater(toolbar_y, 0)
+        self.assertLess(toolbar_y, 300)
 
     def test_handles_show_a_resize_cursor_with_every_tool(self):
         self.drag(50, 50, 250, 200)

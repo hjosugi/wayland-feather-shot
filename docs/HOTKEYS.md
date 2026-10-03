@@ -22,12 +22,15 @@ Default keys with either mechanism:
 
 | Key | Action |
 | --- | --- |
-| Ctrl+PrtSc | region capture (`gui`) |
-| Ctrl+Shift+PrtSc | copy a region straight to the clipboard (`copy`) |
-| Ctrl+Shift+F12 | full screen (`full`) |
+| Ctrl+PrtSc | full screen (`full`): the overlay with everything selected |
+| Ctrl+Shift+PrtSc | region capture (`gui`) |
 
-With Ctrl+Shift+PrtSc, selecting is the whole job: releasing the drag (or
-a click for the whole screen) copies the selection and closes.
+With Ctrl+PrtSc the whole screen starts out selected: annotate it, copy it
+with Enter, or pull a handle in to cut a part out of it.
+
+`wayland-feather-shot copy` selects a region and copies it straight to the
+clipboard (releasing the drag is the whole job). It has no default key;
+bind it by hand like the commands below if you want it.
 
 Scrolling capture has no key: it is in the app's menu (right-click Feather
 Shot in the dock or app grid, "Scrolling capture"), or run
@@ -41,9 +44,9 @@ Shot in the dock or app grid, "Scrolling capture"), or run
 $ ./scripts/setup-hotkey.sh
 ```
 
-It adds three custom keybindings through `gsettings` (Settings → Keyboard →
-Custom Shortcuts, named "Feather Shot (region)", "Feather Shot (copy
-region)" and "Feather Shot (full screen)") and is safe to rerun. The command
+It adds two custom keybindings through `gsettings` (Settings → Keyboard →
+Custom Shortcuts, named "Feather Shot (full screen)" and "Feather Shot
+(region)") and is safe to rerun. The command
 is the installed `wayland-feather-shot`, or this checkout's
 `bin/wayland-feather-shot` when nothing is installed. To undo, delete the
 entries in that settings page.
@@ -73,25 +76,23 @@ GNOME binds the keys without a dialog. They appear under Settings → Keyboard
 Plasma implements the GlobalShortcuts portal. Start the daemon (the autostart
 entry does this at login), approve the shortcut dialog once, and the keys show
 up under System Settings → Shortcuts → Feather Shot, where you can change them.
-Alternatively add a custom shortcut by hand: command `wayland-feather-shot gui`,
-key Ctrl+PrtSc.
+Alternatively add custom shortcuts by hand: `wayland-feather-shot full` on
+Ctrl+PrtSc and `wayland-feather-shot gui` on Ctrl+Shift+PrtSc.
 
 ### Hyprland
 
 ```ini
 # ~/.config/hypr/hyprland.conf
-bind = CTRL, Print, exec, wayland-feather-shot gui
-bind = CTRL SHIFT, Print, exec, wayland-feather-shot copy
-bind = CTRL SHIFT, F12, exec, wayland-feather-shot full
+bind = CTRL, Print, exec, wayland-feather-shot full
+bind = CTRL SHIFT, Print, exec, wayland-feather-shot gui
 ```
 
 ### Sway and other wlroots compositors
 
 ```
 # ~/.config/sway/config
-bindsym Ctrl+Print exec wayland-feather-shot gui
-bindsym Ctrl+Shift+Print exec wayland-feather-shot copy
-bindsym Ctrl+Shift+F12 exec wayland-feather-shot full
+bindsym Ctrl+Print exec wayland-feather-shot full
+bindsym Ctrl+Shift+Print exec wayland-feather-shot gui
 ```
 
 `xdg-desktop-portal-wlr` does not implement the GlobalShortcuts portal, so the
@@ -99,9 +100,9 @@ daemon reports failure there; the native binding is the way.
 
 ### Other desktops
 
-Bind `wayland-feather-shot gui`, `copy` and `full` in your
-desktop's keyboard settings. If the desktop implements the GlobalShortcuts
-portal, `wayland-feather-shot daemon` works too.
+Bind `wayland-feather-shot full` and `gui` in your desktop's keyboard
+settings. If the desktop implements the GlobalShortcuts portal,
+`wayland-feather-shot daemon` works too.
 
 ### Changing the daemon's keys
 
@@ -159,13 +160,9 @@ Before a region is selected:
 
 | Key | Action |
 | --- | --- |
-| drag | select a region (Selection mode, the default) |
-| click | Selection mode: the whole screen; Screen mode: the monitor under the pointer |
-| Enter | the same as a click, and start editing |
+| drag | select a region |
+| click, Enter | select the whole screen and start editing |
 | Esc | quit |
-
-The bar at the bottom switches between Selection and Screen, as in GNOME's
-screenshot UI.
 
 With a region selected:
 

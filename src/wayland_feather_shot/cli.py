@@ -58,8 +58,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("mode", nargs="?", default="gui", choices=MODES,
                         help="gui: region capture (default) / copy: "
                              "select a region and copy it straight to the "
-                             "clipboard / full: whole "
-                             "screen / window: pick a window via the portal "
+                             "clipboard / full: whole screen, already "
+                             "selected / window: pick a window via the portal "
                              "picker / scroll: scrolling capture / edit: "
                              "open an existing image in the editor / "
                              "daemon: GlobalShortcuts-portal hotkey daemon "
@@ -91,8 +91,8 @@ def build_parser() -> argparse.ArgumentParser:
         "daemon", "options for the GlobalShortcuts hotkey daemon")
     daemon.add_argument("--shortcut", metavar="TRIGGER",
                         help="portal trigger for region capture "
-                             "(default Ctrl+PrtSc; portal syntax CTRL+Print), "
-                             "e.g. CTRL+Print")
+                             "(default Ctrl+Shift+PrtSc; portal syntax "
+                             "CTRL+SHIFT+Print), e.g. SUPER+Print")
     daemon.add_argument("--bind-once", action="store_true",
                         help="bind the shortcuts and exit (test the binding)")
 

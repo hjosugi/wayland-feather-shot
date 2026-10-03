@@ -22,16 +22,16 @@ from __future__ import annotations
 
 import os
 
-DEFAULT_SHORTCUT = "CTRL+Print"
+DEFAULT_SHORTCUT = "CTRL+SHIFT+Print"   # region capture
 
 # id -> (default trigger, human description) for the daemon's portal session.
-# The everyday captures get keys; scrolling capture is in the app's menu (the
-# desktop entry's actions) instead.
+# Ctrl+PrtSc takes the full screen (in the overlay, already selected, so a
+# part can still be cut out) and Ctrl+Shift+PrtSc selects a region. Scrolling
+# capture is in the app's menu, and `copy` can be bound by hand.
 DAEMON_SHORTCUTS = [
-    ("capture-region", "CTRL+Print", "Capture a screen region (Feather Shot)"),
-    ("capture-copy", "CTRL+SHIFT+Print",
-     "Copy a screen region to the clipboard (Feather Shot)"),
-    ("capture-full", "SHIFT+CTRL+F12", "Capture the full screen (Feather Shot)"),
+    ("capture-full", "CTRL+Print", "Capture the full screen (Feather Shot)"),
+    ("capture-region", "CTRL+SHIFT+Print",
+     "Capture a screen region (Feather Shot)"),
 ]
 
 
@@ -78,38 +78,35 @@ def portal_support(desktop: str) -> str:
 
 
 def setup_hint(desktop: str, cmd: str = "wayland-feather-shot") -> str:
-    """Exact, copy-pasteable instructions to bind Ctrl+PrtSc on *desktop*."""
+    """Exact, copy-pasteable instructions to bind the keys on *desktop*."""
     if desktop == "gnome":
         return (
             "GNOME: run the helper to bind it via gsettings —\n"
             "    ./scripts/setup-hotkey.sh\n"
-            "  (Ctrl+PrtSc → region, Ctrl+Shift+PrtSc → copy a region,\n"
-            "  Ctrl+Shift+F12 → full screen). GNOME 46+ can\n"
-            f"  also use the portal daemon:  {cmd} daemon")
+            "  (Ctrl+PrtSc → full screen, Ctrl+Shift+PrtSc → region).\n"
+            f"  GNOME 46+ can also use the portal daemon:  {cmd} daemon")
     if desktop == "kde":
         return (
             "KDE Plasma: the portal daemon works —\n"
             f"    {cmd} daemon\n"
             "  (the installed autostart entry runs it at login; approve the\n"
             "  shortcut dialog once). Or System Settings → Shortcuts → Custom:\n"
-            f"    command:  {cmd} gui      key: Ctrl+PrtSc")
+            f"    command:  {cmd} full     key: Ctrl+PrtSc\n"
+            f"    command:  {cmd} gui      key: Ctrl+Shift+PrtSc")
     if desktop == "hyprland":
         return (
             "Hyprland: add to ~/.config/hypr/hyprland.conf —\n"
-            f"    bind = CTRL, Print, exec, {cmd} gui\n"
-            f"    bind = CTRL SHIFT, Print, exec, {cmd} copy\n"
-            f"    bind = CTRL SHIFT, F12, exec, {cmd} full")
+            f"    bind = CTRL, Print, exec, {cmd} full\n"
+            f"    bind = CTRL SHIFT, Print, exec, {cmd} gui")
     if desktop == "sway":
         return (
             "Sway: add to ~/.config/sway/config —\n"
-            f"    bindsym Ctrl+Print exec {cmd} gui\n"
-            f"    bindsym Ctrl+Shift+Print exec {cmd} copy\n"
-            f"    bindsym Ctrl+Shift+F12 exec {cmd} full")
+            f"    bindsym Ctrl+Print exec {cmd} full\n"
+            f"    bindsym Ctrl+Shift+Print exec {cmd} gui")
     return (
         "Register these in your desktop's keyboard-shortcut settings:\n"
-        f"    Ctrl+PrtSc        ->  {cmd} gui\n"
-        f"    Ctrl+Shift+PrtSc  ->  {cmd} copy\n"
-        f"    Ctrl+Shift+F12    ->  {cmd} full\n"
+        f"    Ctrl+PrtSc        ->  {cmd} full\n"
+        f"    Ctrl+Shift+PrtSc  ->  {cmd} gui\n"
         "  If your desktop implements the GlobalShortcuts portal you can\n"
         f"  instead run:  {cmd} daemon")
 

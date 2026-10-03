@@ -161,14 +161,6 @@ class OverlayViewMixin:
         except Exception:
             return []
 
-    def _screen_at(self, ix, iy) -> Rect:
-        """The monitor under an image point, in image coordinates; the whole
-        image when the layout is unknown (one monitor, or no geometry)."""
-        for mx, my, mw, mh in self._mon_rects:
-            if mx <= ix < mx + mw and my <= iy < my + mh:
-                return self._clamp_rect(mx, my, mw, mh)
-        return (0, 0, self.pixbuf.get_width(), self.pixbuf.get_height())
-
     def _snap_selection(self, x0, y0, x1, y1, thresh=14):
         """Snap selection edges to nearby monitor boundaries (image
         coordinates), so a monitor is easy to select exactly."""
