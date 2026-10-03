@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **A tidier toolbar.** Tools that do the same kind of thing share one
+  button with a ▾ menu (rectangle, ellipse and highlighter; blur and
+  pixelate), and the button shows the one last picked. Colour, size and
+  text style sit behind one style button that shows the colour and the
+  size and offers only what the current tool uses, with a palette and a
+  colour picker. The action bar keeps copy, save and pin, and puts save as
+  and the save folder under "…". The keys are unchanged.
 - **Each monitor keeps its own picture.** With several monitors the
   overlay squeezed all of them into one screen. It now opens on every
   monitor, each showing its own part of the screenshot at its own scale;

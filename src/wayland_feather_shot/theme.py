@@ -95,7 +95,8 @@ def install_custom_css() -> None:
         background-color: rgba(17, 24, 39, 0.92);
         border: 1px solid rgba(255, 255, 255, 0.28);
     }
-    .wfs-bar button.wfs-round {
+    .wfs-bar button.wfs-round,
+    .wfs-popover button.wfs-round {
         min-width: 0;
         min-height: 30px;
         margin: 0;
@@ -109,25 +110,31 @@ def install_custom_css() -> None:
         text-shadow: none;
         font-weight: bold;
     }
-    .wfs-bar button.wfs-round label {
+    .wfs-bar button.wfs-round label,
+    .wfs-popover button.wfs-round label {
         color: inherit;
     }
-    .wfs-bar button.wfs-round:hover {
+    .wfs-bar button.wfs-round:hover,
+    .wfs-popover button.wfs-round:hover {
         background-image: none;
         background-color: #ffffff;
         color: #0b1220;
     }
     .wfs-bar button.wfs-round:checked,
-    .wfs-bar button.wfs-round:checked:hover {
+    .wfs-popover button.wfs-round:checked,
+    .wfs-bar button.wfs-round:checked:hover,
+    .wfs-popover button.wfs-round:checked:hover {
         background-image: none;
         background-color: #2563eb;
         color: #ffffff;
         border-color: #1d4ed8;
     }
-    .wfs-bar button.wfs-round:checked label {
+    .wfs-bar button.wfs-round:checked label,
+    .wfs-popover button.wfs-round:checked label {
         color: #ffffff;
     }
-    .wfs-bar button.wfs-round:disabled {
+    .wfs-bar button.wfs-round:disabled,
+    .wfs-popover button.wfs-round:disabled {
         background-image: none;
         background-color: #d7dbe0;
         color: #7b828c;
@@ -144,7 +151,8 @@ def install_custom_css() -> None:
         outline: 2px solid #fbbf24;
         outline-offset: 1px;
     }
-    .wfs-bar spinbutton {
+    .wfs-bar spinbutton,
+    .wfs-popover spinbutton {
         background-image: none;
         background-color: #f1f5f9;
         color: #111827;
@@ -153,20 +161,90 @@ def install_custom_css() -> None:
         box-shadow: none;
         min-height: 30px;
     }
-    .wfs-bar spinbutton text {
+    .wfs-bar spinbutton text,
+    .wfs-popover spinbutton text {
         color: #111827;
         background-color: transparent;
         caret-color: #111827;
     }
-    .wfs-bar spinbutton button {
+    .wfs-bar spinbutton button,
+    .wfs-popover spinbutton button {
         color: #111827;
         background-image: none;
         background-color: transparent;
         box-shadow: none;
         border: none;
     }
-    .wfs-bar spinbutton button:hover {
+    .wfs-bar spinbutton button:hover,
+    .wfs-popover spinbutton button:hover {
         background-color: rgba(15, 23, 42, 0.10);
+    }
+    /* Popovers of the toolbar and the action bar: dark, like the bars. */
+    popover.wfs-popover > contents {
+        background-color: rgba(17, 24, 39, 0.97);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 12px;
+        padding: 8px;
+    }
+    popover.wfs-popover > arrow {
+        background-color: rgba(17, 24, 39, 0.97);
+        border: 1px solid rgba(255, 255, 255, 0.28);
+    }
+    .wfs-popover button.wfs-menu-item {
+        background-image: none;
+        background-color: transparent;
+        color: #ffffff;
+        border: none;
+        box-shadow: none;
+        border-radius: 8px;
+        padding: 6px 10px;
+    }
+    .wfs-popover button.wfs-menu-item:hover {
+        background-color: rgba(255, 255, 255, 0.12);
+    }
+    .wfs-popover button.wfs-chip {
+        background-image: none;
+        background-color: transparent;
+        color: #ffffff;
+        border: none;
+        box-shadow: none;
+        border-radius: 999px;
+        min-width: 0;
+        min-height: 0;
+        padding: 3px;
+    }
+    .wfs-popover button.wfs-chip:hover {
+        background-color: rgba(255, 255, 255, 0.18);
+    }
+    /* A tool family: the tool's button and its menu arrow, joined. */
+    .wfs-bar .wfs-family > button.wfs-round:first-child {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    .wfs-bar .wfs-family > menubutton > button.wfs-round,
+    .wfs-bar .wfs-family > menubutton.wfs-round > button {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        border-left: none;
+        padding-left: 1px;
+        padding-right: 1px;
+        min-width: 14px;
+    }
+    .wfs-bar .wfs-family image {
+        -gtk-icon-size: 18px;
+    }
+    .wfs-bar separator.wfs-sep {
+        background-color: rgba(255, 255, 255, 0.25);
+        min-width: 1px;
+        margin: 6px 3px;
+    }
+    .wfs-bar menubutton.wfs-style > button {
+        padding: 4px 10px;
+    }
+    .wfs-size-label {
+        font-weight: bold;
+        min-width: 16px;
     }
     .wfs-toast {
         background-color: rgba(17, 24, 39, 0.96);

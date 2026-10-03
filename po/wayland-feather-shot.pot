@@ -276,6 +276,15 @@ msgstr ""
 msgid "Align right"
 msgstr ""
 
+msgid "More tools like this"
+msgstr ""
+
+msgid "Colour and size"
+msgstr ""
+
+msgid "More"
+msgstr ""
+
 msgid "Plain text"
 msgstr ""
 

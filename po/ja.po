@@ -276,6 +276,15 @@ msgstr "中央揃え"
 msgid "Align right"
 msgstr "右揃え"
 
+msgid "More tools like this"
+msgstr "同じ仲間のツール"
+
+msgid "Colour and size"
+msgstr "色と大きさ"
+
+msgid "More"
+msgstr "その他"
+
 msgid "Plain text"
 msgstr "ふちなしの文字"
 

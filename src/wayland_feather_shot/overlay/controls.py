@@ -32,6 +32,57 @@ OVERLAY_TOOLS = [
     ("pixelate", "wfs-tool-pixelate-symbolic", "Pixelate region (X)"),
     ("marker", "wfs-tool-marker-symbolic", "Numbered marker — click (M)"),
 ]
+TOOL_INFO = {tid: (icon, tip) for tid, icon, tip in OVERLAY_TOOLS}
+
+# Tools that do the same kind of thing share one button in the toolbar; its
+# ▾ lists the others, and the button shows the one last picked. One-member
+# families are plain buttons.
+TOOL_FAMILIES = (
+    ("move",), ("hand",), ("pen",), ("line",), ("arrow",),
+    ("rect", "ellipse", "highlight"),
+    ("text",),
+    ("blur", "pixelate"),
+    ("marker",),
+)
+
+# The style button's palette (the editor window's presets).
+PALETTE = ((0.90, 0.15, 0.12), (0.95, 0.55, 0.10), (0.98, 0.85, 0.10),
+           (0.20, 0.70, 0.25), (0.15, 0.50, 0.95), (0.60, 0.20, 0.80),
+           (0.10, 0.10, 0.10), (1.0, 1.0, 1.0))
+
+
+def _swatch(rgba, size=18):
+    """A round colour sample; *rgba* is a callable, so it can follow the
+    current colour."""
+    area = Gtk.DrawingArea()
+    area.set_content_width(size)
+    area.set_content_height(size)
+
+    def draw(_area, cr, width, height):
+        r, g, b, a = rgba()
+        radius = min(width, height) / 2 - 1
+        cr.arc(width / 2, height / 2, radius, 0, 6.2832)
+        cr.set_source_rgba(r, g, b, a)
+        cr.fill_preserve()
+        cr.set_source_rgba(1, 1, 1, 0.7)
+        cr.set_line_width(1.5)
+        cr.stroke()
+    area.set_draw_func(draw)
+    return area
+
+
+def _round(menu_button):
+    """A Gtk.MenuButton draws through an inner button; give that the round
+    toolbar look the plain buttons have."""
+    menu_button.get_first_child().add_css_class("wfs-round")
+    return menu_button
+
+
+def _popover(child):
+    popover = Gtk.Popover()
+    popover.add_css_class("wfs-popover")
+    popover.set_child(child)
+    return popover
 
 
 class OverlayControlsMixin:
@@ -40,7 +91,11 @@ class OverlayControlsMixin:
     # -- building ----------------------------------------------------------
 
     def _build_toolbar(self) -> Gtk.Widget:
-        """Tools, colour, the size control, text styles, undo and redo.
+        """Tools, the style button, undo and redo.
+
+        Similar tools share a button with a ▾ menu (TOOL_FAMILIES), and the
+        colour, size and text options sit behind one style button that
+        shows only what the current tool uses, so the bar stays short.
 
         Hidden until there is a selection; _update_control_layout places it
         next to the selection with margins (the bars are overlay children
@@ -53,41 +108,134 @@ class OverlayControlsMixin:
         bar.set_valign(Gtk.Align.START)
         bar.set_visible(False)
 
+        # _tool_buttons: each tool's own button (in the bar, or in its
+        # family's menu); _family_buttons: the toggles in the bar.
         self._tool_buttons = {}
+        self._family_buttons = []
+        self._family_of = {}
+        self._family_current = []
         first = None
-        for tid, icon, tip in OVERLAY_TOOLS:
-            btn = Gtk.ToggleButton()
-            btn.set_icon_name(icon)
-            btn.add_css_class("wfs-round")
-            btn.set_tooltip_text(_(tip))
-            btn.update_property([Gtk.AccessibleProperty.LABEL], [_(tip)])
+        for index, members in enumerate(TOOL_FAMILIES):
+            toggle = Gtk.ToggleButton()
+            toggle.add_css_class("wfs-round")
             if first is None:
-                first = btn
-                btn.set_active(True)
+                first = toggle
+                toggle.set_active(True)
             else:
-                btn.set_group(first)
-            btn.connect("toggled", self._on_tool_toggled, tid)
-            bar.append(btn)
-            self._tool_buttons[tid] = btn
+                toggle.set_group(first)
+            self._family_buttons.append(toggle)
+            self._family_current.append(members[0])
+            self._show_tool_on(toggle, members[0])
+            toggle.connect("toggled", self._on_family_toggled, index)
+            for tid in members:
+                self._family_of[tid] = index
+            if len(members) == 1:
+                self._tool_buttons[members[0]] = toggle
+                bar.append(toggle)
+                continue
+            family = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+            family.add_css_class("wfs-family")
+            family.append(toggle)
+            more = _round(Gtk.MenuButton())
+            more.set_icon_name("pan-down-symbolic")
+            more.add_css_class("wfs-more")
+            more.set_tooltip_text(_("More tools like this"))
+            menu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            popover = _popover(menu)
+            for tid in members:
+                icon, tip = TOOL_INFO[tid]
+                content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,
+                                  spacing=8)
+                content.append(Gtk.Image.new_from_icon_name(icon))
+                content.append(Gtk.Label(label=_(tip), xalign=0))
+                item = Gtk.Button()
+                item.set_child(content)
+                item.add_css_class("wfs-menu-item")
+                item.set_tooltip_text(_(tip))
+                item.connect("clicked", self._on_family_item, tid, popover)
+                menu.append(item)
+                self._tool_buttons[tid] = item
+            more.set_popover(popover)
+            family.append(more)
+            bar.append(family)
 
-        color = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog())
+        bar.append(self._separator())
+        bar.append(self._build_style_button())
+        bar.append(self._separator())
+
+        undo = Gtk.Button.new_from_icon_name("edit-undo-symbolic")
+        undo.add_css_class("wfs-round")
+        undo.set_tooltip_text(_("Undo (Ctrl+Z)"))
+        undo.connect("clicked", lambda *_: self.undo())
+        redo = Gtk.Button.new_from_icon_name("edit-redo-symbolic")
+        redo.add_css_class("wfs-round")
+        redo.set_tooltip_text(_("Redo (Ctrl+Shift+Z)"))
+        redo.connect("clicked", lambda *_: self.redo())
+        bar.append(undo)
+        bar.append(redo)
+        return bar
+
+    @staticmethod
+    def _separator():
+        sep = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
+        sep.add_css_class("wfs-sep")
+        return sep
+
+    @staticmethod
+    def _show_tool_on(button, tool_id):
+        icon, tip = TOOL_INFO[tool_id]
+        button.set_icon_name(icon)
+        button.set_tooltip_text(_(tip))
+        button.update_property([Gtk.AccessibleProperty.LABEL], [_(tip)])
+
+    def _build_style_button(self) -> Gtk.Widget:
+        """Colour and size in one button; its menu holds what the current
+        tool uses: the palette, the size, and for text its style."""
         rgba = Gdk.RGBA()
         rgba.parse(self.settings.pen_color)
-        color.set_rgba(rgba)
-        color.set_tooltip_text(_("Annotation color"))
-        color.connect("notify::rgba", self._on_color_changed)
-        bar.append(color)
+        self._custom_rgba = rgba
+
+        face = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        self._style_swatch = _swatch(lambda: self.style.rgba)
+        face.append(self._style_swatch)
+        self._style_size_label = Gtk.Label()
+        self._style_size_label.add_css_class("wfs-size-label")
+        face.append(self._style_size_label)
+        button = _round(Gtk.MenuButton())
+        button.set_child(face)
+        button.add_css_class("wfs-style")
+        button.set_tooltip_text(_("Colour and size"))
+        self._style_button = button
+
+        menu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+
+        palette = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        for r, g, b in PALETTE:
+            chip = Gtk.Button()
+            chip.add_css_class("wfs-chip")
+            chip.set_child(_swatch(lambda c=(r, g, b): (*c, 1.0), size=20))
+            chip.connect("clicked", lambda _b, c=(r, g, b):
+                         self._set_colour((*c, 1.0)))
+            palette.append(chip)
+        custom = Gtk.Button.new_from_icon_name("color-select-symbolic")
+        custom.add_css_class("wfs-chip")
+        custom.set_tooltip_text(_("Annotation color"))
+        custom.connect("clicked", lambda *_: self._choose_colour())
+        palette.append(custom)
+        menu.append(palette)
 
         # One size control that follows the tool: line width for the drawing
         # tools, text size for the text tool. The icon says which.
+        size_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         self._size_icon = Gtk.Image.new_from_icon_name(
             "wfs-size-width-symbolic")
-        bar.append(self._size_icon)
+        size_row.append(self._size_icon)
         self._size_spin = Gtk.SpinButton.new_with_range(1, 24, 1)
         self._size_spin.set_value(float(self.settings.pen_width))
         self._size_spin.set_tooltip_text(_("Line width ([ / ])"))
         self._size_spin.connect("value-changed", self._on_size_changed)
-        bar.append(self._size_spin)
+        size_row.append(self._size_spin)
+        menu.append(size_row)
 
         # Plain, outlined or boxed text; shown while the text tool is in use.
         self._text_style_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,
@@ -109,22 +257,14 @@ class OverlayControlsMixin:
             btn.connect("toggled", self._on_text_style_toggled, name)
             self._text_style_box.append(btn)
             self._text_style_buttons[name] = btn
-        bar.append(self._text_style_box)
+        menu.append(self._text_style_box)
 
-        undo = Gtk.Button.new_from_icon_name("edit-undo-symbolic")
-        undo.add_css_class("wfs-round")
-        undo.set_tooltip_text(_("Undo (Ctrl+Z)"))
-        undo.connect("clicked", lambda *_: self.undo())
-        redo = Gtk.Button.new_from_icon_name("edit-redo-symbolic")
-        redo.add_css_class("wfs-round")
-        redo.set_tooltip_text(_("Redo (Ctrl+Shift+Z)"))
-        redo.connect("clicked", lambda *_: self.redo())
-        bar.append(undo)
-        bar.append(redo)
-        return bar
+        button.set_popover(_popover(menu))
+        self._update_style_face()
+        return button
 
     def _build_action_bar(self) -> Gtk.Widget:
-        """Copy, save, save as, open folder, editor, pin, cancel.
+        """Copy, save and pin, the rest under "…", and cancel.
 
         Vertical beside the selection; _update_control_layout turns it
         horizontal when it has to sit under the toolbar instead.
@@ -147,15 +287,33 @@ class OverlayControlsMixin:
         button("edit-copy-symbolic", "Copy to clipboard (Ctrl+C / Enter)",
                self.copy_and_close)
         button("document-save-symbolic", "Save (Ctrl+S)", self.save_and_close)
-        button("document-save-as-symbolic", "Save as… (Ctrl+Shift+S)",
-               self.save_as)
-        button("folder-open-symbolic", "Open save folder (Ctrl+O)",
-               self.open_save_folder)
-        if self.open_editor:
-            button("window-new-symbolic", "Open in editor window (W)",
-                   self._to_editor)
         button("view-pin-symbolic", "Pin to screen (frameless window)",
                self.pin_to_screen)
+
+        more = _round(Gtk.MenuButton())
+        more.set_icon_name("view-more-horizontal-symbolic")
+        more.set_tooltip_text(_("More"))
+        menu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        popover = _popover(menu)
+        entries = [("document-save-as-symbolic", "Save as… (Ctrl+Shift+S)",
+                    self.save_as),
+                   ("folder-open-symbolic", "Open save folder (Ctrl+O)",
+                    self.open_save_folder)]
+        if self.open_editor:
+            entries.append(("window-new-symbolic", "Open in editor window (W)",
+                            self._to_editor))
+        for icon, tip, cb in entries:
+            content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            content.append(Gtk.Image.new_from_icon_name(icon))
+            content.append(Gtk.Label(label=_(tip), xalign=0))
+            item = Gtk.Button()
+            item.set_child(content)
+            item.add_css_class("wfs-menu-item")
+            item.connect("clicked", lambda _b, cb=cb: (popover.popdown(), cb()))
+            menu.append(item)
+        more.set_popover(popover)
+        bar.append(more)
+
         button("window-close-symbolic", "Cancel (Esc)", self.close)
         return bar
 
@@ -184,34 +342,74 @@ class OverlayControlsMixin:
 
     # -- reacting ----------------------------------------------------------
 
-    def _on_tool_toggled(self, button, tool_id):
+    def _on_family_toggled(self, button, index):
+        # Grouped toggle buttons: only the one becoming active matters.
         if button.get_active():
-            # Another tool finishes the text being typed, as a press does;
-            # the size control is about to stop sizing it.
-            self._end_text(commit=True)
-            self.tool = tool_id
-            cursor = "default" if tool_id in ("move", "hand") else "crosshair"
-            for view in self._views:
-                view.area.set_cursor(Gdk.Cursor.new_from_name(cursor))
-            self._refresh_size_control()
+            self._use_tool(self._family_current[index])
+
+    def _on_family_item(self, _item, tool_id, popover):
+        popover.popdown()
+        self.select_tool(tool_id)
+
+    def _use_tool(self, tool_id):
+        # Another tool finishes the text being typed, as a press does; the
+        # size control is about to stop sizing it.
+        self._end_text(commit=True)
+        self.tool = tool_id
+        cursor = "default" if tool_id in ("move", "hand") else "crosshair"
+        for view in self._views:
+            view.area.set_cursor(Gdk.Cursor.new_from_name(cursor))
+        self._refresh_size_control()
 
     def select_tool(self, tool_id):
-        btn = self._tool_buttons.get(tool_id)
-        if btn:
-            btn.set_active(True)
+        """Switch to *tool_id*: its family's button shows it and turns on."""
+        index = self._family_of.get(tool_id)
+        if index is None:
+            return
+        self._family_current[index] = tool_id
+        toggle = self._family_buttons[index]
+        self._show_tool_on(toggle, tool_id)
+        if toggle.get_active():
+            self._use_tool(tool_id)      # same family: no toggled signal
+        else:
+            toggle.set_active(True)
 
     def _page_width(self, slider_value: float) -> float:
         """An authored stroke width in image pixels."""
         longest = max(self.pixbuf.get_width(), self.pixbuf.get_height())
         return shape_model.page_stroke_width(slider_value, longest)
 
-    def _on_color_changed(self, button, _pspec):
-        rgba = button.get_rgba()
-        self.style = Style(rgba=(rgba.red, rgba.green, rgba.blue, rgba.alpha),
-                           width=self.style.width,
+    def _set_colour(self, rgba):
+        """The colour for new shapes (and the text being typed)."""
+        self.style = Style(rgba=tuple(rgba), width=self.style.width,
                            font_size=self.style.font_size)
+        self._update_style_face()
         self._style_text_view()
         self._refocus_text()
+
+    def _choose_colour(self):
+        """Any colour, from GTK's colour dialog."""
+        self._style_button.popdown()
+        current = Gdk.RGBA()
+        current.red, current.green, current.blue, current.alpha = \
+            self.style.rgba
+
+        def chosen(dialog, result):
+            try:
+                rgba = dialog.choose_rgba_finish(result)
+            except GLib.Error:
+                return                        # cancelled
+            self._set_colour((rgba.red, rgba.green, rgba.blue, rgba.alpha))
+        Gtk.ColorDialog().choose_rgba(self._view.window, current, None, chosen)
+
+    def _update_style_face(self):
+        """The style button shows the colour and the current size."""
+        if getattr(self, "_style_swatch", None) is None:
+            return
+        self._style_swatch.queue_draw()
+        spin = getattr(self, "_size_spin", None)
+        if spin is not None:
+            self._style_size_label.set_text(f"{spin.get_value():g}")
 
     def _refresh_size_control(self):
         """Point the size spinner at what the current tool sizes."""
@@ -219,10 +417,7 @@ class OverlayControlsMixin:
         if spin is None:
             return
         kind = "text" if self.tool == "text" else "width"
-        if self._text_style_box.get_visible() != (kind == "text"):
-            self._text_style_box.set_visible(kind == "text")
-            if self._bars_visible:
-                self._update_control_layout()   # the toolbar changed width
+        self._text_style_box.set_visible(kind == "text")
         self._size_kind = kind
         self._size_syncing = True
         try:
@@ -240,8 +435,10 @@ class OverlayControlsMixin:
                 self._size_icon.set_from_icon_name("wfs-size-width-symbolic")
         finally:
             self._size_syncing = False
+        self._update_style_face()
 
     def _on_size_changed(self, spin):
+        self._update_style_face()
         if self._size_syncing:
             return
         if self._size_kind == "text":

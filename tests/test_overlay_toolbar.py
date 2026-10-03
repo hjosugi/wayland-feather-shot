@@ -31,6 +31,23 @@ if HAS_DISPLAY:
     from wayland_feather_shot.settings import Settings
 
 
+def icon_of(button):
+    """A tool's icon: the button's own, or, for a tool in a family's menu,
+    the icon in its menu item."""
+    if button.get_icon_name():
+        return button.get_icon_name()
+    stack = [button]
+    while stack:
+        widget = stack.pop()
+        if isinstance(widget, Gtk.Image) and widget.get_icon_name():
+            return widget.get_icon_name()
+        child = widget.get_first_child()
+        while child is not None:
+            stack.append(child)
+            child = child.get_next_sibling()
+    return None
+
+
 @unittest.skipUnless(HAS_DISPLAY, "GTK display unavailable")
 class OverlayIconStartupTests(unittest.TestCase):
     def test_icons_are_available_after_app_startup_without_an_overlay(self):
@@ -69,7 +86,7 @@ class OverlayToolbarTests(unittest.TestCase):
         for tool_id, _icon, tooltip in OVERLAY_TOOLS:
             with self.subTest(tool=tool_id):
                 button = self.window._tool_buttons[tool_id]
-                icon_name = button.get_icon_name()
+                icon_name = icon_of(button)
                 self.assertIsNotNone(icon_name)
                 self.assertTrue(theme.has_icon(icon_name), icon_name)
                 self.assertEqual(button.get_tooltip_text(), _(tooltip))
@@ -84,6 +101,34 @@ class OverlayToolbarTests(unittest.TestCase):
         self.assertTrue(buttons["pen"].get_active())
         self.assertFalse(buttons["move"].get_active())
 
+    def test_a_family_button_shows_the_tool_picked_from_its_menu(self):
+        # Rectangle, ellipse and highlighter share one button with a menu.
+        family = self.window._family_buttons[
+            self.window._family_of["ellipse"]]
+        self.assertIs(family, self.window._family_buttons[
+            self.window._family_of["rect"]])
+        self.window._tool_buttons["ellipse"].emit("clicked")
+        self.assertEqual(self.window.tool, "ellipse")
+        self.assertTrue(family.get_active())
+        self.assertEqual(family.get_icon_name(), "wfs-tool-ellipse-symbolic")
+        # The key for another member switches within the family.
+        self.window.select_tool("highlight")
+        self.assertEqual(self.window.tool, "highlight")
+        self.assertEqual(family.get_icon_name(), "wfs-tool-highlight-symbolic")
+        # Leaving and coming back picks up the family's last tool.
+        self.window.select_tool("pen")
+        family.set_active(True)
+        self.assertEqual(self.window.tool, "highlight")
+
+    def test_the_style_button_shows_the_colour_and_size(self):
+        self.window._set_colour((0.15, 0.50, 0.95, 1.0))
+        self.assertEqual(self.window.style.rgba, (0.15, 0.50, 0.95, 1.0))
+        self.window._size_spin.set_value(7)
+        self.assertEqual(self.window._style_size_label.get_text(), "7")
+        self.window.select_tool("text")
+        self.assertEqual(self.window._style_size_label.get_text(),
+                         f"{self.window.style.font_size:g}")
+
     def test_shape_icons_have_transparent_centers(self):
         theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
         renderer = Gsk.CairoRenderer()
@@ -91,7 +136,7 @@ class OverlayToolbarTests(unittest.TestCase):
         try:
             for tool_id in ("rect", "ellipse"):
                 with self.subTest(tool=tool_id):
-                    name = self.window._tool_buttons[tool_id].get_icon_name()
+                    name = icon_of(self.window._tool_buttons[tool_id])
                     icon = theme.lookup_icon(
                         name, [], 20, 1, Gtk.TextDirection.NONE,
                         Gtk.IconLookupFlags.FORCE_SYMBOLIC,
