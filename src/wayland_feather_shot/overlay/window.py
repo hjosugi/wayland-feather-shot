@@ -7,7 +7,7 @@ frozen image — drag-select with resize handles, then annotate in place with
 a floating toolbar attached to the selection, then Ctrl+S / Ctrl+C.
 
 This module holds the window, its pointer and key input, the undo history
-and the outputs (save, copy, pin, editor). The rest is split by concern into
+and the outputs (save, copy, pin). The rest is split by concern into
 mixins: view (coordinates, zoom, handles), controls (the bars), text (typing
 in place), draw (each frame), extract (OCR, QR, smart redaction), frame
 (the background frame) and hand (picking and moving placed shapes).
@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import os
 import shutil
-from typing import Callable, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import gi
 
@@ -79,10 +79,6 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     shows the whole screenshot in one window on the active monitor instead
     of one window per monitor.
 
-    open_editor(pixbuf, shapes) is an optional callback for the "open in
-    editor window" button; it receives the cropped base image and the
-    annotation shapes translated into its coordinates.
-
     With remember_style the overlay starts from the style the last session
     (overlay or editor) ended with, and saves its own on closing
     (editor/preset.py). The tests leave it off.
@@ -93,14 +89,12 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     """
 
     def __init__(self, app, pixbuf: GdkPixbuf.Pixbuf, settings,
-                 open_editor: Optional[Callable] = None,
                  copy_on_select: bool = False, select_all: bool = False,
                  monitor_layout=None, remember_style: bool = False):
         super().__init__(application=app, title="Feather Shot")
         self.pixbuf = pixbuf
         self._scene = OverlayScene(pixbuf)
         self.settings = settings
-        self.open_editor = open_editor
         self.copy_on_select = copy_on_select
 
         # The style new shapes get. The spinner shows the pen width in
@@ -825,9 +819,6 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             if key in TOOL_KEYS:
                 self.select_tool(TOOL_KEYS[key])
                 return True
-            if key == Gdk.KEY_w and self.open_editor:
-                self._to_editor()
-                return True
         return False
 
     # ---------------------------------------------------------- selection --
@@ -987,17 +978,3 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     def pin_to_screen(self):
         from ..editor.pin import PinWindow
         PinWindow(self.get_application(), self._export_result()).present()
-
-    def _to_editor(self):
-        """Hand the selection and its annotations to the editor window, in
-        the selection's own coordinates, and close the overlay."""
-        if not self.open_editor:
-            return
-        self._end_text(commit=True)
-        x, y, _w, _h = self.sel or (0, 0, 0, 0)
-        base = (self.pixbuf if self.sel is None
-                else self.pixbuf.new_subpixbuf(*self.sel).copy())
-        shapes = [s.translate(-x, -y) for s in self.shapes]
-        cb, self.open_editor = self.open_editor, None
-        cb(base, shapes)
-        self.close()

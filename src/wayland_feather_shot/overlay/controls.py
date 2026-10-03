@@ -494,10 +494,6 @@ class OverlayControlsMixin:
         recognition = self._recognition_entries()
         if recognition:
             entries += [None] + [entry + (True,) for entry in recognition]
-        if self.open_editor:
-            entries += [None, ("window-new-symbolic",
-                               "Open in editor window (W)", self._to_editor,
-                               True)]
         for entry in entries:
             if entry is None:
                 menu.append(Gtk.Separator(

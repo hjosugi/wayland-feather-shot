@@ -408,9 +408,6 @@ msgstr ""
 msgid "Open save folder (Ctrl+O)"
 msgstr ""
 
-msgid "Open in editor window (W)"
-msgstr ""
-
 msgid "Pin to screen (frameless window)"
 msgstr ""
 

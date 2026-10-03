@@ -408,9 +408,6 @@ msgstr "クリップボードへコピー (Ctrl+C / Enter)"
 msgid "Open save folder (Ctrl+O)"
 msgstr "保存先フォルダーを開く (Ctrl+O)"
 
-msgid "Open in editor window (W)"
-msgstr "エディタウィンドウで開く (W)"
-
 msgid "Pin to screen (frameless window)"
 msgstr "画面にピン留め(枠なしウィンドウ)"
 

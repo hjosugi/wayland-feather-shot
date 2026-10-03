@@ -41,9 +41,10 @@ src/wayland_feather_shot/
 
 1. `portal.Portal.screenshot()` calls `org.freedesktop.portal.Screenshot`
    (non-interactive first, portal-interactive retry if refused).
-2. `gui` mode freezes that image under `overlay.window.OverlayWindow`;
-   annotation happens directly on the selection. `full` and `edit` skip the
-   overlay and open `editor.window.EditorWindow`.
+2. `gui`, `copy` and `full` freeze that image under
+   `overlay.window.OverlayWindow`; annotation happens directly on the
+   selection. `edit`, the history, `window` and scrolling captures, and
+   scripted captures open `editor.window.EditorWindow` instead.
 3. Saving/copying goes through `save.py`; the portal temp file is deleted.
 
 ## Scrolling capture

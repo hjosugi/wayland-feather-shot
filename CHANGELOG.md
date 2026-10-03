@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **The overlay is the one place to annotate a capture.** Everything the
+  editor window offered for a fresh capture is now in the overlay, so its
+  "Open in editor window" entry and the W key are gone. The editor window
+  still opens for `edit FILE`, re-editing from the history, window and
+  scrolling captures, and scripted captures.
 - **Back to the desktop at once after a copy or a save.** The overlay
   stayed on the screen while the result was exported and encoded, about
   0.1-0.25 s for a big screenshot, and on GNOME wl-copy then mapped a

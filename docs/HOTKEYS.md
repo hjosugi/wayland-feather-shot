@@ -180,7 +180,6 @@ With a region selected:
 | Delete, Backspace | delete the picked shapes |
 | arrows, Shift+arrows | nudge the picked shapes by 1 px, by 10 px |
 | Ctrl+Up, Ctrl+Down | raise, lower the picked shapes |
-| W | open the selection in the editor |
 | Enter, Ctrl+C, double-click inside the selection | copy to the clipboard and close |
 | Ctrl+S | save and close |
 | Ctrl+Shift+S | save as… |
@@ -191,7 +190,7 @@ With a region selected:
 | wheel, Shift+wheel | pan while zoomed in |
 | Esc | quit without saving |
 
-### Editor (`full`, `edit`, or W from the overlay)
+### Editor (`edit`, the history, window and scrolling captures, scripted captures)
 
 | Key | Tool |
 | --- | --- |

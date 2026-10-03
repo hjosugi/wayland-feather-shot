@@ -139,13 +139,6 @@ class OverlayTextTests(unittest.TestCase):
         self.assertIsNone(self.window._text_edit)
         self.assertEqual(self.window.shapes[-1].props.text, "kept")
 
-        handed = []
-        self.window.open_editor = lambda base, shapes: handed.extend(shapes)
-        self.window._begin_text(120, 120)
-        self.window._text_edit["view"].get_buffer().set_text("also")
-        self.window._to_editor()
-        self.assertEqual([s.props.text for s in handed], ["kept", "also"])
-
     def test_typing_goes_on_after_the_size_control_is_used(self):
         self.window._begin_text(100, 100)
         view = self.window._text_edit["view"]

@@ -155,9 +155,11 @@ prints the saved path. Exit codes: `0` ok, `1` error, `2` bad usage,
    Ctrl+PrtSc (`full`) the whole screen starts out selected; the handles
    still cut a part out of it.
 2. Annotate right on the selection — toolbar keys:
-   `V` move/resize, `P` pen, `L` line, `A` arrow, `R` rect, `E` ellipse,
-   `H` highlighter, `T` text, `B` blur, `X` pixelate, `M` numbered marker,
-   `W` open in a full editor window (adds crop).
+   `V` move/resize the selection, `S` hand (pick, move, resize and rotate
+   placed shapes), `P` pen, `L` line, `A` arrow, `G` numbered step arrow,
+   `R` rect, `E` ellipse, `H` highlighter, `T` text, `U` speech bubble,
+   `B` blur, `X` pixelate, `O` spotlight, `M` numbered marker, `J` emoji.
+   OCR, QR, smart redaction and the background frame are under "…".
 3. `Ctrl+S` save • `Ctrl+O` open save folder • `Ctrl+C` / `Enter` copy •
    `Ctrl+Z` undo • `Esc` cancel.
 
