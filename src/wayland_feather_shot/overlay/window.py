@@ -72,7 +72,9 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     one to be dragged out (a click takes the whole screen); with one, the
     toolbar and action bar appear and the tools draw on the screenshot.
     With select_all (the `full` mode, Ctrl+PrtSc) it starts with the whole
-    screen selected, so the handles can still cut a part out of it.
+    screen selected, so the handles can still cut a part out of it, and
+    shows the whole screenshot in one window on the active monitor instead
+    of one window per monitor.
 
     open_editor(pixbuf, shapes) is an optional callback for the "open in
     editor window" button; it receives the cropped base image and the
@@ -152,6 +154,11 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         self._frame_base = None          # (key, shrunk selection) for it
         self._toast_timer = None
 
+        if select_all and monitor_layout is None:
+            # The whole picture at a glance: one window, on the monitor the
+            # compositor puts it on, fitting every monitor's part.
+            monitor_layout = [(None, (0, 0, pixbuf.get_width(),
+                                      pixbuf.get_height()))]
         self._build_ui(monitor_layout)
         self.set_decorated(False)
         monitor = self._views[0].monitor

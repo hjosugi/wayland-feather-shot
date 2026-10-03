@@ -110,6 +110,21 @@ class OverlayMonitorTests(unittest.TestCase):
         self.window.close()
         self.assertNotIn(self.bottom.window, Gtk.Window.list_toplevels())
 
+    def test_full_screen_shows_everything_in_one_window(self):
+        # Ctrl+PrtSc: the whole screenshot at once on the active monitor,
+        # not split over the monitors.
+        from unittest.mock import patch
+        pixbuf = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8,
+                                      400, 600)
+        with patch.object(OverlayWindow, "_monitor_layout",
+                          return_value=[(None, TOP), (None, BOTTOM)]):
+            window = OverlayWindow(self.app, pixbuf, Settings(),
+                                   select_all=True)
+        self.addCleanup(window.destroy)
+        (view,) = window._views
+        self.assertEqual(view.rect, (0, 0, 400, 600))
+        self.assertEqual(window.sel, (0, 0, 400, 600))
+
 
 if __name__ == "__main__":
     unittest.main()

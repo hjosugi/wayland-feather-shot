@@ -41,7 +41,9 @@
   the selection, the annotations and the undo history are shared, a
   selection can start on any monitor, and the toolbar goes to the monitor
   the selection is on. It is lighter too: no window draws the whole
-  multi-monitor screenshot shrunk on every frame any more.
+  multi-monitor screenshot shrunk on every frame any more. A full-screen
+  capture (Ctrl+PrtSc) still shows the whole screenshot in one window on
+  the active monitor, so all of it can be seen and cut at once.
 
 ## 0.12.0 (2026-10-03)
 
