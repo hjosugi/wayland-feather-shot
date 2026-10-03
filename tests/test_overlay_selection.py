@@ -15,7 +15,7 @@ try:
     gi.require_version("Gtk", "4.0")
     gi.require_version("Gdk", "4.0")
     gi.require_version("GdkPixbuf", "2.0")
-    from gi.repository import Gdk, GdkPixbuf, Gtk  # noqa: E402
+    from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # noqa: E402
     HAVE_GTK_DISPLAY = Gdk.Display.get_default() is not None
 except (ImportError, ValueError):
     HAVE_GTK_DISPLAY = False
@@ -121,6 +121,44 @@ class OverlaySelectionTests(unittest.TestCase):
         self.window.undo()
         self.assertIsNone(self.window.sel)
         self.assertTrue(self.window._mode_bar.get_visible())
+
+    def copied_after(self, act):
+        """Run *act* in copy mode and count the copies it leads to."""
+        copies = []
+        self.window.copy_on_select = True
+        self.window.copy_and_close = lambda: copies.append(self.window.sel)
+        act()
+        context = GLib.MainContext.default()
+        while context.iteration(False):
+            pass
+        return copies
+
+    def test_copy_mode_copies_the_selection_as_soon_as_it_is_made(self):
+        self.assertEqual(self.copied_after(lambda: self.drag(50, 50, 250, 200)),
+                         [(50, 50, 200, 150)])
+
+    def test_copy_mode_click_and_enter_copy_the_whole_screen(self):
+        self.assertEqual(self.copied_after(lambda: self.drag(80, 80, 81, 81)),
+                         [(0, 0, 400, 300)])
+        self.window.undo()
+        self.assertEqual(self.copied_after(
+            lambda: self.window._on_key(None, Gdk.KEY_Return, 0, 0)),
+            [(0, 0, 400, 300)])
+
+    def test_copy_mode_screen_click_copies_that_monitor(self):
+        self.window._mon_rects = [(0, 0, 200, 300), (200, 0, 200, 300)]
+        self.window._mode_buttons["screen"].set_active(True)
+        self.assertEqual(self.copied_after(lambda: self.drag(300, 100, 300, 100)),
+                         [(200, 0, 200, 300)])
+
+    def test_the_ordinary_overlay_does_not_copy_on_select(self):
+        copies = []
+        self.window.copy_and_close = lambda: copies.append(True)
+        self.drag(50, 50, 250, 200)
+        context = GLib.MainContext.default()
+        while context.iteration(False):
+            pass
+        self.assertEqual(copies, [])
 
     def test_the_mode_bar_gets_out_of_the_way(self):
         # Of the region being dragged out, and of the toast.

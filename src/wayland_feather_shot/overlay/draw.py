@@ -153,10 +153,16 @@ class OverlayDrawMixin:
                              label_y + ext.height + 4, 13, True)
             del cr
         else:
-            hint = (_("Click a screen to take it   •   Esc: cancel")
-                    if self.capture_mode == "screen" else
-                    _("Drag: select area   •   Click / Enter: full screen"
-                      "   •   Esc: cancel"))
+            if self.copy_on_select:
+                hint = (_("Click a screen to copy it   •   Esc: cancel")
+                        if self.capture_mode == "screen" else
+                        _("Drag: copy area   •   Click / Enter: copy full "
+                          "screen   •   Esc: cancel"))
+            else:
+                hint = (_("Click a screen to take it   •   Esc: cancel")
+                        if self.capture_mode == "screen" else
+                        _("Drag: select area   •   Click / Enter: full screen"
+                          "   •   Esc: cancel"))
             ext = self._text_extents(hint, 15, False)
             hx, hy = (w - ext.width) / 2, 42.0
             bounds = rect(hx - 14, hy - ext.height - 8,

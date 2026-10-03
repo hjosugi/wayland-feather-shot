@@ -14,8 +14,8 @@ import sys
 
 from . import __version__
 
-MODES = ["gui", "full", "window", "scroll", "gif", "edit", "history",
-         "settings", "daemon", "diagnose", "updater"]
+MODES = ["gui", "copy", "full", "window", "scroll", "gif", "edit",
+         "history", "settings", "daemon", "diagnose", "updater"]
 
 # Stable exit codes, so `wayland-feather-shot` can be used in scripts.
 EXIT_OK = 0
@@ -56,7 +56,9 @@ def build_parser() -> argparse.ArgumentParser:
                     "…), scrolling capture. 100% local — no upload, no "
                     "network code.")
     parser.add_argument("mode", nargs="?", default="gui", choices=MODES,
-                        help="gui: region capture (default) / full: whole "
+                        help="gui: region capture (default) / copy: "
+                             "select a region and copy it straight to the "
+                             "clipboard / full: whole "
                              "screen / window: pick a window via the portal "
                              "picker / scroll: scrolling capture / edit: "
                              "open an existing image in the editor / "
@@ -155,7 +157,7 @@ def main(argv=None) -> int:
 
     _validate(parser, args)
 
-    if args.mode in ("gui", "full") and not args.delay:
+    if args.mode in ("gui", "copy", "full") and not args.delay:
         # Take the capture lock and send the portal request before the GTK
         # stack loads: the portal takes about a second, and GTK, the editor
         # and the overlay load while it works.

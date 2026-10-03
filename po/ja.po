@@ -423,6 +423,12 @@ msgstr "ドラッグ: 範囲選択   •   クリック / Enter: 全画面   •
 msgid "Click a screen to take it   •   Esc: cancel"
 msgstr "画面をクリックで全体を選択   •   Esc: キャンセル"
 
+msgid "Drag: copy area   •   Click / Enter: copy full screen   •   Esc: cancel"
+msgstr "ドラッグ: 範囲をコピー   •   クリック / Enter: 全画面をコピー   •   Esc: キャンセル"
+
+msgid "Click a screen to copy it   •   Esc: cancel"
+msgstr "画面をクリックで全体をコピー   •   Esc: キャンセル"
+
 msgid "Selection"
 msgstr "範囲"
 

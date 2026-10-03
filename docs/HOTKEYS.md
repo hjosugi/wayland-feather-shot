@@ -23,7 +23,11 @@ Default keys with either mechanism:
 | Key | Action |
 | --- | --- |
 | Ctrl+PrtSc | region capture (`gui`) |
+| Ctrl+Shift+PrtSc | copy a region straight to the clipboard (`copy`) |
 | Ctrl+Shift+F12 | full screen (`full`) |
+
+With Ctrl+Shift+PrtSc, selecting is the whole job: releasing the drag (or
+a click for the whole screen) copies the selection and closes.
 
 Scrolling capture has no key: it is in the app's menu (right-click Feather
 Shot in the dock or app grid, "Scrolling capture"), or run
@@ -37,12 +41,12 @@ Shot in the dock or app grid, "Scrolling capture"), or run
 $ ./scripts/setup-hotkey.sh
 ```
 
-It adds two custom keybindings through `gsettings` (Settings → Keyboard →
-Custom Shortcuts, named "Feather Shot (region)" and "Feather Shot (full
-screen)")
-and is safe to rerun. The command is the installed `wayland-feather-shot`, or
-this checkout's `bin/wayland-feather-shot` when nothing is installed. To
-undo, delete the two entries in that settings page.
+It adds three custom keybindings through `gsettings` (Settings → Keyboard →
+Custom Shortcuts, named "Feather Shot (region)", "Feather Shot (copy
+region)" and "Feather Shot (full screen)") and is safe to rerun. The command
+is the installed `wayland-feather-shot`, or this checkout's
+`bin/wayland-feather-shot` when nothing is installed. To undo, delete the
+entries in that settings page.
 
 GNOME keeps Print, Shift+Print and Alt+Print for its own screenshot UI;
 Ctrl+Print is free by default, which is why it is the default here.
@@ -77,6 +81,7 @@ key Ctrl+PrtSc.
 ```ini
 # ~/.config/hypr/hyprland.conf
 bind = CTRL, Print, exec, wayland-feather-shot gui
+bind = CTRL SHIFT, Print, exec, wayland-feather-shot copy
 bind = CTRL SHIFT, F12, exec, wayland-feather-shot full
 ```
 
@@ -85,6 +90,7 @@ bind = CTRL SHIFT, F12, exec, wayland-feather-shot full
 ```
 # ~/.config/sway/config
 bindsym Ctrl+Print exec wayland-feather-shot gui
+bindsym Ctrl+Shift+Print exec wayland-feather-shot copy
 bindsym Ctrl+Shift+F12 exec wayland-feather-shot full
 ```
 
@@ -93,7 +99,7 @@ daemon reports failure there; the native binding is the way.
 
 ### Other desktops
 
-Bind `wayland-feather-shot gui` and `wayland-feather-shot full` in your
+Bind `wayland-feather-shot gui`, `copy` and `full` in your
 desktop's keyboard settings. If the desktop implements the GlobalShortcuts
 portal, `wayland-feather-shot daemon` works too.
 

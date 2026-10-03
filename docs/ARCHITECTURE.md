@@ -56,9 +56,10 @@ tested (`tests/test_stitcher.py`).
 
 ## Shortcuts
 
-`app.run_daemon()` binds Ctrl+PrtSc (region) and Shift+Ctrl+F12 (full)
-through `org.freedesktop.portal.GlobalShortcuts` where the desktop implements
-it; `scripts/setup-hotkey.sh` covers the rest with native desktop shortcuts.
+`app.run_daemon()` binds Ctrl+PrtSc (region), Ctrl+Shift+PrtSc (copy a
+region) and Shift+Ctrl+F12 (full) through
+`org.freedesktop.portal.GlobalShortcuts` where the desktop implements it;
+`scripts/setup-hotkey.sh` covers the rest with native desktop shortcuts.
 Scrolling capture is a desktop-entry action, not a key.
 
 ## Design rules

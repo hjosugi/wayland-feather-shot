@@ -62,15 +62,21 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     open_editor(pixbuf, shapes) is an optional callback for the "open in
     editor window" button; it receives the cropped base image and the
     annotation shapes translated into its coordinates.
+
+    With copy_on_select (the `copy` mode, Ctrl+Shift+PrtSc) the first
+    selection is copied to the clipboard and the overlay closes: selecting
+    a region is the whole job.
     """
 
     def __init__(self, app, pixbuf: GdkPixbuf.Pixbuf, settings,
-                 open_editor: Optional[Callable] = None):
+                 open_editor: Optional[Callable] = None,
+                 copy_on_select: bool = False):
         super().__init__(application=app, title="Feather Shot")
         self.pixbuf = pixbuf
         self._scene = OverlayScene(pixbuf)
         self.settings = settings
         self.open_editor = open_editor
+        self.copy_on_select = copy_on_select
 
         # The style new shapes get. The spinner shows the pen width in
         # screen-ish units; Style.width is in image pixels (_page_width).
@@ -602,6 +608,11 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         self._set_bars_visible(True)
         self._sync_mode_bar()
         self._update_control_layout()
+        if self.copy_on_select:
+            # Copy mode: the selection is the result. Deferred to idle, so
+            # the window does not close inside the gesture handler that
+            # made the selection.
+            GLib.idle_add(lambda: (self.copy_and_close(), False)[1])
 
     # ------------------------------------------------------------ actions --
 

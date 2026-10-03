@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Register the default hotkeys for wayland-feather-shot:
 #   Ctrl+PrtSc        -> region capture (gui)
+#   Ctrl+Shift+PrtSc  -> copy a region straight to the clipboard (copy)
 #   Ctrl+Shift+F12    -> full screen (full)
 # Scrolling capture has no key; it is in the app's menu.
 #
@@ -62,13 +63,14 @@ setup_gnome() {
     }
 
     add_binding "Feather Shot (region)" "$CMD gui" "<Control>Print"
+    add_binding "Feather Shot (copy region)" "$CMD copy" "<Control><Shift>Print"
     add_binding "Feather Shot (full screen)" "$CMD full" "<Control><Shift>F12"
 }
 
 case "$desktop" in
     *GNOME*)
         if setup_gnome; then
-            echo "GNOME shortcuts ready: Ctrl+PrtSc / Ctrl+Shift+F12"
+            echo "GNOME shortcuts ready: Ctrl+PrtSc / Ctrl+Shift+PrtSc / Ctrl+Shift+F12"
         else
             echo "Could not configure gsettings automatically." >&2
             echo "Bind manually: Settings → Keyboard → Custom Shortcuts:" >&2
@@ -86,16 +88,19 @@ case "$desktop" in
     *Hyprland*)
         echo "Add to ~/.config/hypr/hyprland.conf:"
         echo "    bind = CTRL, Print, exec, $CMD gui"
+        echo "    bind = CTRL SHIFT, Print, exec, $CMD copy"
         echo "    bind = CTRL SHIFT, F12, exec, $CMD full"
         ;;
     *sway*|*Sway*)
         echo "Add to ~/.config/sway/config:"
         echo "    bindsym Ctrl+Print exec $CMD gui"
+        echo "    bindsym Ctrl+Shift+Print exec $CMD copy"
         echo "    bindsym Ctrl+Shift+F12 exec $CMD full"
         ;;
     *)
         echo "Register these in your desktop's keyboard-shortcut settings:"
         echo "    Ctrl+PrtSc        ->  $CMD gui"
+        echo "    Ctrl+Shift+PrtSc  ->  $CMD copy"
         echo "    Ctrl+Shift+F12    ->  $CMD full"
         echo "If your desktop implements the GlobalShortcuts portal you can"
         echo "instead run:  $CMD daemon"

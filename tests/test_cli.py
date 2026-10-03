@@ -63,6 +63,11 @@ class ArgParsingTests(unittest.TestCase):
         self.assertTrue(os.path.isabs(args.output))
         self.assertTrue(args.output.endswith("shot.png"))
 
+    def test_copy_mode_is_interactive_only(self):
+        self.assertEqual(self.parse(["copy"]).mode, "copy")
+        with self.assertRaises(SystemExit):
+            self.parse(["copy", "--no-editor"])
+
     def test_scripting_rejected_outside_capture_modes(self):
         for argv in (["scroll", "--no-editor"],
                      ["edit", "x.png", "--region", "0,0,1,1"],

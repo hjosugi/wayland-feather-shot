@@ -25,10 +25,12 @@ import os
 DEFAULT_SHORTCUT = "CTRL+Print"
 
 # id -> (default trigger, human description) for the daemon's portal session.
-# Only the two everyday captures get keys; scrolling capture is in the app's
-# menu (the desktop entry's actions) instead.
+# The everyday captures get keys; scrolling capture is in the app's menu (the
+# desktop entry's actions) instead.
 DAEMON_SHORTCUTS = [
     ("capture-region", "CTRL+Print", "Capture a screen region (Feather Shot)"),
+    ("capture-copy", "CTRL+SHIFT+Print",
+     "Copy a screen region to the clipboard (Feather Shot)"),
     ("capture-full", "SHIFT+CTRL+F12", "Capture the full screen (Feather Shot)"),
 ]
 
@@ -81,7 +83,8 @@ def setup_hint(desktop: str, cmd: str = "wayland-feather-shot") -> str:
         return (
             "GNOME: run the helper to bind it via gsettings —\n"
             "    ./scripts/setup-hotkey.sh\n"
-            "  (Ctrl+PrtSc → region, Ctrl+Shift+F12 → full screen). GNOME 46+ can\n"
+            "  (Ctrl+PrtSc → region, Ctrl+Shift+PrtSc → copy a region,\n"
+            "  Ctrl+Shift+F12 → full screen). GNOME 46+ can\n"
             f"  also use the portal daemon:  {cmd} daemon")
     if desktop == "kde":
         return (
@@ -94,15 +97,18 @@ def setup_hint(desktop: str, cmd: str = "wayland-feather-shot") -> str:
         return (
             "Hyprland: add to ~/.config/hypr/hyprland.conf —\n"
             f"    bind = CTRL, Print, exec, {cmd} gui\n"
+            f"    bind = CTRL SHIFT, Print, exec, {cmd} copy\n"
             f"    bind = CTRL SHIFT, F12, exec, {cmd} full")
     if desktop == "sway":
         return (
             "Sway: add to ~/.config/sway/config —\n"
             f"    bindsym Ctrl+Print exec {cmd} gui\n"
+            f"    bindsym Ctrl+Shift+Print exec {cmd} copy\n"
             f"    bindsym Ctrl+Shift+F12 exec {cmd} full")
     return (
         "Register these in your desktop's keyboard-shortcut settings:\n"
         f"    Ctrl+PrtSc        ->  {cmd} gui\n"
+        f"    Ctrl+Shift+PrtSc  ->  {cmd} copy\n"
         f"    Ctrl+Shift+F12    ->  {cmd} full\n"
         "  If your desktop implements the GlobalShortcuts portal you can\n"
         f"  instead run:  {cmd} daemon")

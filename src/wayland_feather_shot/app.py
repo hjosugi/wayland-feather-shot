@@ -128,7 +128,8 @@ class FeatherShotApp(Gtk.Application):
         else:
             # Overlay region-select only in interactive gui mode; a scripted
             # capture (--region / --output / --no-editor) is non-interactive.
-            overlay = (self.mode == "gui" and not self._scripted())
+            overlay = (self.mode in ("gui", "copy")
+                       and not self._scripted())
             self._start_screenshot(overlay=overlay)
         return False  # one-shot timeout
 
@@ -222,7 +223,8 @@ class FeatherShotApp(Gtk.Application):
 
         if overlay:
             win = OverlayWindow(self, pixbuf, self.settings,
-                                open_editor=self._open_editor)
+                                open_editor=self._open_editor,
+                                copy_on_select=self.mode == "copy")
         else:
             from .editor.window import EditorWindow
             win = EditorWindow(self, pixbuf, self.settings,
@@ -404,7 +406,8 @@ class FeatherShotApp(Gtk.Application):
             print(f"feather-shot daemon: {e}", file=sys.stderr)
             return 1
         loop = GLib.MainLoop()
-        mode_by_id = {"capture-region": "gui", "capture-full": "full"}
+        mode_by_id = {"capture-region": "gui", "capture-copy": "copy",
+                      "capture-full": "full"}
 
         # Build the shortcut set, applying the --shortcut override to region.
         defs = []

@@ -208,6 +208,8 @@ desktop and prints the exact command):
 | Sway / wlroots | native shortcut | `bindsym Ctrl+Print exec wayland-feather-shot gui` |
 | other | native shortcut | bind `wayland-feather-shot gui` in your settings |
 
+Ctrl+Shift+PrtSc (`wayland-feather-shot copy`) selects a region and copies
+it straight to the clipboard, and Ctrl+Shift+F12 takes the full screen.
 Step-by-step setup for each desktop, what the portal daemon needs, and
 every in-app key: [docs/HOTKEYS.md](docs/HOTKEYS.md).
 

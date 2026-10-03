@@ -346,6 +346,8 @@ class GlobalShortcuts:
 
     SHORTCUTS = [
         ("capture-region", "Capture a screen region (Feather Shot)", "CTRL+Print"),
+        ("capture-copy", "Copy a screen region to the clipboard (Feather Shot)",
+         "CTRL+SHIFT+Print"),
         ("capture-full", "Capture the full screen (Feather Shot)", "SHIFT+CTRL+F12"),
     ]
 

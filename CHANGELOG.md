@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Ctrl+Shift+PrtSc copies a region straight to the clipboard.** A new
+  `copy` mode opens the region overlay, and selecting is the whole job:
+  releasing the drag (a click takes the whole screen, a click in Screen mode
+  a whole monitor) copies the selection and closes. The portal daemon and
+  `scripts/setup-hotkey.sh` bind it next to Ctrl+PrtSc and Ctrl+Shift+F12.
+
 ## 0.11.0 (2026-10-03)
 
 - **Faster from key press to overlay.** The portal needs about a second to

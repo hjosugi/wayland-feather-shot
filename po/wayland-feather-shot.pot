@@ -423,6 +423,12 @@ msgstr ""
 msgid "Click a screen to take it   •   Esc: cancel"
 msgstr ""
 
+msgid "Drag: copy area   •   Click / Enter: copy full screen   •   Esc: cancel"
+msgstr ""
+
+msgid "Click a screen to copy it   •   Esc: cancel"
+msgstr ""
+
 msgid "Selection"
 msgstr ""
 
