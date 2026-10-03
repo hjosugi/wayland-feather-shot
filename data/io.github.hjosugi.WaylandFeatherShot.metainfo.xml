@@ -52,6 +52,20 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.13.0" date="2026-10-04">
+      <description>
+        <p>
+          The region overlay now does everything the editor window did for
+          a fresh capture: numbered step arrows, speech bubbles, spotlights
+          and emoji; moving, resizing, rotating and retyping placed shapes;
+          OCR, QR and smart redaction; and a background frame. Similar
+          tools share one toolbar button, colour and size sit behind one
+          style button, and the style carries over to the next capture.
+          Copying or saving returns to the desktop at once, and with
+          several monitors each keeps its own part of the screenshot.
+        </p>
+      </description>
+    </release>
     <release version="0.12.0" date="2026-10-03">
       <description>
         <p>

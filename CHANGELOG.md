@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.13.0 (2026-10-04)
+
 - **The overlay is the one place to annotate a capture.** Everything the
   editor window offered for a fresh capture is now in the overlay, so its
   "Open in editor window" entry and the W key are gone. The editor window
@@ -16,8 +18,8 @@
   after the app exits; elsewhere wl-copy gets the PNG as before. Text
   copied by OCR goes the same way on GNOME.
 - **A tidier toolbar.** Tools that do the same kind of thing share one
-  button with a ▾ menu (rectangle, ellipse and highlighter; blur and
-  pixelate), and the button shows the one last picked. Colour, size and
+  button with a ▾ menu (rectangle, ellipse and highlighter, for one), and
+  the button shows the one last picked. Colour, size and
   text style sit behind one style button that shows the colour and the
   size and offers only what the current tool uses, with a palette and a
   colour picker. The action bar keeps copy, save and pin, and puts save as
