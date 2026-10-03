@@ -47,9 +47,12 @@ class ObscureCacheTests(unittest.TestCase):
         base = self.base()
         render._obscured_pixbuf(base, 20, 20, 80, 60, 0.55, False)
         self.assertIn(base, render._obscure_cache)
+        # Other tests' images may still be alive (an overlay window outlives
+        # its test), so count rather than expect an empty cache.
+        count = len(render._obscure_cache)
         del base
         gc.collect()
-        self.assertEqual(len(render._obscure_cache), 0)
+        self.assertEqual(len(render._obscure_cache), count - 1)
 
     def test_a_live_drag_cannot_grow_the_cache_past_its_byte_budget(self):
         # A pixelate dragged out is drawn every frame, each frame a new and
