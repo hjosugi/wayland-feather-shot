@@ -13,6 +13,10 @@
   join the arrow, speech bubbles (U) the text tool, spotlight (O) blur and
   pixelate, and emoji stickers (J) the numbered marker. A bubble is typed
   in place and fits its text; step arrows and markers count on together.
+- **Move several shapes at once.** With the hand tool, Shift+click or
+  Ctrl+click picks more shapes (or drops a picked one), and dragging any
+  of them moves them all as one undo step. Picked shapes are framed; a
+  click on empty space clears the pick.
 - **Each monitor keeps its own picture.** With several monitors the
   overlay squeezed all of them into one screen. It now opens on every
   monitor, each showing its own part of the screenshot at its own scale;

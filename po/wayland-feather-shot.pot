@@ -105,7 +105,7 @@ msgstr ""
 msgid "Ctrl+Enter to finish, Esc to cancel"
 msgstr ""
 
-msgid "Grab and move a shape (S)"
+msgid "Grab and move shapes; Shift or Ctrl+click picks several (S)"
 msgstr ""
 
 msgid "Freehand pen (P)"

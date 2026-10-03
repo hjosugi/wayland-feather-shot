@@ -85,7 +85,8 @@ JA = {
     "Line width ([ / ])": "線の太さ ([ / ])",
     "Text size ([ / ])": "文字サイズ ([ / ])",
     "Ctrl+Enter to finish, Esc to cancel": "Ctrl+Enter で確定、Esc で取り消し",
-    "Grab and move a shape (S)": "図形をつかんで移動 (S)",
+    "Grab and move shapes; Shift or Ctrl+click picks several (S)":
+        "図形をつかんで移動 — Shift/Ctrl+クリックで複数選択 (S)",
     "Freehand pen (P)": "フリーハンドペン (P)",
     "Straight line (L)": "直線 (L)",
     "Arrow (A)": "矢印 (A)",

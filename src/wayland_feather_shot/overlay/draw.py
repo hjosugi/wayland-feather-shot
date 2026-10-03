@@ -17,7 +17,7 @@ from gi.repository import Gsk  # noqa: E402
 
 import cairo  # noqa: E402
 
-from ..editor import arrows
+from ..editor import arrows, render
 from ..i18n import _
 from .canvas import color, dim_outside, rect
 from .layout import position_label
@@ -32,9 +32,10 @@ class OverlayDrawMixin:
 
         1. the screenshot with the finished annotations, as one texture
            that is rebuilt only when the annotations change (canvas.py);
-        2. the shape being drawn or moved, live;
+        2. the shape being drawn, or the shapes being moved, live;
         3. the dimmed outside, with the selection left bright;
-        4. the selection's border, handles and size label, or the hint
+        4. the frames of the hand's picked shapes;
+        5. the selection's border, handles and size label, or the hint
            when there is no selection yet.
         """
         # 1. Black letterbox, then the screenshot and finished annotations.
@@ -44,49 +45,9 @@ class OverlayDrawMixin:
                             self.pixbuf.get_height() * scale)
         snapshot.append_texture(self._scene.content(self.shapes), image_bounds)
 
-        # 2. The shape in progress.
-        if self._preview is not None and (
-                self._preview.kind == "spotlight"
-                or (self._preview.kind == "obscure"
-                    and not self._preview.props.pixelate)):
-            # A blur re-samples the screenshot on every frame, which made
-            # dragging one out or carrying it with the hand stutter; show its
-            # footprint while it moves and render the real thing on release.
-            # A spotlight's scrim covers the whole screenshot, so it too is
-            # rendered on release.
-            box = self._preview.page_bounds
-            footprint = rect(ox + box.x * scale, oy + box.y * scale,
-                             box.w * scale, box.h * scale)
-            snapshot.push_clip(image_bounds)
-            snapshot.append_color(color(1, 1, 1, 0.3), footprint)
-            outline = Gsk.RoundedRect()
-            outline.init_from_rect(footprint, 0)
-            snapshot.append_border(outline, [1.5] * 4,
-                                   [color(1, 1, 1, 0.9)] * 4)
-            snapshot.pop()
-        elif self._preview is not None:
-            # Keep the existing annotation renderer, restricted to its preview.
-            box = self._preview.page_bounds
-            padding = max(2, self.style.width * scale)
-            if self._preview.kind == "arrow":
-                # The model's bounds describe the shaft, not its arrowheads.
-                props = self._preview.props
-                padding = max(padding, scale * max(
-                    arrows.head_size(props.head_start, props.style.width),
-                    arrows.head_size(props.head_end, props.style.width)))
-            bounds = rect(ox + box.x * scale - padding,
-                          oy + box.y * scale - padding,
-                          box.w * scale + 2 * padding,
-                          box.h * scale + 2 * padding)
-            snapshot.push_clip(image_bounds)
-            cr = snapshot.append_cairo(bounds)
-            cr.translate(ox, oy)
-            cr.scale(scale, scale)
-            from ..editor import render
-            with render.uncached_obscure():
-                self._preview.draw(cr, self.pixbuf)
-            del cr
-            snapshot.pop()
+        # 2. The shapes in progress.
+        for shape in self._live_shapes():
+            self._draw_live(snapshot, shape, scale, ox, oy, image_bounds)
 
         # 3. Dim everything but the selection (its widget rectangle, or None
         # to dim it all).
@@ -106,7 +67,18 @@ class OverlayDrawMixin:
             selection = wx0, wy0, wx1, wy1
         dim_outside(snapshot, w, h, selection, OVERLAY_DIM_ALPHA)
 
-        # 4. The selection's frame, handles and size, or the hint.
+        # 4. The hand's picked shapes.
+        for shape in self._picked_shapes():
+            box = shape.page_bounds
+            outline = Gsk.RoundedRect()
+            outline.init_from_rect(rect(ox + box.x * scale - 4,
+                                        oy + box.y * scale - 4,
+                                        box.w * scale + 8,
+                                        box.h * scale + 8), 3)
+            snapshot.append_border(outline, [1.5] * 4,
+                                   [color(0.25, 0.6, 1.0, 0.95)] * 4)
+
+        # 5. The selection's frame, handles and size, or the hint.
         if selection:
             purple = color(0.55, 0.07, 0.68, 0.95)
             outline = Gsk.RoundedRect()
@@ -143,6 +115,49 @@ class OverlayDrawMixin:
             cr.fill()
             self._paint_text(cr, hint, hx, hy, 15, False)
             del cr
+
+    def _draw_live(self, snapshot, shape, scale, ox, oy, image_bounds):
+        """One shape drawn on its own over the cached composite."""
+        if shape.kind == "spotlight" or (shape.kind == "obscure"
+                                         and not shape.props.pixelate):
+            # A blur re-samples the screenshot on every frame, which made
+            # dragging one out or carrying it with the hand stutter; show its
+            # footprint while it moves and render the real thing on release.
+            # A spotlight's scrim covers the whole screenshot, so it too is
+            # rendered on release.
+            box = shape.page_bounds
+            footprint = rect(ox + box.x * scale, oy + box.y * scale,
+                             box.w * scale, box.h * scale)
+            snapshot.push_clip(image_bounds)
+            snapshot.append_color(color(1, 1, 1, 0.3), footprint)
+            outline = Gsk.RoundedRect()
+            outline.init_from_rect(footprint, 0)
+            snapshot.append_border(outline, [1.5] * 4,
+                                   [color(1, 1, 1, 0.9)] * 4)
+            snapshot.pop()
+            return
+        # The annotation renderer, restricted to the shape's bounds.
+        box = shape.page_bounds
+        width = shape.style.width if shape.style is not None else 0
+        padding = max(2, width * scale)
+        if shape.kind == "arrow":
+            # The model's bounds describe the shaft, not its arrowheads.
+            props = shape.props
+            padding = max(padding, scale * max(
+                arrows.head_size(props.head_start, props.style.width),
+                arrows.head_size(props.head_end, props.style.width)))
+        bounds = rect(ox + box.x * scale - padding,
+                      oy + box.y * scale - padding,
+                      box.w * scale + 2 * padding,
+                      box.h * scale + 2 * padding)
+        snapshot.push_clip(image_bounds)
+        cr = snapshot.append_cairo(bounds)
+        cr.translate(ox, oy)
+        cr.scale(scale, scale)
+        with render.uncached_obscure():
+            shape.draw(cr, self.pixbuf)
+        del cr
+        snapshot.pop()
 
     def _draw_size_label(self, snapshot, w, h, selection, sw, sh):
         label = f"{sw} × {sh}"

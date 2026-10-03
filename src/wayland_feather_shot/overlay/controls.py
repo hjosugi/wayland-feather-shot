@@ -20,7 +20,8 @@ from .layout import layout_controls
 
 OVERLAY_TOOLS = [
     ("move", "wfs-tool-move-symbolic", "Move / resize selection (V)"),
-    ("hand", "wfs-tool-hand-symbolic", "Grab and move a shape (S)"),
+    ("hand", "wfs-tool-hand-symbolic",
+     "Grab and move shapes; Shift or Ctrl+click picks several (S)"),
     ("pen", "wfs-tool-pen-symbolic", "Freehand pen (P)"),
     ("line", "wfs-tool-line-symbolic", "Straight line (L)"),
     ("arrow", "wfs-tool-arrow-symbolic", "Arrow (A)"),
@@ -368,6 +369,8 @@ class OverlayControlsMixin:
         # size control is about to stop sizing it.
         self._end_text(commit=True)
         self.tool = tool_id
+        if tool_id != "hand":
+            self._picked.clear()
         cursor = "default" if tool_id in ("move", "hand") else "crosshair"
         for view in self._views:
             view.area.set_cursor(Gdk.Cursor.new_from_name(cursor))

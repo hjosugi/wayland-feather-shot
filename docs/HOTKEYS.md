@@ -169,7 +169,7 @@ With a region selected:
 | Key | Action |
 | --- | --- |
 | V | move the selection (the resize handles work with every tool) |
-| S | hand: grab a placed shape and move it |
+| S | hand: grab a placed shape and move it; Shift+click or Ctrl+click picks several, which then move together |
 | P, L, A, G | pen, line, arrow, numbered step arrow |
 | R, E, H | rectangle, ellipse, highlighter |
 | T, U | text, speech bubble (click, then type on the canvas: Enter is a newline, Ctrl+Enter finishes, Esc cancels) |

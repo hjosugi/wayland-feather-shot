@@ -1,4 +1,5 @@
-"""The hand tool grabs a placed shape and moves it; the move is undoable.
+"""The hand tool grabs placed shapes and moves them; the move is undoable.
+Shift or Ctrl+click picks several, and they move together.
 
 Needs a GTK display; skips otherwise.  Run:  python3 tests/test_overlay_hand.py
 """
@@ -24,15 +25,19 @@ if HAVE_GTK_DISPLAY:
     from wayland_feather_shot.settings import Settings  # noqa: E402
 
 
-CTRL = 1 << 2
+SHIFT, CTRL = 1 << 0, 1 << 2
 
 
 class FakeDrag:
-    def __init__(self, x, y):
+    def __init__(self, x, y, state=0):
         self.start = (x, y)
+        self.state = state
 
     def get_start_point(self):
         return (True, *self.start)
+
+    def get_current_event_state(self):
+        return self.state
 
 
 @unittest.skipUnless(HAVE_GTK_DISPLAY, "GTK display unavailable")
@@ -57,8 +62,8 @@ class OverlayHandToolTests(unittest.TestCase):
         self.rect = self.window.shapes[0]
         self.window.select_tool("hand")
 
-    def drag(self, x0, y0, x1, y1):
-        gesture = FakeDrag(x0, y0)
+    def drag(self, x0, y0, x1, y1, state=0):
+        gesture = FakeDrag(x0, y0, state)
         self.window._on_drag_begin(gesture, x0, y0)
         self.window._on_drag_update(gesture, x1 - x0, y1 - y0)
         self.window._on_drag_end(gesture, x1 - x0, y1 - y0)
@@ -80,10 +85,11 @@ class OverlayHandToolTests(unittest.TestCase):
         self.window._on_drag_begin(gesture, 100, 100)
         self.assertEqual(self.window.shapes, [])
         self.window._on_drag_update(gesture, 20, 0)
-        self.assertEqual(self.window._preview.x - self.rect.x, 20)
+        (live,) = self.window._live_shapes()
+        self.assertEqual(live.x - self.rect.x, 20)
         self.window._on_drag_end(gesture, 20, 0)
         self.assertEqual(len(self.window.shapes), 1)
-        self.assertIsNone(self.window._preview)
+        self.assertEqual(self.window._live_shapes(), [])
 
     def test_a_press_on_empty_space_does_nothing(self):
         history_before = len(self.window._undo)
@@ -161,6 +167,76 @@ class OverlayHandToolTests(unittest.TestCase):
         self.assertEqual(set(render._obscure_cache.get(self.window.pixbuf, {})),
                          before)
         self.window._on_drag_end(gesture, 30, 30)
+
+    def add_second_rect(self):
+        self.window.select_tool("rect")
+        self.drag(200, 150, 260, 200)
+        self.window.select_tool("hand")
+        return self.window.shapes[1]
+
+    def picked(self):
+        return {s.sid for s in self.window._picked_shapes()}
+
+    def test_shift_or_ctrl_click_picks_several_and_they_move_together(self):
+        for modifier in (SHIFT, CTRL):
+            with self.subTest(modifier=modifier):
+                self.setUp()
+                second = self.add_second_rect()
+                self.drag(100, 100, 100, 100)                 # pick the first
+                self.drag(230, 175, 230, 175, modifier)       # add the second
+                self.assertEqual(self.picked(), {self.rect.sid, second.sid})
+                history_before = len(self.window._undo)
+                self.drag(100, 100, 120, 130)                 # move both
+                first, other = self.window.shapes
+                self.assertEqual(
+                    (first.x - self.rect.x, first.y - self.rect.y), (20, 30))
+                self.assertEqual((other.x - second.x, other.y - second.y),
+                                 (20, 30))
+                self.assertEqual(len(self.window._undo), history_before + 1)
+                self.window.undo()
+                self.assertEqual(self.window.shapes, [self.rect, second])
+
+    def test_a_modified_drag_on_an_unpicked_shape_takes_the_others_along(self):
+        second = self.add_second_rect()
+        self.drag(100, 100, 100, 100)
+        self.drag(230, 175, 240, 185, SHIFT)
+        first, other = self.window.shapes
+        self.assertEqual(first.x - self.rect.x, 10)
+        self.assertEqual(other.x - second.x, 10)
+
+    def test_a_plain_press_on_another_shape_picks_only_that_one(self):
+        second = self.add_second_rect()
+        self.drag(100, 100, 100, 100)
+        self.drag(230, 175, 230, 175)
+        self.assertEqual(self.picked(), {second.sid})
+        self.drag(230, 175, 250, 175)
+        self.assertEqual(self.window.shapes[0], self.rect)  # left behind
+
+    def test_a_click_on_a_picked_shape_keeps_just_it_or_drops_it(self):
+        second = self.add_second_rect()
+        self.drag(100, 100, 100, 100)
+        self.drag(230, 175, 230, 175, CTRL)
+        self.drag(230, 175, 230, 175)                       # just this one
+        self.assertEqual(self.picked(), {second.sid})
+        self.drag(100, 100, 100, 100, CTRL)
+        self.drag(100, 100, 100, 100, CTRL)                 # and drop it again
+        self.assertEqual(self.picked(), {second.sid})
+
+    def test_a_press_on_empty_space_clears_the_pick_unless_modified(self):
+        self.add_second_rect()
+        self.drag(100, 100, 100, 100)
+        self.drag(300, 230, 300, 230, SHIFT)
+        self.assertEqual(self.picked(), {self.rect.sid})
+        self.drag(300, 230, 300, 230)
+        self.assertEqual(self.picked(), set())
+
+    def test_picked_shapes_are_framed_and_the_pick_ends_with_the_tool(self):
+        self.drag(100, 100, 100, 100)
+        self.window._snapshot(self.window.area, Gtk.Snapshot.new(), 400, 300)
+        self.assertEqual(self.picked(), {self.rect.sid})
+        self.window.select_tool("pen")
+        self.window.select_tool("hand")
+        self.assertEqual(self.picked(), set())
 
     def test_s_selects_the_hand_tool(self):
         self.window.select_tool("pen")

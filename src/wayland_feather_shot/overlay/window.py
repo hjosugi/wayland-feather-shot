@@ -119,9 +119,16 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         self._prev_sel: Optional[Rect] = None   # before a "select" drag
         self._drag_handle: Optional[str] = None
         self._drag_sel0: Optional[Rect] = None  # before a move or resize
-        self._drag_shape = None          # (index, original) for the hand
         self._pen_points: List[Tuple[float, float]] = []
-        self._preview = None             # the shape being drawn or moved
+        self._preview = None             # the shape being drawn
+
+        # The hand's picked shapes (by sid; Shift/Ctrl+click adds and
+        # removes), and while they move: (index, original) for each, lifted
+        # out of self.shapes, and how far they have gone.
+        self._picked = set()
+        self._lifted: List[tuple] = []
+        self._lift_offset = (0.0, 0.0)
+        self._pick_on_click = None       # what a click without a move does
 
         # Double-click inside the selection copies it (see _on_click).
         self._copy_first_click = False
@@ -389,10 +396,11 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     def _on_drag_begin(self, gesture, x, y):
         """Decide what this drag does, from where it starts and the tool.
 
-        With nothing selected it starts the selection. With a selection: a handle resizes
-        it, the hand picks up the shape under the pointer, the move tool
-        moves the selection (or starts a new one outside it), and the
-        drawing tools draw. The press also finishes any text being typed.
+        With nothing selected it starts the selection. With a selection: a
+        handle resizes it, the hand picks up the shape under the pointer
+        (with the other picked shapes), the move tool moves the selection
+        (or starts a new one outside it), and the drawing tools draw. The
+        press also finishes any text being typed.
         """
         self._end_text(commit=True)
         ix, iy = self._to_image(x, y)
@@ -408,16 +416,8 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
                 self._drag_handle = handle
                 self._drag_sel0 = self.sel
             elif self.tool == "hand":
-                index = self._shape_at(ix, iy)
-                if index is None:
-                    self._drag_kind = None
-                else:
-                    # Lift the shape out of the cached composite and draw it
-                    # live as the preview while it moves.
-                    self._drag_kind = "shape"
-                    self._drag_shape = (index, self.shapes[index])
-                    self._preview = self.shapes.pop(index)
-                    self.area.set_cursor(Gdk.Cursor.new_from_name("grabbing"))
+                self._drag_kind = self._pick(self._shape_at(ix, iy),
+                                             self._adds_to_pick(gesture))
             elif self.tool == "move":
                 if self._inside_sel(ix, iy):
                     self._drag_kind = "move"
@@ -477,14 +477,8 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         elif kind == "draw" and preview is not None:
             self._push_history()
             self.shapes.append(preview)
-        elif kind == "shape" and self._drag_shape:
-            index, original = self._drag_shape
-            self._drag_shape = None
-            self.shapes.insert(index, original)
-            if preview is not None and preview != original:
-                self._push_history()
-                self.shapes[index] = preview
-            self.area.set_cursor(Gdk.Cursor.new_from_name("grab"))
+        elif kind == "shape":
+            self._drop_lifted()
         elif kind in ("move", "resize"):
             if self.sel != self._drag_sel0:
                 self._push_history(prev_sel=self._drag_sel0)
@@ -529,9 +523,87 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             self._update_control_layout()
         elif kind == "draw":
             self._update_preview((ix, iy))
-        elif kind == "shape" and self._drag_shape:
-            _index, original = self._drag_shape
-            self._preview = original.translate(ix - sx, iy - sy)
+        elif kind == "shape":
+            self._lift_offset = (ix - sx, iy - sy)
+
+    # -- the hand: picking and moving shapes --
+
+    @staticmethod
+    def _adds_to_pick(gesture) -> bool:
+        """Shift or Ctrl held: the press adds to (or takes from) the picked
+        shapes instead of starting over."""
+        state = gesture.get_current_event_state()
+        return bool(state & (Gdk.ModifierType.SHIFT_MASK
+                             | Gdk.ModifierType.CONTROL_MASK))
+
+    def _pick(self, index, adding) -> Optional[str]:
+        """A press with the hand on shape *index* (None: on no shape).
+
+        A press on a shape not yet picked picks it: alone, or with Shift or
+        Ctrl as one more. Then every picked shape is lifted to move
+        together. A click (a press without a move) on a shape that was
+        already picked keeps just that one, or with Shift or Ctrl drops it;
+        see _drop_lifted. A press on no shape clears the pick, unless Shift
+        or Ctrl is held. Returns the kind of drag that follows.
+        """
+        self._pick_on_click = None
+        if index is None:
+            if not adding:
+                self._picked.clear()
+            return None
+        sid = self.shapes[index].sid
+        if sid not in self._picked:
+            if not adding:
+                self._picked.clear()
+            self._picked.add(sid)
+        else:
+            self._pick_on_click = ("drop" if adding else "only", sid)
+        # Lift the picked shapes out of the cached composite; they are drawn
+        # live while they move.
+        self._lifted = [(i, shape) for i, shape in enumerate(self.shapes)
+                        if shape.sid in self._picked]
+        for i, _shape in reversed(self._lifted):
+            del self.shapes[i]
+        self._lift_offset = (0.0, 0.0)
+        self.area.set_cursor(Gdk.Cursor.new_from_name("grabbing"))
+        return "shape"
+
+    def _drop_lifted(self):
+        """Put the lifted shapes back where they were in the stacking order,
+        moved if the pointer moved (one undo step)."""
+        lifted, self._lifted = self._lifted, []
+        for i, shape in lifted:
+            self.shapes.insert(i, shape)
+        dx, dy = self._lift_offset
+        if dx or dy:
+            self._push_history()
+            for i, shape in lifted:
+                self.shapes[i] = shape.translate(dx, dy)
+        elif self._pick_on_click is not None:
+            action, sid = self._pick_on_click
+            if action == "drop":
+                self._picked.discard(sid)
+            else:
+                self._picked = {sid}
+        self._pick_on_click = None
+        self._lift_offset = (0.0, 0.0)
+        self.area.set_cursor(Gdk.Cursor.new_from_name("grab"))
+
+    def _live_shapes(self):
+        """What is drawn live over the cached composite: the shape being
+        drawn, or the picked shapes on the move."""
+        if self._preview is not None:
+            return [self._preview]
+        dx, dy = self._lift_offset
+        return [shape.translate(dx, dy) for _i, shape in self._lifted]
+
+    def _picked_shapes(self):
+        """The picked shapes as drawn now, for their frames."""
+        if self.tool != "hand" or not self._picked:
+            return []
+        return [shape for shape in self.shapes
+                if shape.sid in self._picked] + (
+            self._live_shapes() if self._lifted else [])
 
     def _update_preview(self, cur):
         """The shape the current tool would draw from the drag's start to

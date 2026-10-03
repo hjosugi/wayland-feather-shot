@@ -105,8 +105,8 @@ msgstr "文字サイズ ([ / ])"
 msgid "Ctrl+Enter to finish, Esc to cancel"
 msgstr "Ctrl+Enter で確定、Esc で取り消し"
 
-msgid "Grab and move a shape (S)"
-msgstr "図形をつかんで移動 (S)"
+msgid "Grab and move shapes; Shift or Ctrl+click picks several (S)"
+msgstr "図形をつかんで移動 — Shift/Ctrl+クリックで複数選択 (S)"
 
 msgid "Freehand pen (P)"
 msgstr "フリーハンドペン (P)"
