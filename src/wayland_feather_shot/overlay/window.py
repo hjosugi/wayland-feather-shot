@@ -142,8 +142,11 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         self.tool = "move"
         self.sel: Optional[Rect] = None
         self.shapes: List = []
-        self._undo: List[tuple] = []     # (selection, shapes) to go back to
+        # (selection, shapes, base image) to go back to; the base changes
+        # only when a redaction covers the annotations under it.
+        self._undo: List[tuple] = []
         self._redo: List[tuple] = []
+        self.flatten_redactions = False  # see _flatten_under
         self._history_merge = None       # see _push_history
 
         # The drag in progress, if any. _drag_kind says what it does:
@@ -421,7 +424,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             return
         self._history_merge = merge
         sel = self.sel if prev_sel is self._CURRENT else prev_sel
-        self._undo.append((sel, tuple(self.shapes)))
+        self._undo.append((sel, tuple(self.shapes), self.pixbuf))
         if len(self._undo) > 100:
             self._undo.pop(0)
         self._redo.clear()
@@ -429,18 +432,38 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     def undo(self):
         self._history_merge = None
         if self._undo:
-            self._redo.append((self.sel, tuple(self.shapes)))
-            self.sel, shapes = self._undo.pop()
+            self._redo.append((self.sel, tuple(self.shapes), self.pixbuf))
+            self.sel, shapes, base = self._undo.pop()
             self.shapes = list(shapes)
+            self._set_base(base)
             self._after_history()
 
     def redo(self):
         self._history_merge = None
         if self._redo:
-            self._undo.append((self.sel, tuple(self.shapes)))
-            self.sel, shapes = self._redo.pop()
+            self._undo.append((self.sel, tuple(self.shapes), self.pixbuf))
+            self.sel, shapes, base = self._redo.pop()
             self.shapes = list(shapes)
+            self._set_base(base)
             self._after_history()
+
+    def _set_base(self, pixbuf):
+        """The picture under the annotations, when it changed."""
+        if pixbuf is not self.pixbuf:
+            self.pixbuf = pixbuf
+            self._scene = OverlayScene(pixbuf)
+            self._frame_base = None
+
+    def _flatten_under(self, redaction):
+        """Add a blur or pixelate drawn with flatten_redactions on: the
+        annotations under it become part of the picture first, so it hides
+        them too, as the editor window's option does. One undo step, which
+        brings them back as annotations."""
+        self._push_history()
+        if self.shapes:
+            self._set_base(render.flatten(self.pixbuf, self.shapes))
+            self.shapes = []
+        self.shapes.append(redaction)
 
     def _after_history(self):
         # Undo can take the selection away or bring one back; the controls
@@ -543,8 +566,11 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
                 self.sel = self._prev_sel
             self._selection_made()
         elif kind == "draw" and preview is not None:
-            self._push_history()
-            self.shapes.append(preview)
+            if self.flatten_redactions and preview.kind == "obscure":
+                self._flatten_under(preview)
+            else:
+                self._push_history()
+                self.shapes.append(preview)
         elif kind == "shape":
             self._drop_lifted()
         elif kind == "reshape":

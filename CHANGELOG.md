@@ -26,7 +26,9 @@
   text (and the font for bubbles), the heads at either end of an arrow,
   how strongly blur and pixelate hide what is under them, and how dark a
   spotlight leaves the rest. For a redaction or a spotlight the button
-  shows that strength.
+  shows that strength. "Covers annotations too" makes a new blur or
+  pixelate hide the annotations under it as well, which become part of
+  the picture (one undo step brings them back).
 - **The overlay remembers the style.** Colour, line width, text size and
   font, text style and alignment, arrowheads, redaction strength and
   spotlight dimming carry over to the next capture, shared with the editor

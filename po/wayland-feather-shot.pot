@@ -192,6 +192,9 @@ msgstr ""
 msgid "Recognized text copied to clipboard."
 msgstr ""
 
+msgid "Covers annotations too"
+msgstr ""
+
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr ""
 

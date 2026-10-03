@@ -174,7 +174,7 @@ class OverlayStyleMenuTests(OverlayCase, unittest.TestCase):
                 ("bubble", {"palette", "size", "font"}),
                 ("arrow", {"palette", "size", "widths", "heads"}),
                 ("steparrow", {"palette", "size", "widths", "heads"}),
-                ("blur", {"strength"}),
+                ("blur", {"strength", "flatten"}),
                 ("spotlight", {"dim"}),
                 ("emoji", {"size"})):
             with self.subTest(tool=tool):
@@ -213,6 +213,39 @@ class OverlayStyleMenuTests(OverlayCase, unittest.TestCase):
         self.window.select_tool("text")
         self.window._size_spin.set_value(40)
         self.assertEqual(self.window.style.font_family, "Serif")
+
+    def test_a_covering_redaction_bakes_the_annotations_under_it(self):
+        self.window.select_tool("rect")
+        self.drag(100, 100, 200, 160)
+        rect = self.window.shapes[0]
+        original = self.window.pixbuf
+        self.window._flatten_check.set_active(True)
+        self.window.select_tool("blur")
+        self.drag(90, 90, 210, 170)
+        (blur,) = self.window.shapes
+        self.assertEqual(blur.kind, "obscure")
+        self.assertIsNot(self.window.pixbuf, original)
+        # The rectangle is in the picture now: its red edge is there.
+        pixels = self.window.pixbuf.get_pixels()
+        stride = self.window.pixbuf.get_rowstride()
+        n = self.window.pixbuf.get_n_channels()
+        red, green = pixels[130 * stride + 100 * n], \
+            pixels[130 * stride + 100 * n + 1]
+        self.assertGreater(red, green)
+        self.window.undo()
+        self.assertEqual(self.window.shapes, [rect])
+        self.assertIs(self.window.pixbuf, original)
+        self.window.redo()
+        self.assertEqual(self.window.shapes, [blur])
+
+    def test_without_the_option_a_redaction_is_just_added(self):
+        self.window.select_tool("rect")
+        self.drag(100, 100, 200, 160)
+        original = self.window.pixbuf
+        self.window.select_tool("pixelate")
+        self.drag(90, 90, 210, 170)
+        self.assertEqual(len(self.window.shapes), 2)
+        self.assertIs(self.window.pixbuf, original)
 
     def test_strength_and_dim_reach_new_shapes_and_the_button(self):
         self.window._strength_scale.set_value(0.9)

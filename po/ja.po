@@ -192,6 +192,9 @@ msgstr "何も認識できませんでした。"
 msgid "Recognized text copied to clipboard."
 msgstr "認識したテキストをクリップボードにコピーしました。"
 
+msgid "Covers annotations too"
+msgstr "注釈も覆う"
+
 msgid "Blur/pixelate covers annotations too (flatten)"
 msgstr "ぼかし/モザイクで注釈も覆う(フラット化)"
 

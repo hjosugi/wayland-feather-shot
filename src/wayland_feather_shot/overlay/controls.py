@@ -65,6 +65,7 @@ TEXT_SIZED_TOOLS = ("text", "bubble", "emoji")
 # not listed here (the palette, the size) shows for every tool but those in
 # its NOT_FOR entry.
 STYLE_ROWS_FOR = {
+    "flatten": ("blur", "pixelate"),
     "text_style": ("text",),
     "align": ("text",),
     "font": ("text", "bubble"),
@@ -316,7 +317,8 @@ class OverlayControlsMixin:
         menu.append(self._text_style_box)
         self._style_rows["text_style"] = self._text_style_box
 
-        for name, row in (("align", self._build_align_row()),
+        for name, row in (("flatten", self._build_flatten_row()),
+                          ("align", self._build_align_row()),
                           ("font", self._build_font_row()),
                           ("heads", self._build_heads_row()),
                           ("strength", self._build_strength_row()),
@@ -342,6 +344,17 @@ class OverlayControlsMixin:
         widget.set_hexpand(True)
         row.append(widget)
         return row
+
+    def _build_flatten_row(self):
+        """Whether a new blur or pixelate also hides the annotations under
+        it (they become part of the picture)."""
+        check = Gtk.CheckButton(label=_("Covers annotations too"))
+        check.set_tooltip_text(
+            _("Blur/pixelate covers annotations too (flatten)"))
+        check.connect("toggled", lambda c: setattr(
+            self, "flatten_redactions", c.get_active()))
+        self._flatten_check = check
+        return check
 
     def _build_align_row(self):
         """Left, centre or right: how the lines of a text line up."""
@@ -642,7 +655,10 @@ class OverlayControlsMixin:
             return
         tools = self._style_tools()
         for name, row in self._style_rows.items():
-            if name in STYLE_ROWS_FOR:
+            if name == "flatten":
+                # It is about new redactions, not the picked ones.
+                row.set_visible(self.tool in STYLE_ROWS_FOR[name])
+            elif name in STYLE_ROWS_FOR:
                 row.set_visible(bool(tools & set(STYLE_ROWS_FOR[name])))
             else:
                 row.set_visible(bool(tools - set(STYLE_ROWS_NOT_FOR[name])))

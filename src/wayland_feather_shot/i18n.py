@@ -117,6 +117,7 @@ JA = {
     "Nothing recognized.": "何も認識できませんでした。",
     "Recognized text copied to clipboard.":
         "認識したテキストをクリップボードにコピーしました。",
+    "Covers annotations too": "注釈も覆う",
     "Blur/pixelate covers annotations too (flatten)":
         "ぼかし/モザイクで注釈も覆う(フラット化)",
     "Background & framing": "背景と額装",
