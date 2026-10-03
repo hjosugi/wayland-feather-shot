@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.12.0 (2026-10-03)
+
 - **Ctrl+PrtSc takes the full screen, Ctrl+Shift+PrtSc a region.** The
   Selection/Screen bar at the bottom of the overlay is gone; the key says
   which. Ctrl+PrtSc opens the overlay with the whole screen already
@@ -18,6 +20,11 @@
   straight to the clipboard: releasing the drag (a click takes the whole
   screen) copies and closes. It has no default key; bind it by hand if you
   want it.
+- **Copying is quicker.** Most of a copy went into compressing the PNG
+  (0.5-0.8 s for a screen-sized image on a laptop CPU); the clipboard gets
+  the lightest compression now, which takes 40-80 ms and is still lossless.
+  Copy, save and pin also paint just the selection instead of the whole
+  screenshot (both monitors, on a two-monitor desk).
 
 ## 0.11.0 (2026-10-03)
 
