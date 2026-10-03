@@ -85,10 +85,14 @@ def layout_controls(window: Size, selection: Bounds, toolbar: Size,
     if below_ay + row_h <= win_h - EDGE_MARGIN:
         return ControlLayout((tx, below_ty), (ax, below_ay), True)
 
-    above_ty = math.floor(y0 - tb_h - BAR_GAP)
-    above_ay = above_ty - row_h - BAR_GAP
-    if above_ay >= EDGE_MARGIN:
-        return ControlLayout((tx, above_ty), (ax, above_ay), True)
+    # No room below: both rows go inside the selection's bottom edge, as the
+    # toolbar does on its own, never above the selection.
+    group_h = tb_h + BAR_GAP + row_h
+    inside_ty = max(EDGE_MARGIN, min(math.floor(y1), win_h - EDGE_MARGIN)
+                    - BAR_GAP - group_h)
+    inside_ay = inside_ty + tb_h + BAR_GAP
+    if inside_ay + row_h <= win_h - EDGE_MARGIN:
+        return ControlLayout((tx, inside_ty), (ax, inside_ay), True)
 
     # A short viewport may have no room outside the selection. Keep both
     # rows accessible at the opposite edge rather than returning an invalid
@@ -133,11 +137,16 @@ def position_bars(window: Size, selection: Bounds, toolbar: Size,
     left_aligned_tx = clamp(round(x0), max_tx)
     placements = []
     below_ty = math.ceil(y1 + BAR_GAP)
-    above_ty = math.floor(y0 - tb_h - BAR_GAP)
     if below_ty <= max_ty:
         placements.append(("below", below_ty))
-    if above_ty >= EDGE_MARGIN:
-        placements.append(("above", above_ty))
+    else:
+        # No room under the selection (it reaches the bottom of the screen,
+        # or past it when zoomed in): the toolbar goes inside it, along the
+        # bottom edge of what is visible. It never flips above the
+        # selection; that read as the selection and its controls swapping
+        # places.
+        placements.append(("inside", clamp(
+            math.floor(min(y1, win_h) - tb_h - BAR_GAP), max_ty)))
 
     sides = []
     right_sx = math.ceil(x1 + BAR_GAP)
@@ -161,15 +170,16 @@ def position_bars(window: Size, selection: Bounds, toolbar: Size,
                              clamp(math.floor(y1 - act_h), max_sy),
                              preferred_ty + tb_h + BAR_GAP)
             else:
-                action_ys = (preferred_sy, preferred_ty - act_h - BAR_GAP)
+                action_ys = (preferred_sy,
+                             clamp(math.floor(min(y1, win_h) - act_h),
+                                   max_sy))
 
             for sy in action_ys:
                 if direction == "below":
                     toolbar_ys = (preferred_ty,
                                   max(preferred_ty, sy + act_h + BAR_GAP))
                 else:
-                    toolbar_ys = (preferred_ty,
-                                  min(preferred_ty, sy - tb_h - BAR_GAP))
+                    toolbar_ys = (preferred_ty,)
 
                 preferred_tx = (right_aligned_tx if side == "right"
                                 else left_aligned_tx)
@@ -183,7 +193,7 @@ def position_bars(window: Size, selection: Bounds, toolbar: Size,
                             continue
 
                         vertical_gap = (ty - y1 if direction == "below"
-                                        else y0 - ty - tb_h)
+                                        else 0)       # inside: attached
                         horizontal_gap = max(0, x0 - tx - tb_w, tx - x1)
                         action_gap = max(0, y0 - sy - act_h, sy - y1)
                         # The long toolbar should continue to face the

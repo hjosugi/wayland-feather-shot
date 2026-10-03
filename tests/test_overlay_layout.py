@@ -195,7 +195,8 @@ class OverlayLayoutTests(unittest.TestCase):
         toolbar, actions = position_bars(
             window, selection, toolbar_size, action_size,
         )
-        self.assertEqual(toolbar[1], 1136)
+        # No room below: inside the selection's bottom edge, not above it.
+        self.assertEqual(toolbar[1], 1376)
         self.assertEqual(actions[0], 54)
         self.assertLess(toolbar[0], selection[2])
         self.assertGreater(toolbar[0] + toolbar_size[0], selection[0])
@@ -211,8 +212,8 @@ class OverlayLayoutTests(unittest.TestCase):
         cases = (
             ((0, 0, 486, 157), (8, 169), (8, 233)),
             ((2258, 0, 2559, 71), (1550, 83), (2210, 147)),
-            ((0, 1313, 505, 1438), (8, 1249), (8, 1185)),
-            ((2297, 1214, 2559, 1438), (1550, 1150), (2210, 1086)),
+            ((0, 1313, 505, 1438), (8, 1304), (8, 1368)),
+            ((2297, 1214, 2559, 1438), (1550, 1304), (2210, 1368)),
         )
         for selection, toolbar, actions in cases:
             with self.subTest(selection=selection):
@@ -227,6 +228,18 @@ class OverlayLayoutTests(unittest.TestCase):
                     window, layout.toolbar, layout.actions,
                     toolbar_size, action_row_size,
                 )
+
+    def test_toolbar_never_flips_above_the_selection(self):
+        # Below when it fits; otherwise inside the selection's bottom edge,
+        # including a selection that runs past the window (zoomed in).
+        window = (2560, 1440)
+        for selection in ((700, 300, 1700, 800), (700, 900, 1700, 1440),
+                          (700, 1000, 1700, 2100), (0, 0, 2560, 1440)):
+            with self.subTest(selection=selection):
+                toolbar, _actions = position_bars(
+                    window, selection, (1002, 52), (54, 328))
+                self.assertGreaterEqual(toolbar[1], selection[1])
+                self.assertLessEqual(toolbar[1] + 52, window[1] - 8)
 
     def test_ordinary_selections_keep_vertical_action_bar(self):
         for selection in (
