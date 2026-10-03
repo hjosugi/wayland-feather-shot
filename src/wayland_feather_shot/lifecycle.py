@@ -1,10 +1,12 @@
-"""Process lifecycle helpers: application holds and the capture lock."""
+"""Process lifecycle helpers: application holds and the capture lock.
+
+Import-light: nothing here imports gi at module level, so the GTK-free
+tests (and cli, before it loads GTK) can use it.
+"""
 
 import errno
 import os
 from typing import Optional
-
-from gi.repository import GLib
 
 
 class _NoLock:
@@ -24,8 +26,9 @@ def acquire_capture_lock(directory: Optional[str] = None):
     a crash cannot leave it behind.
     """
     import fcntl
-    directory = (directory or GLib.get_user_runtime_dir()
-                 or GLib.get_user_cache_dir())
+    if directory is None:
+        from gi.repository import GLib
+        directory = GLib.get_user_runtime_dir() or GLib.get_user_cache_dir()
     try:
         os.makedirs(directory, exist_ok=True)
         handle = open(os.path.join(directory,
