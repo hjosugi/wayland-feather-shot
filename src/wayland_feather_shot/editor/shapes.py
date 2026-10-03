@@ -601,13 +601,19 @@ def Line(p0: Point, p1: Point, style: Style) -> Shape:
                  ArrowProps((p1[0] - p0[0], p1[1] - p0[1]), style, head_end="none"))
 
 
-def Arrow(p0: Point, p1: Point, style: Style) -> Shape:
-    return Shape(p0[0], p0[1], ArrowProps((p1[0] - p0[0], p1[1] - p0[1]), style))
-
-
-def StepArrow(p0: Point, p1: Point, number: int, style: Style) -> Shape:
+def Arrow(p0: Point, p1: Point, style: Style, head_start: str = "none",
+          head_end: str = "arrow") -> Shape:
     return Shape(p0[0], p0[1],
-                 ArrowProps((p1[0] - p0[0], p1[1] - p0[1]), style, number=number))
+                 ArrowProps((p1[0] - p0[0], p1[1] - p0[1]), style,
+                            head_end=head_end, head_start=head_start))
+
+
+def StepArrow(p0: Point, p1: Point, number: int, style: Style,
+              head_start: str = "none", head_end: str = "arrow") -> Shape:
+    return Shape(p0[0], p0[1],
+                 ArrowProps((p1[0] - p0[0], p1[1] - p0[1]), style,
+                            head_end=head_end, head_start=head_start,
+                            number=number))
 
 
 def RectShape(rect, style: Style, filled: bool = False) -> Shape:

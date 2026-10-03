@@ -282,6 +282,12 @@ msgstr ""
 msgid "Spotlight dim"
 msgstr ""
 
+msgid "Font"
+msgstr ""
+
+msgid "Blur radius and mosaic block size"
+msgstr ""
+
 msgid "How dark the area outside a spotlight goes"
 msgstr ""
 

@@ -7,14 +7,17 @@ overlay.window.OverlayWindow.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
-from gi.repository import Gdk, GLib, Gtk  # noqa: E402
+gi.require_version("Pango", "1.0")
+from gi.repository import Gdk, GLib, Gtk, Pango  # noqa: E402
 
+from ..editor import arrows
 from ..editor import shapes as shape_model
-from ..editor.shapes import Style
 from ..i18n import _
 from .layout import layout_controls
 
@@ -54,8 +57,29 @@ TOOL_FAMILIES = (
 )
 
 # Tools whose size is a text size (the spinner shows it instead of the line
-# width); the text style buttons are for "text" alone.
+# width).
 TEXT_SIZED_TOOLS = ("text", "bubble", "emoji")
+
+# Which rows of the style menu each tool uses; the others are hidden. A row
+# not listed here (the palette, the size) shows for every tool but those in
+# its NOT_FOR entry.
+STYLE_ROWS_FOR = {
+    "text_style": ("text",),
+    "align": ("text",),
+    "font": ("text", "bubble"),
+    "heads": ("arrow", "steparrow"),
+    "strength": ("blur", "pixelate"),
+    "dim": ("spotlight",),
+}
+STYLE_ROWS_NOT_FOR = {
+    "palette": ("blur", "pixelate", "spotlight", "emoji"),
+    "size": ("blur", "pixelate", "spotlight"),
+}
+ALIGN_BUTTONS = (
+    ("left", "format-justify-left-symbolic", "Align left"),
+    ("center", "format-justify-center-symbolic", "Align centre"),
+    ("right", "format-justify-right-symbolic", "Align right"),
+)
 
 # The style button's palette (the editor window's presets).
 PALETTE = ((0.90, 0.15, 0.12), (0.95, 0.55, 0.10), (0.98, 0.85, 0.10),
@@ -203,7 +227,9 @@ class OverlayControlsMixin:
 
     def _build_style_button(self) -> Gtk.Widget:
         """Colour and size in one button; its menu holds what the current
-        tool uses: the palette, the size, and for text its style."""
+        tool uses (STYLE_ROWS_FOR): the palette, the size, the text's style,
+        alignment and font, an arrow's heads, a redaction's strength, a
+        spotlight's dimming."""
         rgba = Gdk.RGBA()
         rgba.parse(self.settings.pen_color)
         self._custom_rgba = rgba
@@ -221,6 +247,7 @@ class OverlayControlsMixin:
         self._style_button = button
 
         menu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        self._style_rows = {}
 
         palette = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         for r, g, b in PALETTE:
@@ -236,6 +263,7 @@ class OverlayControlsMixin:
         custom.connect("clicked", lambda *_: self._choose_colour())
         palette.append(custom)
         menu.append(palette)
+        self._style_rows["palette"] = palette
 
         # One size control that follows the tool: line width for the drawing
         # tools, text size for the text tool. The icon says which.
@@ -249,6 +277,7 @@ class OverlayControlsMixin:
         self._size_spin.connect("value-changed", self._on_size_changed)
         size_row.append(self._size_spin)
         menu.append(size_row)
+        self._style_rows["size"] = size_row
 
         # Plain, outlined or boxed text; shown while the text tool is in use.
         self._text_style_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,
@@ -271,10 +300,107 @@ class OverlayControlsMixin:
             self._text_style_box.append(btn)
             self._text_style_buttons[name] = btn
         menu.append(self._text_style_box)
+        self._style_rows["text_style"] = self._text_style_box
+
+        for name, row in (("align", self._build_align_row()),
+                          ("font", self._build_font_row()),
+                          ("heads", self._build_heads_row()),
+                          ("strength", self._build_strength_row()),
+                          ("dim", self._build_dim_row())):
+            row.set_visible(False)
+            menu.append(row)
+            self._style_rows[name] = row
 
         button.set_popover(menu_popover(menu))
         self._update_style_face()
         return button
+
+    @staticmethod
+    def _labelled(label, widget):
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        caption = Gtk.Label(label=label, xalign=0)
+        caption.add_css_class("wfs-caption")
+        row.append(caption)
+        widget.set_hexpand(True)
+        row.append(widget)
+        return row
+
+    def _build_align_row(self):
+        """Left, centre or right: how the lines of a text line up."""
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        self._align_buttons = {}
+        first = None
+        for name, icon, tip in ALIGN_BUTTONS:
+            btn = Gtk.ToggleButton()
+            btn.set_icon_name(icon)
+            btn.add_css_class("wfs-round")
+            btn.set_tooltip_text(_(tip))
+            btn.update_property([Gtk.AccessibleProperty.LABEL], [_(tip)])
+            if first is None:
+                first = btn
+            else:
+                btn.set_group(first)
+            btn.set_active(name == self.text_align)
+            btn.connect("toggled", self._on_align_toggled, name)
+            row.append(btn)
+            self._align_buttons[name] = btn
+        return row
+
+    def _build_font_row(self):
+        """The typeface of text and bubbles; their size is the spinner."""
+        dialog = Gtk.FontDialog()
+        button = Gtk.FontDialogButton(dialog=dialog)
+        button.set_level(Gtk.FontLevel.FAMILY)
+        desc = Pango.FontDescription()
+        desc.set_family(self.style.font_family)
+        button.set_font_desc(desc)
+        button.set_tooltip_text(_("Text font"))
+        button.connect("notify::font-desc", self._on_font_changed)
+        self._font_button = button
+        return self._labelled(_("Font"), button)
+
+    def _build_heads_row(self):
+        """Which head each end of a new arrow gets."""
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        self._head_choosers = {}
+        titles = [_(arrows.HEAD_TITLES[name]) for name in arrows.HEADS]
+        for end, label in (("head_start", _("Start")), ("head_end", _("End"))):
+            chooser = Gtk.DropDown.new_from_strings(titles)
+            chooser.set_selected(arrows.HEADS.index(self.arrow_heads[end]))
+            chooser.set_tooltip_text(_("Arrowheads"))
+            chooser.connect("notify::selected", self._on_head_changed, end)
+            caption = Gtk.Label(label=label)
+            caption.add_css_class("wfs-caption")
+            row.append(caption)
+            row.append(chooser)
+            self._head_choosers[end] = chooser
+        return row
+
+    def _scale_row(self, label, tip, low, high, value, changed):
+        scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,
+                                         low, high, 0.05)
+        scale.set_value(value)
+        scale.set_draw_value(False)
+        scale.set_size_request(140, -1)
+        scale.set_tooltip_text(tip)
+        scale.connect("value-changed", changed)
+        return self._labelled(label, scale), scale
+
+    def _build_strength_row(self):
+        """How strongly blur and pixelate hide what is under them."""
+        row, self._strength_scale = self._scale_row(
+            _("Redaction strength"),
+            _("Blur radius and mosaic block size"), 0.0, 1.0,
+            self.redaction_density, self._on_strength_changed)
+        return row
+
+    def _build_dim_row(self):
+        """How dark the area outside a spotlight goes."""
+        row, self._dim_scale = self._scale_row(
+            _("Spotlight dim"),
+            _("How dark the area outside a spotlight goes"), 0.1, 0.9,
+            self.spotlight_scrim, self._on_dim_changed)
+        return row
 
     def _build_action_bar(self) -> Gtk.Widget:
         """Copy, save and pin, the rest under "…", and cancel.
@@ -374,7 +500,7 @@ class OverlayControlsMixin:
         cursor = "default" if tool_id in ("move", "hand") else "crosshair"
         for view in self._views:
             view.area.set_cursor(Gdk.Cursor.new_from_name(cursor))
-        self._refresh_size_control()
+        self._refresh_style_menu()
 
     def select_tool(self, tool_id):
         """Switch to *tool_id*: its family's button shows it and turns on."""
@@ -396,8 +522,7 @@ class OverlayControlsMixin:
 
     def _set_colour(self, rgba):
         """The colour for new shapes (and the text being typed)."""
-        self.style = Style(rgba=tuple(rgba), width=self.style.width,
-                           font_size=self.style.font_size)
+        self.style = replace(self.style, rgba=tuple(rgba))
         self._update_style_face()
         self._style_text_view()
         self._refocus_text()
@@ -418,21 +543,33 @@ class OverlayControlsMixin:
         Gtk.ColorDialog().choose_rgba(self._view.window, current, None, chosen)
 
     def _update_style_face(self):
-        """The style button shows the colour and the current size."""
+        """The style button shows the colour and the current size, or for
+        a redaction or a spotlight how strong it is."""
         if getattr(self, "_style_swatch", None) is None:
             return
         self._style_swatch.queue_draw()
-        spin = getattr(self, "_size_spin", None)
-        if spin is not None:
-            self._style_size_label.set_text(f"{spin.get_value():g}")
+        if self.tool in ("blur", "pixelate"):
+            self._style_size_label.set_text(
+                f"{round(self.redaction_density * 100)}%")
+        elif self.tool == "spotlight":
+            self._style_size_label.set_text(
+                f"{round(self.spotlight_scrim * 100)}%")
+        elif getattr(self, "_size_spin", None) is not None:
+            self._style_size_label.set_text(
+                f"{self._size_spin.get_value():g}")
 
-    def _refresh_size_control(self):
-        """Point the size spinner at what the current tool sizes."""
+    def _refresh_style_menu(self):
+        """Show the style menu's rows for the current tool, and point the
+        size spinner at what it sizes."""
         spin = getattr(self, "_size_spin", None)
         if spin is None:
             return
+        for name, row in self._style_rows.items():
+            if name in STYLE_ROWS_FOR:
+                row.set_visible(self.tool in STYLE_ROWS_FOR[name])
+            else:
+                row.set_visible(self.tool not in STYLE_ROWS_NOT_FOR[name])
         kind = "text" if self.tool in TEXT_SIZED_TOOLS else "width"
-        self._text_style_box.set_visible(self.tool == "text")
         self._size_kind = kind
         self._size_syncing = True
         try:
@@ -457,21 +594,46 @@ class OverlayControlsMixin:
         if self._size_syncing:
             return
         if self._size_kind == "text":
-            self.style = Style(rgba=self.style.rgba, width=self.style.width,
-                               font_size=float(spin.get_value()))
+            self.style = replace(self.style,
+                                 font_size=float(spin.get_value()))
             self._style_text_view()
             self._refocus_text()
         else:
             self._pen_width = spin.get_value()
-            self.style = Style(rgba=self.style.rgba,
-                               width=self._page_width(self._pen_width),
-                               font_size=self.style.font_size)
+            self.style = replace(self.style,
+                                 width=self._page_width(self._pen_width))
 
     def _on_text_style_toggled(self, button, name):
         if button.get_active():
             self.text_style = name
             self._style_text_view()
             self._refocus_text()
+
+    def _on_align_toggled(self, button, name):
+        if button.get_active():
+            self.text_align = name
+            self._style_text_view()
+            self._refocus_text()
+
+    def _on_font_changed(self, button, _pspec):
+        desc = button.get_font_desc()
+        family = desc.get_family() if desc is not None else None
+        if not family:
+            return
+        self.style = replace(self.style, font_family=family)
+        self._style_text_view()
+        self._refocus_text()
+
+    def _on_head_changed(self, chooser, _pspec, end):
+        self.arrow_heads[end] = arrows.HEADS[chooser.get_selected()]
+
+    def _on_strength_changed(self, scale):
+        self.redaction_density = scale.get_value()
+        self._update_style_face()
+
+    def _on_dim_changed(self, scale):
+        self.spotlight_scrim = scale.get_value()
+        self._update_style_face()
 
     def step_size(self, direction: int) -> None:
         """Nudge the current size (line width or text size) by one step."""

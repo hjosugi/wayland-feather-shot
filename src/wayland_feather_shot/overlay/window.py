@@ -101,6 +101,8 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             settings.blur_factor)
         self.spotlight_scrim = 0.55      # how dark a spotlight's outside goes
         self.text_style = "plain"        # one of shape_model.TEXT_STYLES
+        self.text_align = "left"         # left, center or right
+        self.arrow_heads = {"head_start": "none", "head_end": "arrow"}
         self._size_kind = "width"        # what the spinner sizes: width|text
         self._size_syncing = False       # set while the spinner is re-ranged
 
@@ -618,11 +620,11 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         elif tool == "line":
             self._preview = Line(start, cur, self.style)
         elif tool == "arrow":
-            self._preview = Arrow(start, cur, self.style)
+            self._preview = Arrow(start, cur, self.style, **self.arrow_heads)
         elif tool == "steparrow":
             self._preview = StepArrow(start, cur,
                                       shape_model.next_number(self.shapes),
-                                      self.style)
+                                      self.style, **self.arrow_heads)
         elif tool in RECT_TOOLS:
             rect = shape_model.norm_rect(start[0], start[1], cur[0], cur[1])
             if tool == "rect":

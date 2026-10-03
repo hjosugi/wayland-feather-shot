@@ -36,12 +36,13 @@ class FakeDrag:
         return (True, *self.start)
 
 
-@unittest.skipUnless(HAVE_GTK_DISPLAY, "GTK display unavailable")
-class OverlayToolTests(unittest.TestCase):
+class OverlayCase:
+    """An overlay with a selection made; for the test classes below."""
+
     @classmethod
     def setUpClass(cls):
         cls.app = Gtk.Application(
-            application_id="io.github.hjosugi.WaylandFeatherShot.ToolTest")
+            application_id="io.github.hjosugi.WaylandFeatherShot." + cls.APP)
         cls.app.register(None)
 
     def setUp(self):
@@ -65,6 +66,11 @@ class OverlayToolTests(unittest.TestCase):
     def click(self, x, y):
         self.window._on_click_pressed(None, 1, x, y)
         self.window._on_click(None, 1, x, y)
+
+
+@unittest.skipUnless(HAVE_GTK_DISPLAY, "GTK display unavailable")
+class OverlayToolTests(OverlayCase, unittest.TestCase):
+    APP = "ToolTest"
 
     def test_each_tool_joins_the_family_it_belongs_to(self):
         family_of = self.window._family_of
@@ -149,6 +155,76 @@ class OverlayToolTests(unittest.TestCase):
                 self.window.select_tool(tool)
                 self.assertEqual(self.window._size_kind, "text")
                 self.assertFalse(self.window._text_style_box.get_visible())
+
+
+@unittest.skipUnless(HAVE_GTK_DISPLAY, "GTK display unavailable")
+class OverlayStyleMenuTests(OverlayCase, unittest.TestCase):
+    """The style button's menu offers what the current tool uses."""
+
+    APP = "StyleMenuTest"
+
+    def visible_rows(self):
+        return {name for name, row in self.window._style_rows.items()
+                if row.get_visible()}
+
+    def test_each_tool_shows_its_own_rows(self):
+        for tool, rows in (
+                ("pen", {"palette", "size"}),
+                ("text", {"palette", "size", "text_style", "align", "font"}),
+                ("bubble", {"palette", "size", "font"}),
+                ("arrow", {"palette", "size", "heads"}),
+                ("steparrow", {"palette", "size", "heads"}),
+                ("blur", {"strength"}),
+                ("spotlight", {"dim"}),
+                ("emoji", {"size"})):
+            with self.subTest(tool=tool):
+                self.window.select_tool(tool)
+                self.assertEqual(self.visible_rows(), rows)
+
+    def test_arrowheads_apply_to_new_arrows(self):
+        from wayland_feather_shot.editor import arrows
+        self.window._head_choosers["head_start"].set_selected(
+            arrows.HEADS.index("dot"))
+        self.window._head_choosers["head_end"].set_selected(
+            arrows.HEADS.index("none"))
+        self.window.select_tool("arrow")
+        self.drag(80, 80, 200, 150)
+        props = self.window.shapes[-1].props
+        self.assertEqual((props.head_start, props.head_end), ("dot", "none"))
+
+    def test_alignment_applies_to_the_text_and_its_live_view(self):
+        self.window.select_tool("text")
+        self.window._align_buttons["center"].set_active(True)
+        self.click(120, 90)
+        view = self.window._text_edit["view"]
+        self.assertEqual(view.get_justification(), Gtk.Justification.CENTER)
+        view.get_buffer().set_text("one\nlonger line")
+        self.window._on_text_key(None, Gdk.KEY_Return, 0, CTRL)
+        self.assertEqual(self.window.shapes[-1].props.align, "center")
+
+    def test_the_font_is_kept_when_the_colour_or_size_changes(self):
+        gi.require_version("Pango", "1.0")
+        from gi.repository import Pango
+        desc = Pango.FontDescription()
+        desc.set_family("Serif")
+        self.window._font_button.set_font_desc(desc)
+        self.assertEqual(self.window.style.font_family, "Serif")
+        self.window._set_colour((0.1, 0.5, 0.9, 1.0))
+        self.window.select_tool("text")
+        self.window._size_spin.set_value(40)
+        self.assertEqual(self.window.style.font_family, "Serif")
+
+    def test_strength_and_dim_reach_new_shapes_and_the_button(self):
+        self.window._strength_scale.set_value(0.9)
+        self.window.select_tool("pixelate")
+        self.assertEqual(self.window._style_size_label.get_text(), "90%")
+        self.drag(80, 80, 160, 140)
+        self.assertAlmostEqual(self.window.shapes[-1].props.density, 0.9)
+        self.window._dim_scale.set_value(0.3)
+        self.window.select_tool("spotlight")
+        self.assertEqual(self.window._style_size_label.get_text(), "30%")
+        self.drag(200, 100, 300, 200)
+        self.assertAlmostEqual(self.window.shapes[-1].props.scrim, 0.3)
 
 
 if __name__ == "__main__":

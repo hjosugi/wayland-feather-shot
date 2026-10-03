@@ -282,6 +282,12 @@ msgstr "スポットライト — 範囲外を暗く (S)"
 msgid "Spotlight dim"
 msgstr "スポットライトの暗さ"
 
+msgid "Font"
+msgstr "フォント"
+
+msgid "Blur radius and mosaic block size"
+msgstr "ぼかしの半径とモザイクのブロックの大きさ"
+
 msgid "How dark the area outside a spotlight goes"
 msgstr "スポットライト範囲外をどれだけ暗くするか"
 

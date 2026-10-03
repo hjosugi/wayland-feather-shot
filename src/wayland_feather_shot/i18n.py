@@ -148,6 +148,8 @@ JA = {
     "Spot": "スポット",
     "Spotlight — dim everything outside (S)": "スポットライト — 範囲外を暗く (S)",
     "Spotlight dim": "スポットライトの暗さ",
+    "Font": "フォント",
+    "Blur radius and mosaic block size": "ぼかしの半径とモザイクのブロックの大きさ",
     "How dark the area outside a spotlight goes": "スポットライト範囲外をどれだけ暗くするか",
     "Align left": "左揃え",
     "Align centre": "中央揃え",

@@ -13,6 +13,12 @@
   join the arrow, speech bubbles (U) the text tool, spotlight (O) blur and
   pixelate, and emoji stickers (J) the numbered marker. A bubble is typed
   in place and fits its text; step arrows and markers count on together.
+- **More choices behind the style button.** It now offers what the tool
+  in hand uses, as the editor window does: text alignment and font for
+  text (and the font for bubbles), the heads at either end of an arrow,
+  how strongly blur and pixelate hide what is under them, and how dark a
+  spotlight leaves the rest. For a redaction or a spotlight the button
+  shows that strength.
 - **Move several shapes at once.** With the hand tool, Shift+click or
   Ctrl+click picks more shapes (or drops a picked one), and dragging any
   of them moves them all as one undo step. Picked shapes are framed; a

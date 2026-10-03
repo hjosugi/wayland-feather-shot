@@ -203,6 +203,28 @@ def install_custom_css() -> None:
     .wfs-popover button.wfs-menu-item:hover {
         background-color: rgba(255, 255, 255, 0.12);
     }
+    .wfs-popover dropdown > button,
+    .wfs-popover fontbutton > button {
+        background-image: none;
+        background-color: #f1f5f9;
+        color: #111827;
+        border: none;
+        border-radius: 8px;
+        box-shadow: none;
+        min-height: 30px;
+        padding: 2px 10px;
+    }
+    .wfs-popover dropdown > button:hover,
+    .wfs-popover fontbutton > button:hover {
+        background-color: #ffffff;
+    }
+    .wfs-popover dropdown > button label,
+    .wfs-popover fontbutton > button label {
+        color: inherit;
+    }
+    .wfs-popover label.wfs-caption {
+        color: rgba(255, 255, 255, 0.78);
+    }
     .wfs-popover button.wfs-emoji {
         font-size: 20px;
         min-width: 36px;

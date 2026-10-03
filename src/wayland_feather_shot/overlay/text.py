@@ -22,6 +22,11 @@ from ..i18n import _
 from ..theme import style_live_bubble, style_live_text
 
 
+JUSTIFICATIONS = {"left": Gtk.Justification.LEFT,
+                  "center": Gtk.Justification.CENTER,
+                  "right": Gtk.Justification.RIGHT}
+
+
 class TextLayer(Gtk.Fixed):
     """Hosts the in-place text editor over the canvas.
 
@@ -115,6 +120,7 @@ class OverlayTextMixin:
             view.set_size_request(int(max(w, font * 3) * scale) + 12,
                                   int(max(h, font * 1.3) * scale) + 6)
             style_live_text(view, self.text_style, rgba, font * scale)
+            view.set_justification(JUSTIFICATIONS[self.text_align])
         tag = buffer.get_tag_table().lookup("wfs-live")
         if tag is None:
             tag = buffer.create_tag("wfs-live")
@@ -154,6 +160,7 @@ class OverlayTextMixin:
                     SpeechBubble((*edit["pos"], w, h), text, self.style))
             else:
                 self.shapes.append(Text(edit["pos"], text, self.style,
+                                        align=self.text_align,
                                         **shape_model.text_style_flags(
                                             self.text_style)))
         self._redraw()
