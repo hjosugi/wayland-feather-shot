@@ -1,0 +1,369 @@
+"""The region overlay's controls.
+
+The toolbar (tools, colour, the size control, text styles, undo/redo), the
+Selection/Screen bar shown before a selection exists, the action bar, the
+toast, and where the bars sit around the selection. A mixin of
+overlay.window.OverlayWindow.
+"""
+
+from __future__ import annotations
+
+import gi
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
+from gi.repository import Gdk, GLib, Gtk  # noqa: E402
+
+from ..editor import shapes as shape_model
+from ..editor.shapes import Style
+from ..i18n import _
+from .layout import layout_controls
+
+OVERLAY_TOOLS = [
+    ("move", "wfs-tool-move-symbolic", "Move / resize selection (V)"),
+    ("hand", "wfs-tool-hand-symbolic", "Grab and move a shape (S)"),
+    ("pen", "wfs-tool-pen-symbolic", "Freehand pen (P)"),
+    ("line", "wfs-tool-line-symbolic", "Straight line (L)"),
+    ("arrow", "wfs-tool-arrow-symbolic", "Arrow (A)"),
+    ("rect", "wfs-tool-rect-symbolic", "Rectangle (R)"),
+    ("ellipse", "wfs-tool-ellipse-symbolic", "Ellipse (E)"),
+    ("highlight", "wfs-tool-highlight-symbolic", "Highlighter (H)"),
+    ("text", "wfs-tool-text-symbolic", "Text — click to place (T)"),
+    ("blur", "wfs-tool-blur-symbolic", "Blur region (B)"),
+    ("pixelate", "wfs-tool-pixelate-symbolic", "Pixelate region (X)"),
+    ("marker", "wfs-tool-marker-symbolic", "Numbered marker — click (M)"),
+]
+
+
+class OverlayControlsMixin:
+    """Builds the bars and reacts to them; see the module docstring."""
+
+    # -- building ----------------------------------------------------------
+
+    def _build_toolbar(self) -> Gtk.Widget:
+        """Tools, colour, the size control, text styles, undo and redo.
+
+        Hidden until there is a selection; _update_control_layout places it
+        next to the selection with margins (the bars are overlay children
+        aligned to the top-left corner).
+        """
+        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        bar.add_css_class("wfs-bar")
+        bar.add_css_class("wfs-toolbar")
+        bar.set_halign(Gtk.Align.START)
+        bar.set_valign(Gtk.Align.START)
+        bar.set_visible(False)
+
+        self._tool_buttons = {}
+        first = None
+        for tid, icon, tip in OVERLAY_TOOLS:
+            btn = Gtk.ToggleButton()
+            btn.set_icon_name(icon)
+            btn.add_css_class("wfs-round")
+            btn.set_tooltip_text(_(tip))
+            btn.update_property([Gtk.AccessibleProperty.LABEL], [_(tip)])
+            if first is None:
+                first = btn
+                btn.set_active(True)
+            else:
+                btn.set_group(first)
+            btn.connect("toggled", self._on_tool_toggled, tid)
+            bar.append(btn)
+            self._tool_buttons[tid] = btn
+
+        color = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog())
+        rgba = Gdk.RGBA()
+        rgba.parse(self.settings.pen_color)
+        color.set_rgba(rgba)
+        color.set_tooltip_text(_("Annotation color"))
+        color.connect("notify::rgba", self._on_color_changed)
+        bar.append(color)
+
+        # One size control that follows the tool: line width for the drawing
+        # tools, text size for the text tool. The icon says which.
+        self._size_icon = Gtk.Image.new_from_icon_name(
+            "wfs-size-width-symbolic")
+        bar.append(self._size_icon)
+        self._size_spin = Gtk.SpinButton.new_with_range(1, 24, 1)
+        self._size_spin.set_value(float(self.settings.pen_width))
+        self._size_spin.set_tooltip_text(_("Line width ([ / ])"))
+        self._size_spin.connect("value-changed", self._on_size_changed)
+        bar.append(self._size_spin)
+
+        # Plain, outlined or boxed text; shown while the text tool is in use.
+        self._text_style_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,
+                                       spacing=4)
+        self._text_style_box.set_visible(False)
+        self._text_style_buttons = {}
+        first = None
+        for name, icon, tip in shape_model.TEXT_STYLE_BUTTONS:
+            btn = Gtk.ToggleButton()
+            btn.set_icon_name(icon)
+            btn.add_css_class("wfs-round")
+            btn.set_tooltip_text(_(tip))
+            btn.update_property([Gtk.AccessibleProperty.LABEL], [_(tip)])
+            if first is None:
+                first = btn
+            else:
+                btn.set_group(first)
+            btn.set_active(name == self.text_style)
+            btn.connect("toggled", self._on_text_style_toggled, name)
+            self._text_style_box.append(btn)
+            self._text_style_buttons[name] = btn
+        bar.append(self._text_style_box)
+
+        undo = Gtk.Button.new_from_icon_name("edit-undo-symbolic")
+        undo.add_css_class("wfs-round")
+        undo.set_tooltip_text(_("Undo (Ctrl+Z)"))
+        undo.connect("clicked", lambda *_: self.undo())
+        redo = Gtk.Button.new_from_icon_name("edit-redo-symbolic")
+        redo.add_css_class("wfs-round")
+        redo.set_tooltip_text(_("Redo (Ctrl+Shift+Z)"))
+        redo.connect("clicked", lambda *_: self.redo())
+        bar.append(undo)
+        bar.append(redo)
+        return bar
+
+    def _build_mode_bar(self) -> Gtk.Widget:
+        """Selection or Screen, as in GNOME's screenshot UI: drag out a
+        region, or click a monitor to take all of it. Only there while
+        nothing is selected."""
+        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        bar.add_css_class("wfs-bar")
+        bar.set_halign(Gtk.Align.CENTER)
+        bar.set_valign(Gtk.Align.END)
+        bar.set_margin_bottom(28)
+        self._mode_buttons = {}
+        first = None
+        for mode, icon, label, tip in (
+                ("selection", "wfs-mode-selection-symbolic", "Selection",
+                 "Drag to select a region"),
+                ("screen", "wfs-mode-screen-symbolic", "Screen",
+                 "Click a screen to take all of it")):
+            content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,
+                              spacing=6)
+            content.append(Gtk.Image.new_from_icon_name(icon))
+            content.append(Gtk.Label(label=_(label)))
+            btn = Gtk.ToggleButton()
+            btn.set_child(content)
+            btn.add_css_class("wfs-round")
+            btn.set_tooltip_text(_(tip))
+            # The only focusable widgets on the empty overlay: with the focus
+            # they would take Enter (a toggle button's own shortcut) away
+            # from "Enter: full screen".
+            btn.set_focusable(False)
+            if first is None:
+                first = btn
+                btn.set_active(True)
+            else:
+                btn.set_group(first)
+            btn.connect("toggled", self._on_mode_toggled, mode)
+            bar.append(btn)
+            self._mode_buttons[mode] = btn
+        return bar
+
+    def _on_mode_toggled(self, button, mode):
+        # Grouped toggle buttons: only the one becoming active matters.
+        if button.get_active():
+            self.capture_mode = mode
+            self.area.queue_draw()
+
+    def _sync_mode_bar(self):
+        """Show the Selection/Screen bar exactly while nothing is selected."""
+        visible = self.sel is None
+        self._mode_bar.set_visible(visible)
+        # Bottom-centred too: the toast goes above the bar while it is there.
+        self._toast.set_margin_bottom(96 if visible else 48)
+
+    def _build_action_bar(self) -> Gtk.Widget:
+        """Copy, save, save as, open folder, editor, pin, cancel.
+
+        Vertical beside the selection; _update_control_layout turns it
+        horizontal when it has to sit under the toolbar instead.
+        """
+        bar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        bar.add_css_class("wfs-bar")
+        bar.set_halign(Gtk.Align.START)
+        bar.set_valign(Gtk.Align.START)
+        bar.set_visible(False)
+
+        def button(icon, tip, cb):
+            b = Gtk.Button.new_from_icon_name(icon)
+            b.add_css_class("wfs-round")
+            b.set_tooltip_text(_(tip))
+            b.connect("clicked", lambda *_: cb())
+            bar.append(b)
+            return b
+
+        # The tooltips are translated inside button().
+        button("edit-copy-symbolic", "Copy to clipboard (Ctrl+C / Enter)",
+               self.copy_and_close)
+        button("document-save-symbolic", "Save (Ctrl+S)", self.save_and_close)
+        button("document-save-as-symbolic", "Save as… (Ctrl+Shift+S)",
+               self.save_as)
+        button("folder-open-symbolic", "Open save folder (Ctrl+O)",
+               self.open_save_folder)
+        if self.open_editor:
+            button("window-new-symbolic", "Open in editor window (W)",
+                   self._to_editor)
+        button("view-pin-symbolic", "Pin to screen (frameless window)",
+               self.pin_to_screen)
+        button("window-close-symbolic", "Cancel (Esc)", self.close)
+        return bar
+
+    def toast(self, message: str, seconds: float = 2.2):
+        """A short message at the bottom of the screen."""
+        self._toast.set_text(message)
+        self._toast.set_visible(True)
+        GLib.timeout_add(int(seconds * 1000),
+                         lambda: (self._toast.set_visible(False), False)[1])
+
+    # -- reacting ----------------------------------------------------------
+
+    def _on_tool_toggled(self, button, tool_id):
+        if button.get_active():
+            # Another tool finishes the text being typed, as a press does;
+            # the size control is about to stop sizing it.
+            self._end_text(commit=True)
+            self.tool = tool_id
+            cursor = "default" if tool_id in ("move", "hand") else "crosshair"
+            self.area.set_cursor(Gdk.Cursor.new_from_name(cursor))
+            self._refresh_size_control()
+
+    def select_tool(self, tool_id):
+        btn = self._tool_buttons.get(tool_id)
+        if btn:
+            btn.set_active(True)
+
+    def _page_width(self, slider_value: float) -> float:
+        """An authored stroke width in image pixels."""
+        longest = max(self.pixbuf.get_width(), self.pixbuf.get_height())
+        return shape_model.page_stroke_width(slider_value, longest)
+
+    def _on_color_changed(self, button, _pspec):
+        rgba = button.get_rgba()
+        self.style = Style(rgba=(rgba.red, rgba.green, rgba.blue, rgba.alpha),
+                           width=self.style.width,
+                           font_size=self.style.font_size)
+        self._style_text_view()
+        self._refocus_text()
+
+    def _refresh_size_control(self):
+        """Point the size spinner at what the current tool sizes."""
+        spin = getattr(self, "_size_spin", None)
+        if spin is None:
+            return
+        kind = "text" if self.tool == "text" else "width"
+        if self._text_style_box.get_visible() != (kind == "text"):
+            self._text_style_box.set_visible(kind == "text")
+            if self._bars_visible:
+                self._update_control_layout()   # the toolbar changed width
+        self._size_kind = kind
+        self._size_syncing = True
+        try:
+            if kind == "text":
+                spin.set_range(8, 96)
+                spin.set_increments(2, 8)
+                spin.set_value(self.style.font_size)
+                spin.set_tooltip_text(_("Text size ([ / ])"))
+                self._size_icon.set_from_icon_name("wfs-tool-text-symbolic")
+            else:
+                spin.set_range(1, 24)
+                spin.set_increments(1, 4)
+                spin.set_value(self._pen_width)
+                spin.set_tooltip_text(_("Line width ([ / ])"))
+                self._size_icon.set_from_icon_name("wfs-size-width-symbolic")
+        finally:
+            self._size_syncing = False
+
+    def _on_size_changed(self, spin):
+        if self._size_syncing:
+            return
+        if self._size_kind == "text":
+            self.style = Style(rgba=self.style.rgba, width=self.style.width,
+                               font_size=float(spin.get_value()))
+            self._style_text_view()
+            self._refocus_text()
+        else:
+            self._pen_width = spin.get_value()
+            self.style = Style(rgba=self.style.rgba,
+                               width=self._page_width(self._pen_width),
+                               font_size=self.style.font_size)
+
+    def _on_text_style_toggled(self, button, name):
+        if button.get_active():
+            self.text_style = name
+            self._style_text_view()
+            self._refocus_text()
+
+    def step_size(self, direction: int) -> None:
+        """Nudge the current size (line width or text size) by one step."""
+        step = self._size_spin.get_adjustment().get_step_increment()
+        self._size_spin.spin(Gtk.SpinType.STEP_FORWARD if direction > 0
+                             else Gtk.SpinType.STEP_BACKWARD, step)
+
+    # -- placing the bars ---------------------------------------------------
+
+    def _set_bars_visible(self, visible: bool):
+        self._bars_visible = visible
+        self._toolbar.set_visible(visible)
+        self._action_bar.set_visible(visible)
+        if not visible:
+            self._bar_rects = ()
+
+    def _update_control_layout(self):
+        """Put the toolbar and action bar around the selection.
+
+        overlay/layout.py decides where (GTK-free, unit-tested); this
+        measures the bars, applies the result as margins and remembers the
+        bars' rectangles so the size label can stay clear of them. Runs
+        whenever the selection, the view or the toolbar's width changes.
+        """
+        if not self.sel:
+            return
+        win_w = max(1, self.area.get_width())
+        win_h = max(1, self.area.get_height())
+        x, y, w, h = self.sel
+        wx0, wy0 = self._to_widget(x, y)
+        wx1, wy1 = self._to_widget(x + w, y + h)
+        def bar_size(bar):
+            return (
+                max(1, bar.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
+                    - bar.get_margin_start() - bar.get_margin_end()),
+                max(1, bar.measure(Gtk.Orientation.VERTICAL, -1)[1]
+                    - bar.get_margin_top() - bar.get_margin_bottom()),
+            )
+
+        toolbar_size = bar_size(self._toolbar)
+        # The action bar's size both ways is measured once: flipping its
+        # orientation to measure is not free, and its buttons never change.
+        if self._action_sizes is None:
+            self._action_bar.set_orientation(Gtk.Orientation.VERTICAL)
+            vertical_size = bar_size(self._action_bar)
+            self._action_bar.set_orientation(Gtk.Orientation.HORIZONTAL)
+            horizontal_size = bar_size(self._action_bar)
+            self._action_sizes = (vertical_size, horizontal_size)
+
+        vertical_size, horizontal_size = self._action_sizes
+        layout = layout_controls(
+            (win_w, win_h), (wx0, wy0, wx1, wy1), toolbar_size,
+            vertical_size, horizontal_size,
+        )
+        self._action_bar.set_orientation(
+            Gtk.Orientation.HORIZONTAL if layout.stacked
+            else Gtk.Orientation.VERTICAL)
+        toolbar_pos, action_pos = layout.toolbar, layout.actions
+        tb_w, tb_h = toolbar_size
+        action_w, action_h = (horizontal_size if layout.stacked
+                              else vertical_size)
+        self._toolbar.set_margin_start(toolbar_pos[0])
+        self._toolbar.set_margin_top(toolbar_pos[1])
+        self._action_bar.set_margin_start(action_pos[0])
+        self._action_bar.set_margin_top(action_pos[1])
+        self._bar_rects = (
+            (toolbar_pos[0], toolbar_pos[1],
+             toolbar_pos[0] + tb_w, toolbar_pos[1] + tb_h),
+            (action_pos[0], action_pos[1],
+             action_pos[0] + action_w, action_pos[1] + action_h),
+        )
+        self.area.queue_draw()

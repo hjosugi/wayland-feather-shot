@@ -83,11 +83,11 @@ def install_custom_css() -> None:
     # These selectors are deliberately specific (.wfs-bar button.wfs-round) and
     # installed at USER priority so the frozen-overlay toolbar keeps a fixed,
     # high-contrast look no matter which GTK theme the user runs. Adwaita-dark
-    # and many third-party themes paint buttons with a background *image*/gradient
-    # and set the label colour on the label node, which silently overrode the old
-    # low-specificity `.wfs-round` rules — leaving white labels on white pills.
-    # Neutralising background-image and pinning both the button and its label
-    # colour makes the styling theme-independent.
+    # and many third-party themes paint buttons with a background
+    # *image*/gradient and set the label colour on the label node, which
+    # silently overrode the old low-specificity `.wfs-round` rules — leaving
+    # white labels on white pills. Neutralising background-image and pinning
+    # both the button and its label colour makes the styling theme-independent.
     css = b"""
     .wfs-bar {
         padding: 5px;
@@ -212,3 +212,41 @@ def install_custom_css() -> None:
     )
     _STYLE_PROVIDERS.append(provider)
     _STYLE_DISPLAY_IDS.add(display_id)
+
+
+_LIVE_TEXT_PROVIDER = None
+
+
+def style_live_text(view, style_name: str, rgba, font_px: float) -> None:
+    """Dress the in-place text view like the text it will become.
+
+    Pango cannot stroke glyphs, so an outlined text's halo is drawn as a ring
+    of CSS text shadows in the same contrasting colour and about the same
+    width as the real one; boxed text gets the same dark box behind it.
+    """
+    global _LIVE_TEXT_PROVIDER
+    display = view.get_display()
+    if _LIVE_TEXT_PROVIDER is None:
+        _LIVE_TEXT_PROVIDER = Gtk.CssProvider()
+        Gtk.StyleContext.add_provider_for_display(
+            display, _LIVE_TEXT_PROVIDER, Gtk.STYLE_PROVIDER_PRIORITY_USER + 1)
+    r, g, b, a = rgba
+    halo = 0 if 0.299 * r + 0.587 * g + 0.114 * b > 0.5 else 255
+    colour = f"rgba({halo}, {halo}, {halo}, {a:.3f})"
+    radius = max(1.0, max(2.0, font_px * 0.12) / 2)
+    d = radius * 0.7
+    rings = ", ".join(f"{dx:.2f}px {dy:.2f}px 0 {colour}" for dx, dy in (
+        (radius, 0), (-radius, 0), (0, radius), (0, -radius),
+        (d, d), (-d, -d), (d, -d), (-d, d)))
+    css = (f".wfs-live-outline {{ text-shadow: {rings}; }}\n"
+           f".wfs-live-box {{ background-color: rgba(0, 0, 0, 0.45);"
+           f" border-radius: {max(2.0, font_px * 0.25):.1f}px; }}\n")
+    if hasattr(_LIVE_TEXT_PROVIDER, "load_from_string"):     # GTK 4.12+
+        _LIVE_TEXT_PROVIDER.load_from_string(css)
+    else:
+        _LIVE_TEXT_PROVIDER.load_from_data(css.encode())
+    for name in ("outline", "box"):
+        if style_name == name:
+            view.add_css_class(f"wfs-live-{name}")
+        else:
+            view.remove_css_class(f"wfs-live-{name}")

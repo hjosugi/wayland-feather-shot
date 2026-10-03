@@ -52,6 +52,22 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.11.0" date="2026-10-03">
+      <description>
+        <p>
+          The region overlay becomes the place to finish a capture. Text is
+          typed right on the capture at its final size, plain by default or
+          outlined or on a dark box. A bar switches between dragging out a
+          region and taking a whole monitor, as in GNOME's screenshot UI. A
+          hand tool moves annotations after they are placed, the overlay
+          zooms with Ctrl+wheel or a pinch, and selection changes can be
+          undone. Only one capture is open at a time, the overlay appears
+          sooner after the key press, and the portal's capture file no longer
+          piles up in the home directory. Arch and CachyOS users can install
+          from a signed pacman repository.
+        </p>
+      </description>
+    </release>
     <release version="0.10.2" date="2026-10-01">
       <description>
         <p>

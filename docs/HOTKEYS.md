@@ -23,8 +23,11 @@ Default keys with either mechanism:
 | Key | Action |
 | --- | --- |
 | Ctrl+PrtSc | region capture (`gui`) |
-| Ctrl+Shift+PrtSc | scrolling capture (`scroll`) |
-| Ctrl+Shift+F12 | full screen (`full`), portal daemon only |
+| Ctrl+Shift+F12 | full screen (`full`) |
+
+Scrolling capture has no key: it is in the app's menu (right-click Feather
+Shot in the dock or app grid, "Scrolling capture"), or run
+`wayland-feather-shot scroll`.
 
 ### GNOME
 
@@ -35,7 +38,8 @@ $ ./scripts/setup-hotkey.sh
 ```
 
 It adds two custom keybindings through `gsettings` (Settings → Keyboard →
-Custom Shortcuts, named "Feather Shot (region)" and "Feather Shot (scroll)")
+Custom Shortcuts, named "Feather Shot (region)" and "Feather Shot (full
+screen)")
 and is safe to rerun. The command is the installed `wayland-feather-shot`, or
 this checkout's `bin/wayland-feather-shot` when nothing is installed. To
 undo, delete the two entries in that settings page.
@@ -50,7 +54,7 @@ Ctrl+Print is free by default, which is why it is the default here.
    login. From a git checkout, install the entries with
    `scripts/install-desktop-entry.sh --autostart`, then log out and in, or
    start it by hand once with `./bin/wayland-feather-shot daemon`.
-2. The portal must know the app id. Feather Shot registers it at start-up
+2. The portal must know the app id. The hotkey daemon registers it at start-up
    through `org.freedesktop.host.portal.Registry` (xdg-desktop-portal 1.18 or
    newer), and the portal accepts that only when a desktop entry named
    `io.github.hjosugi.WaylandFeatherShot.desktop` exists in an applications
@@ -73,7 +77,7 @@ key Ctrl+PrtSc.
 ```ini
 # ~/.config/hypr/hyprland.conf
 bind = CTRL, Print, exec, wayland-feather-shot gui
-bind = CTRL SHIFT, Print, exec, wayland-feather-shot scroll
+bind = CTRL SHIFT, F12, exec, wayland-feather-shot full
 ```
 
 ### Sway and other wlroots compositors
@@ -81,7 +85,7 @@ bind = CTRL SHIFT, Print, exec, wayland-feather-shot scroll
 ```
 # ~/.config/sway/config
 bindsym Ctrl+Print exec wayland-feather-shot gui
-bindsym Ctrl+Shift+Print exec wayland-feather-shot scroll
+bindsym Ctrl+Shift+F12 exec wayland-feather-shot full
 ```
 
 `xdg-desktop-portal-wlr` does not implement the GlobalShortcuts portal, so the
@@ -89,7 +93,7 @@ daemon reports failure there; the native binding is the way.
 
 ### Other desktops
 
-Bind `wayland-feather-shot gui` and `wayland-feather-shot scroll` in your
+Bind `wayland-feather-shot gui` and `wayland-feather-shot full` in your
 desktop's keyboard settings. If the desktop implements the GlobalShortcuts
 portal, `wayland-feather-shot daemon` works too.
 
@@ -136,6 +140,8 @@ $ journalctl --user -b -g "feather-shot daemon"
   no custom shortcut uses the same key.
 - **Ctrl+PrtSc opens the desktop's own screenshot tool** — the desktop has its
   own binding on that key; change or remove it in the keyboard settings.
+- **Pressing the key again while a capture is open does nothing** — on
+  purpose. One capture at a time; finish or close it first.
 - **`gui` works but no key does** — the binding mechanism is the problem, not
   the capture. Re-read the section for your desktop above.
 
@@ -147,25 +153,34 @@ Before a region is selected:
 
 | Key | Action |
 | --- | --- |
-| drag | select a region |
-| Enter | select the whole screen and start editing |
+| drag | select a region (Selection mode, the default) |
+| click | Selection mode: the whole screen; Screen mode: the monitor under the pointer |
+| Enter | the same as a click, and start editing |
 | Esc | quit |
+
+The bar at the bottom switches between Selection and Screen, as in GNOME's
+screenshot UI.
 
 With a region selected:
 
 | Key | Action |
 | --- | --- |
-| V | move / resize the selection |
+| V | move the selection (the resize handles work with every tool) |
+| S | hand: grab a placed shape and move it |
 | P, L, A | pen, line, arrow |
 | R, E, H | rectangle, ellipse, highlighter |
-| T, M | text (click to place), numbered marker (click to place) |
+| T, M | text (click, then type on the canvas: Enter is a newline, Ctrl+Enter finishes, Esc cancels), numbered marker (click to place) |
+| [ , ] | smaller or larger line width, or text size while the text tool is active |
 | B, X | blur, pixelate |
 | W | open the selection in the editor |
 | Enter, Ctrl+C, double-click inside the selection | copy to the clipboard and close |
 | Ctrl+S | save and close |
 | Ctrl+Shift+S | save as… |
 | Ctrl+O | open the save folder |
-| Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y | undo, redo |
+| Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y | undo, redo (annotations and selection changes alike) |
+| Ctrl+wheel, touchpad pinch, Ctrl++, Ctrl+- | zoom in and out around the pointer |
+| Ctrl+1, Ctrl+0 | zoom to the selection, back to the whole screen |
+| wheel, Shift+wheel | pan while zoomed in |
 | Esc | quit without saving |
 
 ### Editor (`full`, `edit`, or W from the overlay)

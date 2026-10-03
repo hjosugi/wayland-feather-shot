@@ -66,7 +66,7 @@ class _BitWriter:
 
 
 def lzw_encode(indices: bytes, min_code_size: int) -> bytes:
-    """GIF variable-width LZW. Returns the raw code stream (not sub-blocked)."""
+    """GIF variable-width LZW; the raw code stream, not yet sub-blocked."""
     clear_code = 1 << min_code_size
     end_code = clear_code + 1
     code_size = min_code_size + 1

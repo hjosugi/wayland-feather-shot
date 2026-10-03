@@ -57,7 +57,7 @@ def linear(t: float) -> float:
 
 @dataclass(frozen=True)
 class StrokeOptions:
-    """Tuning for one stroke.  The defaults are the reference's mouse preset."""
+    """Tuning for one stroke. The defaults are the reference's mouse preset."""
 
     size: float = 16.0
     #: How much speed thins the stroke.  0 gives a constant width.
@@ -186,8 +186,8 @@ def get_stroke_points(points: Sequence[Point],
 
     for i in range(1, len(pts)):
         raw = pts[i]
-        # The last point of a finished stroke lands exactly where the pointer
-        # was, so the stroke ends where the user let go rather than short of it.
+        # The last point of a finished stroke lands exactly where the
+        # pointer was, so the stroke ends where the user let go, not short.
         if options.last and i == len(pts) - 1:
             point = raw
         else:
@@ -207,8 +207,8 @@ def get_stroke_points(points: Sequence[Point],
         ))
         previous = point
 
-    # The first point has no predecessor to point at, so it borrows the second's
-    # direction; otherwise the start cap would face an arbitrary way.
+    # The first point has no predecessor to point at, so it borrows the
+    # second's direction; otherwise the start cap would face an arbitrary way.
     if len(result) > 1:
         result[0].vector = result[1].vector
     return result
@@ -320,8 +320,8 @@ def get_stroke_outline(stroke_points: Sequence[StrokePoint],
 
         candidate_left = _sub(point, offset)
         candidate_right = _add(point, offset)
-        # Skip points that barely moved: they add vertices without adding shape,
-        # and they make the smoothed outline wobble.
+        # Skip points that barely moved: they add vertices without adding
+        # shape, and they make the smoothed outline wobble.
         first_or_last = i <= 1 or i == len(stroke_points) - 1
         if first_or_last or _dist2(previous_left, candidate_left) > min_distance:
             left.append(candidate_left)

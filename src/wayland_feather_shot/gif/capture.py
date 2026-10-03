@@ -1,8 +1,8 @@
 """Short animated-GIF capture of a screen region.
 
-Pick a region on a frozen first shot, then frames are grabbed on a timer via
-the Screenshot portal and encoded to an animated GIF with the pure gifenc
-module (no image-library dependency).
+Pick a region on a frozen first shot; frames are then grabbed on a timer
+through the Screenshot portal and encoded to an animated GIF by encoder.py
+(pure Python, no image-library dependency).
 
 NOTE: the GIF encoder is unit-tested; this GTK/portal capture flow needs a
 real Wayland session to verify (on-device checklist #17).
@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 import time
-from typing import List, Optional
+from typing import List
 
 import gi
 
@@ -21,9 +21,9 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # noqa: E402
 
-from . import gifenc
-from .i18n import _, tr
-from .portal import Portal, cleanup_portal_file
+from . import encoder
+from ..i18n import _, tr
+from ..portal import Portal, cleanup_portal_file
 
 MAX_FRAMES = 60
 FRAME_INTERVAL_MS = 200
@@ -100,6 +100,7 @@ class GifCaptureWindow(Gtk.ApplicationWindow):
 
     def begin(self):
         self._status.set_text(_("Choose the area to record…"))
+        asked = time.time()   # the capture file is ours if written since (#52)
 
         def got(path, error):
             if path is None:
@@ -111,7 +112,7 @@ class GifCaptureWindow(Gtk.ApplicationWindow):
                 self._emit(None, str(e))
                 return
             finally:
-                cleanup_portal_file(path)
+                cleanup_portal_file(path, since=asked)
             self._enter_select()
 
         def first(path, error):
@@ -155,6 +156,8 @@ class GifCaptureWindow(Gtk.ApplicationWindow):
         return True
 
     def _grab(self):
+        asked = time.time()
+
         def got(path, error):
             if path is None:
                 return
@@ -163,10 +166,10 @@ class GifCaptureWindow(Gtk.ApplicationWindow):
             except GLib.Error:
                 return
             finally:
-                cleanup_portal_file(path)
+                cleanup_portal_file(path, since=asked)
             rgb, w, h = pixbuf_crop_to_rgb(shot, self._crop)
             self._size = (w, h)
-            self._frames.append(gifenc.quantize_rgb(rgb, w * h))
+            self._frames.append(encoder.quantize_rgb(rgb, w * h))
             self._status.set_text(tr("Recording…  frames: {n}",
                                      n=len(self._frames)))
 
@@ -180,7 +183,7 @@ class GifCaptureWindow(Gtk.ApplicationWindow):
             self._emit(None, _("Not enough frames captured."))
             return
         w, h = self._size
-        data = gifenc.write_gif(self._frames, w, h, delay_cs=DELAY_CS)
+        data = encoder.write_gif(self._frames, w, h, delay_cs=DELAY_CS)
         name = time.strftime("wfs-%Y-%m-%d_%H-%M-%S.gif")
         path = os.path.join(self.settings.save_dir_path, name)
         try:

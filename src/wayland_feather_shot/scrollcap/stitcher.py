@@ -44,9 +44,9 @@ class Frame:
 @dataclass
 class FrameNote:
     """Per-frame stitching decision, for surfacing warnings in the UI."""
-    index: int          # frame index in the input list (1-based; frame 0 is the base)
+    index: int          # in the input list; 1-based, frame 0 is the base
     action: str         # "kept" | "duplicate" | "dropped"
-    shift: int          # rows of new content appended (0 for duplicate/dropped)
+    shift: int          # rows of new content appended; 0 unless kept
     score: float        # match score (lower = better); -1 when no match found
     reason: str = ""    # human-readable reason for duplicate/dropped
 
@@ -180,12 +180,6 @@ def _match(prev_sigs, cur_sigs, top: int, usable_h: int):
     if best_score is not None and best_score <= MATCH_THRESHOLD:
         return best_s, best_score
     return None
-
-
-def _best_shift(prev_sigs, cur_sigs, top: int, usable_h: int) -> Optional[int]:
-    """Backwards-compatible wrapper returning just the shift (or None)."""
-    m = _match(prev_sigs, cur_sigs, top, usable_h)
-    return None if m is None else m[0]
 
 
 def detect_static_margins(frames: List[Frame], max_frac: float = 0.35) -> tuple:

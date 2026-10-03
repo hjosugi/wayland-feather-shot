@@ -6,7 +6,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from wayland_feather_shot.overlay_layout import (  # noqa: E402
+from wayland_feather_shot.overlay.layout import (  # noqa: E402
     layout_controls, position_bars, position_label,
 )
 
@@ -40,7 +40,8 @@ class OverlayLayoutTests(unittest.TestCase):
             (2560, 1440), (700, 300, 1700, 800),
             self.TOOLBAR, self.VERTICAL_ACTIONS,
         )
-        self.assertEqual(toolbar, (750, 812))
+        # Right-aligned with the selection, where the action bar hangs.
+        self.assertEqual(toolbar, (800, 812))
         self.assertEqual(actions, (1712, 300))
 
     def test_small_selections_do_not_cover_controls_anywhere(self):
@@ -125,7 +126,11 @@ class OverlayLayoutTests(unittest.TestCase):
             toolbar_size, action_row_size,
         )
 
-    def test_wider_selection_does_not_push_actions_away_from_edge(self):
+    def test_wide_toolbar_shifts_left_so_the_actions_hang_from_the_top(self):
+        # The toolbar is wider than the selection; centred, it would run under
+        # the action bar. Rather than lifting the actions above the selection,
+        # the toolbar moves left and the actions keep hanging from the top
+        # edge, so the L looks the same as everywhere else.
         window = (2560, 1440)
         toolbar_size, action_size = (1002, 52), (54, 328)
         selection = (983, 717, 1738, 909)
@@ -133,7 +138,21 @@ class OverlayLayoutTests(unittest.TestCase):
             window, selection, toolbar_size, action_size,
         )
         self.assertEqual(toolbar[1], 921)
-        self.assertEqual(actions, (1750, 581))
+        self.assertEqual(actions, (1750, 717))
+        self.assertLessEqual(toolbar[0] + toolbar_size[0] + 8, actions[0])
+        self.assert_bars_fit_without_overlap(
+            window, toolbar, actions, toolbar_size, action_size,
+        )
+
+    def test_short_wide_selection_keeps_the_actions_hanging_from_the_top(self):
+        window = (2560, 1440)
+        toolbar_size, action_size = (1002, 52), (54, 328)
+        selection = (400, 600, 2100, 700)
+        toolbar, actions = position_bars(
+            window, selection, toolbar_size, action_size,
+        )
+        self.assertEqual(toolbar[1], 712)
+        self.assertEqual(actions, (2112, 600))
         self.assert_bars_fit_without_overlap(
             window, toolbar, actions, toolbar_size, action_size,
         )

@@ -1,6 +1,3 @@
-<!-- i18n: language-switcher -->
-[English](ARCHITECTURE.md) | [日本語](ARCHITECTURE.ja.md)
-
 # Architecture
 
 One GTK 4 / PyGObject / cairo application. Everything screen-related goes
@@ -11,12 +8,23 @@ compositor-private protocols.
 src/wayland_feather_shot/
   cli.py                 argument parsing; import-light so `diagnose` and
                          `--help` work even when GTK is missing
-  app.py                 Gtk.Application, mode dispatch (gui/full/scroll/edit/daemon)
+  app.py                 Gtk.Application, mode dispatch
+                         (gui/full/scroll/edit/daemon)
   portal.py              async portal Request/Response helpers:
                          Screenshot, ScreenCast (+ PipeWire fd), GlobalShortcuts
-  select_overlay.py      Flameshot-style fullscreen overlay: drag selection,
-                         resize handles, floating annotation toolbar
-  editor/                full editor window (canvas, tools, crop)
+  overlay/               Flameshot-style fullscreen region overlay
+    window.py            OverlayWindow: pointer and key input, undo history,
+                         save/copy/pin/editor; assembled from the mixins below
+    view.py              image/widget coordinates, zoom and pan, monitors,
+                         resize handles
+    controls.py          toolbar, Selection/Screen bar, action bar, size and
+                         text style controls, where the bars sit
+    text.py              typing text in place on the canvas
+    draw.py              the per-frame snapshot
+    canvas.py            the snapshot widget and the cached screenshot texture
+    layout.py            GTK-free placement of the bars and the size label
+  editor/                full editor window (canvas, tools, crop, OCR/QR)
+  gif/                   short animated-GIF capture and its pure-Python encoder
   scrollcap/recorder.py  ScreenCast + GStreamer/PipeWire recording,
                          damage-driven frame keeping
   scrollcap/stitcher.py  GUI-free vertical stitcher (pure Python, optional
@@ -33,7 +41,7 @@ src/wayland_feather_shot/
 
 1. `portal.Portal.screenshot()` calls `org.freedesktop.portal.Screenshot`
    (non-interactive first, portal-interactive retry if refused).
-2. `gui` mode freezes that image under `select_overlay.OverlayWindow`;
+2. `gui` mode freezes that image under `overlay.window.OverlayWindow`;
    annotation happens directly on the selection. `full` and `edit` skip the
    overlay and open `editor.window.EditorWindow`.
 3. Saving/copying goes through `save.py`; the portal temp file is deleted.
@@ -48,10 +56,10 @@ tested (`tests/test_stitcher.py`).
 
 ## Shortcuts
 
-`app.run_daemon()` binds Ctrl+PrtSc (region), Ctrl+Shift+PrtSc (scroll) and
-Shift+Ctrl+F12 (full) through `org.freedesktop.portal.GlobalShortcuts` where
-the desktop implements it; `scripts/setup-hotkey.sh` covers the rest with
-native desktop shortcuts.
+`app.run_daemon()` binds Ctrl+PrtSc (region) and Shift+Ctrl+F12 (full)
+through `org.freedesktop.portal.GlobalShortcuts` where the desktop implements
+it; `scripts/setup-hotkey.sh` covers the rest with native desktop shortcuts.
+Scrolling capture is a desktop-entry action, not a key.
 
 ## Design rules
 

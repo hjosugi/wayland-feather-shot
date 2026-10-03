@@ -11,8 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
-from .geometry import Box
-from .shapes import Shape, Style, selection_bounds
+from .shapes import Shape, Style
 
 HISTORY_LIMIT = 100
 
@@ -49,9 +48,6 @@ class Document:
     @property
     def has_selection(self) -> bool:
         return bool(self.selected)
-
-    def selection_page_bounds(self) -> Optional[Box]:
-        return selection_bounds(self.selected_shapes)
 
     # -- history --
 

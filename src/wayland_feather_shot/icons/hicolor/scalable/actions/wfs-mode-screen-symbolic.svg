@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+  <rect class="transparent-fill foreground-stroke" x="2" y="3" width="16" height="11" rx="1.5" fill="none" stroke="#2e3436" stroke-width="1.5"/>
+  <path class="transparent-fill foreground-stroke" d="M10 14v3M6.5 17.5h7" fill="none" stroke="#2e3436" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

@@ -3,7 +3,6 @@
 Run:  python3 tests/test_editor_background.py
 """
 
-import math
 import os
 import sys
 import unittest

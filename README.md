@@ -1,6 +1,3 @@
-<!-- i18n: language-switcher -->
-[English](README.md) | [日本語](README.ja.md)
-
 # wayland-feather-shot
 
 **Flameshot-style screenshot tool, built Wayland-first. 100% local — no
@@ -148,7 +145,9 @@ prints the saved path. Exit codes: `0` ok, `1` error, `2` bad usage,
 
 ### Region capture
 
-1. The screen freezes. Drag to select (click or Enter = full screen).
+1. The screen freezes. Drag to select (click or Enter = full screen), or
+   switch the bar at the bottom to **Screen** and click a monitor to take
+   all of it.
 2. Annotate right on the selection — toolbar keys:
    `V` move/resize, `P` pen, `L` line, `A` arrow, `R` rect, `E` ellipse,
    `H` highlighter, `T` text, `B` blur, `X` pixelate, `M` numbered marker,
@@ -267,7 +266,6 @@ $ ./bin/wayland-feather-shot gui   # run from the repo without installing
 
 Design notes live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and
 [docs/SECURITY.md](docs/SECURITY.md). Known limitations and the roadmap are
-tracked as [GitHub issues](https://github.com/hjosugi/wayland-feather-shot/issues)
-(summary in [ISSUES.md](ISSUES.md)).
+tracked as [GitHub issues](https://github.com/hjosugi/wayland-feather-shot/issues).
 
 License: [MIT](LICENSE)

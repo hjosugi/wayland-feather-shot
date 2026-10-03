@@ -28,7 +28,7 @@ except (ImportError, ValueError):
 HAVE_DISPLAY = HAVE_GTK and Gdk.Display.get_default() is not None
 
 if HAVE_GTK:
-    from wayland_feather_shot.overlay_canvas import (
+    from wayland_feather_shot.overlay.canvas import (
         OverlayScene, color, dim_outside, rect,
     )
     from wayland_feather_shot.editor.shapes import (
@@ -37,7 +37,7 @@ if HAVE_GTK:
     )
 
 if HAVE_DISPLAY:
-    from wayland_feather_shot.select_overlay import OverlayWindow
+    from wayland_feather_shot.overlay.window import OverlayWindow
     from wayland_feather_shot.settings import Settings
 
 
@@ -238,7 +238,6 @@ class OverlayWindowRenderingTests(unittest.TestCase):
         window = OverlayWindow(self.app, base or self.base, Settings())
         self.addCleanup(window.destroy)
         window.area.allocate(240, 180, -1, None)
-        window.mode = "edit"
         return window
 
     def render_window(self, window, device_scale=1):

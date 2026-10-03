@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import secrets
+import time
 from typing import Optional
 from urllib.parse import unquote, urlparse
 
@@ -50,6 +51,12 @@ def uri_to_path(uri: str) -> str:
 # GTK talks to the portal (Settings) on the shared session connection as soon
 # as it initialises, so the helpers below use a private connection and
 # register before anything else touches it.
+#
+# Only the hotkey daemon registers.  A registered app id also makes the
+# Screenshot and ScreenCast portals ask for per-app permission through a
+# dialog they cannot show for a client without a window, and the request is
+# then denied; the capture path therefore keeps the plain, unregistered
+# connection, which the portal treats as a trusted host client as before.
 
 _BUS = {"conn": None, "app_id_error": None}
 
@@ -101,23 +108,43 @@ def app_id_error() -> Optional[str]:
     return _BUS["app_id_error"]
 
 
-def cleanup_portal_file(path: str) -> None:
-    """Delete the temp file the portal handed us — but only if it clearly
-    lives in a temp/cache location, never a real user directory."""
-    for marker in ("/tmp/", "/.cache/", "/run/", "/var/tmp/"):
-        if marker in path:
-            try:
-                os.remove(path)
-            except OSError:
-                pass
+def cleanup_portal_file(path: str, since: Optional[float] = None) -> None:
+    """Delete the temp file the portal handed us.
+
+    A file under a temp or cache directory is always ours to remove.  Some
+    backends write the capture into the Pictures folder or straight into
+    $HOME instead (#52); such a file is removed only when *since* (the time
+    the request was made) shows it appeared for this very request, so a stale
+    path can never cost the user a real picture.
+    """
+    temp = any(marker in path
+               for marker in ("/tmp/", "/.cache/", "/run/", "/var/tmp/"))
+    if not temp:
+        if since is None:
             return
+        try:
+            if os.path.getmtime(path) < since - 1.0:
+                return
+        except OSError:
+            return
+    try:
+        os.remove(path)
+    except OSError:
+        pass
 
 
 class Portal:
     """Thin wrapper implementing the portal Request/Response dance."""
 
-    def __init__(self):
-        self.bus = portal_bus()
+    def __init__(self, registered: bool = False):
+        """*registered*: use the private connection that carries the app id.
+        Needed for GlobalShortcuts, harmful for Screenshot (see above)."""
+        if registered:
+            self.bus = portal_bus()
+        else:
+            self.bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+            if self.bus is None:
+                raise PortalError("Cannot connect to the session D-Bus bus")
         unique = self.bus.get_unique_name() or ":0.0"
         self._sender_token = unique[1:].replace(".", "_")
 
@@ -183,7 +210,7 @@ class Portal:
     # -- Screenshot --------------------------------------------------------
 
     def screenshot(self, callback, interactive: bool = False) -> None:
-        """Take a full-screen screenshot.  callback(path_or_None, error_msg)."""
+        """Take a full-screen screenshot: callback(path_or_None, error_msg)."""
 
         def on_resp(code, results):
             if code == 0 and results.get("uri"):
@@ -200,6 +227,34 @@ class Portal:
             on_resp)
 
 
+class PendingScreenshot:
+    """A screenshot request sent before the GTK stack is loaded.
+
+    The portal needs about a second to take the shot. Sending the request
+    first and importing GTK while the portal works takes most of our own
+    start-up off the time between the key press and the overlay.
+    """
+
+    def __init__(self, portal: Portal, interactive: bool = False):
+        self.started = time.time()
+        self.result = None
+        self._waiter = None
+        portal.screenshot(self._done, interactive=interactive)
+
+    def _done(self, path, error):
+        self.result = (path, error)
+        if self._waiter is not None:
+            waiter, self._waiter = self._waiter, None
+            waiter(path, error)
+
+    def then(self, callback):
+        """Call *callback(path, error)* now if the answer is in, else later."""
+        if self.result is not None:
+            callback(*self.result)
+        else:
+            self._waiter = callback
+
+
 class ScreenCastSession:
     """One ScreenCast portal session: pick a monitor/window, get a PipeWire
     node id + connection fd suitable for `pipewiresrc`."""
@@ -209,7 +264,7 @@ class ScreenCastSession:
         self.session_handle = None
 
     def start(self, callback) -> None:
-        """callback(node_id, pipewire_fd, error_msg) — node_id None on failure."""
+        """callback(node_id, pipewire_fd, error); node_id None on failure."""
 
         def fail(msg):
             self.close()
@@ -226,13 +281,19 @@ class ScreenCastSession:
                 {
                     "types": GLib.Variant("u", 3),      # monitor | window
                     "multiple": GLib.Variant("b", False),
-                    "cursor_mode": GLib.Variant("u", 1),  # hidden (clean stitching)
+                    # Hidden cursor: it would be stitched into the result.
+                    "cursor_mode": GLib.Variant("u", 1),
                 },
                 on_sources)
 
+        # Response code 1 is the user saying no in the portal's dialog: the
+        # capture ends quietly ("cancelled"), not with an error dialog that
+        # tells them to check their portal installation.
         def on_sources(code, results):
+            if code == 1:
+                return fail("cancelled")
             if code != 0:
-                return fail("SelectSources failed or was cancelled")
+                return fail("SelectSources failed")
             self.portal.request(
                 IFACE_SCREENCAST, "Start",
                 lambda opts: GLib.Variant(
@@ -241,8 +302,10 @@ class ScreenCastSession:
                 on_started)
 
         def on_started(code, results):
+            if code == 1:
+                return fail("cancelled")
             if code != 0:
-                return fail("screen cast not authorized (cancelled?)")
+                return fail("screen cast not authorized")
             streams = results.get("streams") or []
             if not streams:
                 return fail("portal returned no streams")
@@ -284,7 +347,6 @@ class GlobalShortcuts:
     SHORTCUTS = [
         ("capture-region", "Capture a screen region (Feather Shot)", "CTRL+Print"),
         ("capture-full", "Capture the full screen (Feather Shot)", "SHIFT+CTRL+F12"),
-        ("capture-scroll", "Scrolling capture (Feather Shot)", "CTRL+SHIFT+Print"),
     ]
 
     def __init__(self, portal: Portal, on_activated, shortcuts=None):

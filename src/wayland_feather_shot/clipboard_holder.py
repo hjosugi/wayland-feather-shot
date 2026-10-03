@@ -36,7 +36,8 @@ def holder_command(png_path: str, python: str | None = None,
     cmd = [python, "-m", "wayland_feather_shot.clipboard_holder", png_path]
     if timeout and timeout > 0:
         cmd += ["--timeout", str(int(timeout))]
-    src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # .../src
+    # .../src, so `python3 -m wayland_feather_shot...` finds the package.
+    src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     env = dict(os.environ)
     existing = env.get("PYTHONPATH")
     env["PYTHONPATH"] = (src_dir if not existing

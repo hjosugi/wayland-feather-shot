@@ -198,6 +198,7 @@ class Editor:
         self.head_start = "none"
         self.head_end = "arrow"
         self.text_align = "left"
+        self.text_style = "plain"
         #: The text shape currently being typed into.  The canvas skips drawing
         #: it, because the editor overlay is showing the same text on top.
         self.editing_sid: Optional[str] = None
@@ -237,7 +238,7 @@ class Editor:
         return None
 
     def arrow_handle_points(self) -> Dict[str, Point]:
-        """The three handle positions of a lone selected arrow, in page space."""
+        """The three handles of a lone selected arrow, in page space."""
         shape = self.lone_arrow
         if shape is None:
             return {}
@@ -691,7 +692,8 @@ class Editor:
     def create_text(self, page_point: Point) -> str:
         """Place an empty text shape and put the caret in it."""
         self._mark_undo()
-        shape = S.Text(page_point, "", self.page_style, align=self.text_align)
+        shape = S.Text(page_point, "", self.page_style, align=self.text_align,
+                       **S.text_style_flags(self.text_style))
         self.doc.add(shape)
         self.doc.select([shape.sid])
         self.start_editing(shape.sid)
@@ -736,6 +738,17 @@ class Editor:
         self._mark_undo()
         self.doc.update_many([replace(s, props=replace(
             s.props, align=align).remeasured()) for s in selected])
+        self._notify()
+
+    def set_text_style(self, name: str) -> None:
+        """Plain, outlined or boxed text, for new text and selected text."""
+        self.text_style = name
+        selected = [s for s in self.doc.selected_shapes if s.kind == "text"]
+        if not selected:
+            return
+        self._mark_undo()
+        self.doc.update_many([replace(s, props=replace(
+            s.props, **S.text_style_flags(name))) for s in selected])
         self._notify()
 
     def add_shape(self, shape: S.Shape) -> None:

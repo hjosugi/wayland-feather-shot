@@ -63,8 +63,8 @@ class PortalConnectionTests(unittest.TestCase):
         bus = FakeBus()
         with fresh_bus_state(), patch.object(
                 portal, "_new_private_connection", return_value=bus) as new:
-            first = portal.Portal()
-            second = portal.Portal()
+            first = portal.Portal(registered=True)
+            second = portal.Portal(registered=True)
         new.assert_called_once()
         self.assertIs(first.bus, bus)
         self.assertIs(second.bus, bus)
@@ -76,8 +76,17 @@ class PortalConnectionTests(unittest.TestCase):
         bus = FakeBus(error="Could not register app ID: App info not found")
         with fresh_bus_state(), patch.object(
                 portal, "_new_private_connection", return_value=bus):
-            portal.Portal()
+            portal.Portal(registered=True)
             self.assertIn("App info not found", portal.app_id_error())
+
+    def test_the_capture_path_stays_on_the_shared_bus_without_an_app_id(self):
+        shared = FakeBus()
+        with fresh_bus_state(), \
+                patch.object(portal, "_new_private_connection") as private, \
+                patch.object(portal.Gio, "bus_get_sync", return_value=shared):
+            self.assertIs(portal.Portal().bus, shared)
+        private.assert_not_called()
+        self.assertEqual(shared.calls, [])
 
     def test_falls_back_to_the_shared_bus_when_a_private_one_fails(self):
         shared = FakeBus()
@@ -85,7 +94,7 @@ class PortalConnectionTests(unittest.TestCase):
                 patch.object(portal, "_new_private_connection",
                              side_effect=GLib.Error("no address")), \
                 patch.object(portal.Gio, "bus_get_sync", return_value=shared):
-            self.assertIs(portal.Portal().bus, shared)
+            self.assertIs(portal.Portal(registered=True).bus, shared)
 
 
 if __name__ == "__main__":

@@ -155,6 +155,27 @@ def main(argv=None) -> int:
 
     _validate(parser, args)
 
+    if args.mode in ("gui", "full") and not args.delay:
+        # Take the capture lock and send the portal request before the GTK
+        # stack loads: the portal takes about a second, and GTK, the editor
+        # and the overlay load while it works.
+        try:
+            from .lifecycle import acquire_capture_lock
+            from .portal import PendingScreenshot, Portal, PortalError
+        except ImportError:
+            pass  # reported below, with the full stack
+        else:
+            lock = acquire_capture_lock()
+            if lock is None:
+                print("wayland-feather-shot: a capture is already open; "
+                      "finish or close it first", file=sys.stderr)
+                return EXIT_ERROR
+            args.capture_lock = lock
+            try:
+                args.pending_shot = PendingScreenshot(Portal())
+            except PortalError:
+                args.pending_shot = None
+
     try:
         from .app import run
     except ImportError as e:

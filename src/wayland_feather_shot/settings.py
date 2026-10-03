@@ -1,4 +1,4 @@
-"""User settings, stored as JSON at ~/.config/wayland-feather-shot/config.json."""
+"""User settings: JSON in ~/.config/wayland-feather-shot/config.json."""
 
 from __future__ import annotations
 
@@ -84,9 +84,6 @@ class Settings:
             return False
         self._data[key] = value
         return True
-
-    def as_dict(self) -> dict:
-        return dict(self._data)
 
     @property
     def save_dir_path(self) -> str:

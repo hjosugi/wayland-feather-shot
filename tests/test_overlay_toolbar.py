@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 try:
-    import cairo  # noqa: F401 - select_overlay needs pycairo
+    import cairo  # noqa: F401 - the overlay needs pycairo
     import gi
     gi.require_version("Gtk", "4.0")
     gi.require_version("Gdk", "4.0")
@@ -25,8 +25,9 @@ else:
 if HAS_DISPLAY:
     import wayland_feather_shot
     from wayland_feather_shot.app import FeatherShotApp
+    from wayland_feather_shot.editor.shapes import TEXT_STYLE_BUTTONS
     from wayland_feather_shot.i18n import _
-    from wayland_feather_shot.select_overlay import OVERLAY_TOOLS, OverlayWindow
+    from wayland_feather_shot.overlay.window import OVERLAY_TOOLS, OverlayWindow
     from wayland_feather_shot.settings import Settings
 
 
@@ -72,6 +73,9 @@ class OverlayToolbarTests(unittest.TestCase):
                 self.assertIsNotNone(icon_name)
                 self.assertTrue(theme.has_icon(icon_name), icon_name)
                 self.assertEqual(button.get_tooltip_text(), _(tooltip))
+        for name, icon, _tip in TEXT_STYLE_BUTTONS:
+            with self.subTest(text_style=name):
+                self.assertTrue(theme.has_icon(icon), icon)
 
     def test_icon_buttons_keep_exclusive_tool_selection(self):
         buttons = self.window._tool_buttons

@@ -2,6 +2,108 @@
 
 ## Unreleased
 
+## 0.11.0 (2026-10-03)
+
+- **Faster from key press to overlay.** The portal needs about a second to
+  take the screenshot; the request is now sent before the GTK stack loads,
+  so our own start-up overlaps with the portal's work instead of preceding
+  it. The editor window's modules load only when the editor opens, and the
+  screenshot reaches the overlay without being copied twice on the way
+  (about 40 ms on a 4K screen). Blurred
+  regions are remembered per image, so adding or undoing annotations after a
+  blur no longer redoes the blur (tens of milliseconds each without numpy),
+  and a blur being dragged out is shown as a footprint until release.
+
+- **Text is typed on the canvas.** The overlay's text tool opened a popover,
+  so the words were visible but their size on the capture was anyone's guess.
+  Clicking with the text tool now puts a caret on the canvas and the text
+  appears at its final size, weight and colour as it is typed, following zoom.
+  Enter is a newline, Ctrl+Enter finishes, Esc cancels, and a press anywhere
+  else finishes too, as in the editor window.
+- **Selection or Screen, as in GNOME's screenshot UI.** While nothing is
+  selected, a bar at the bottom of the region overlay switches between
+  dragging out a region (as before) and taking a whole monitor: in Screen
+  mode the monitor under the pointer lights up and a click selects all of
+  it, ready to annotate.
+- **Text styles, and plain text by default.** Every text used to get a
+  contrasting outline. The text tool now offers plain letters (the new
+  default), outlined letters, or letters on a dark box, in the overlay's
+  toolbar and next to the alignment buttons in the editor, where the choice
+  also restyles the selected text and is remembered. The text being typed
+  shows the style it will have.
+- **One size control that says what it sizes.** The spinner in the toolbar
+  now carries an icon and follows the tool: line width for the drawing tools,
+  text size for the text tool. `[` and `]` step it from the keyboard.
+
+- **Zoom in the region overlay.** Precise work on a small selection meant
+  squinting at it at screen size. Ctrl+wheel, a touchpad pinch, Ctrl++ and
+  Ctrl+- zoom around the pointer, Ctrl+1 fills the window with the selection,
+  Ctrl+0 goes back to the whole screen, and the wheel pans while zoomed in.
+  Everything else — handles, tools, the hand, the controls — follows the
+  zoomed view.
+- **Resizing past the opposite edge flips the selection** instead of
+  pinning it to a one-pixel sliver.
+- **The action bar hangs from the selection's top edge everywhere.** For a
+  short, wide selection it used to share the selection's bottom edge and
+  stick up above it, alone. Now it reaches down from the top-right corner
+  like everywhere else, and the toolbar's right end lines up with the
+  selection's right edge (as in Lightshot and Snipaste), so the two bars
+  always meet at the selection's corner and a toolbar wider than the
+  selection sticks out on one side only.
+
+- **One capture at a time.** Pressing the hotkey while the overlay was already
+  up stacked another fullscreen capture on top of it, and another, each one a
+  screenshot of the previous. A capture now holds a lock in the runtime
+  directory for as long as its overlay (or scroll or GIF capture window) is
+  open; a second launch says so and exits with status 1. An editor window does
+  not hold it, so capturing again with one open still works. The lock is an
+  flock, so a crash cannot leave it behind.
+- **Fixed: the portal's capture file piled up in $HOME** (#52). Some portal
+  backends write the capture into the Pictures folder or straight into the
+  home directory rather than a temp directory, and the cleanup only ever
+  removed files from temp locations. A file elsewhere is now removed too, but
+  only when its timestamp shows it was written for this very request, so a
+  stale path can never delete a real picture. Thanks to
+  [@fenix0xf](https://github.com/fenix0xf) for the report.
+- **Moving a blur with the hand no longer stutters.** The dragged blur used
+  to be re-rendered from the screenshot on every frame; while it moves it is
+  shown as a translucent footprint instead, and the real blur is rendered once
+  on release.
+
+- **A hand tool in the region overlay** (S). Until now an annotation was
+  fixed where it landed; moving a rectangle or a text by a few pixels meant
+  undoing it and drawing it again. The hand grabs the topmost shape under the
+  pointer, moves it live, and records the move in the undo history. While it
+  moves, the shape is drawn as a live preview instead of through the cached
+  annotation composite, so dragging stays as cheap as drawing a new shape.
+- **Fixed: the hotkey daemon left a zombie process per key press.** Each
+  capture it launched was never waited for; it is reaped now.
+
+- **The region overlay has no edit mode any more.** The "edit mode" was only
+  a flag that meant "a selection exists", and it got in the way: the resize
+  handles already worked with every tool but the cursor only said so with the
+  move tool, and changing the selection could not be undone. Now everything
+  follows from the selection itself. Handles show their resize cursor with
+  any tool, and selection changes (a new selection, a move, a resize, the
+  first selection itself) go into the same undo history as the annotations,
+  so Ctrl+Z brings the previous selection back and undoing past the first one
+  returns to the empty overlay.
+
+- **The documentation is in English only.** The Japanese copies of the
+  README and the docs are gone; the app itself still speaks English and
+  Japanese.
+
+- **Scrolling capture moves from a key to the app's menu.** Only the two
+  everyday captures have keys now: Ctrl+PrtSc for a region and Ctrl+Shift+F12
+  for the full screen, with the portal daemon and with the native bindings
+  `scripts/setup-hotkey.sh` makes. Scrolling capture is in the app's menu
+  (right-click Feather Shot in the dock or app grid). A scroll binding the
+  helper made earlier stays until you delete it in Settings → Keyboard.
+- **Fixed: declining the screen-share dialog showed an error.** Cancelling
+  the portal's dialog at the start of a scrolling capture now just ends it,
+  instead of saying the screen could not be captured and to check the portal
+  installation.
+
 - **Signed pacman repository for Arch / CachyOS.** The AUR is not accepting
   new accounts, so the package is now also served as a pacman repository from
   the assets of the `pacman-repo` GitHub release: trust the signing key, add
@@ -10,7 +112,7 @@
   builds and signs the package and database, and the release workflow
   publishes them when `PACMAN_REPO_GPG_PRIVATE_KEY` is set.
 
-- **Hotkey guide.** `docs/HOTKEYS.md` (English and Japanese) explains how to
+- **Hotkey guide.** `docs/HOTKEYS.md` explains how to
   bind the capture keys on each desktop, what the portal daemon needs, and
   lists every in-app key. A shared `.vscode/` adds launch configurations for
   debugging.
@@ -20,15 +122,18 @@
   can name, and a process running outside a sandbox has no app id unless it
   says so; xdg-desktop-portal does not derive one from the launching desktop
   entry or the systemd scope, so the autostart entry failed the same way as a
-  terminal run. The portal helpers now open a private D-Bus connection and
-  register the app id through `org.freedesktop.host.portal.Registry` before
-  any other portal call (GTK's own settings lookup on the shared connection
-  used to get there first). The portal insists that a desktop entry named
-  after the app id exists, which a package install provides; for a git
-  checkout, the new `scripts/install-desktop-entry.sh` installs the entries
-  with `Exec=` pointing at the checkout (`--autostart` adds the daemon at
-  login). The daemon's failure message now says exactly that instead of
-  pointing at the autostart entry.
+  terminal run. The daemon now opens a private D-Bus connection and registers
+  the app id through `org.freedesktop.host.portal.Registry` before any other
+  portal call (GTK's own settings lookup on the shared connection used to get
+  there first). Only the daemon registers: a registered app id makes the
+  Screenshot portal ask for per-app permission through a dialog it cannot show
+  for a windowless client, which would turn every capture into the interactive
+  dialog, so the capture path keeps the plain connection. The portal insists
+  that a desktop entry named after the app id exists, which a package install
+  provides; for a git checkout, the new `scripts/install-desktop-entry.sh`
+  installs the entries with `Exec=` pointing at the checkout (`--autostart`
+  adds the daemon at login). The daemon's failure message now says exactly
+  that instead of pointing at the autostart entry.
 
 ## 0.10.2 (2026-10-01)
 

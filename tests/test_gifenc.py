@@ -10,7 +10,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from wayland_feather_shot import gifenc  # noqa: E402
+from wayland_feather_shot.gif import encoder as gifenc  # noqa: E402
 
 
 def lzw_decode(data: bytes, min_code_size: int) -> bytes:

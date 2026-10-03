@@ -14,8 +14,8 @@ identical whatever it was captured on.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field, replace
-from typing import List, Optional, Sequence, Tuple
+from dataclasses import dataclass, field
+from typing import List, Optional, Tuple
 
 Size = Tuple[float, float]
 Rect = Tuple[float, float, float, float]
@@ -155,10 +155,6 @@ class Layout:
     card: Rect
     corner_radius: float
     border_width: float
-
-    @property
-    def card_center(self) -> Tuple[float, float]:
-        return (self.card[0] + self.card[2] / 2, self.card[1] + self.card[3] / 2)
 
 
 def _align_offsets(alignment: str, free_x: float,

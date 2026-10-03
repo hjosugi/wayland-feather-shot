@@ -96,6 +96,18 @@ msgstr "絵文字"
 msgid "Move / resize selection (V)"
 msgstr "選択範囲の移動・リサイズ (V)"
 
+msgid "Line width ([ / ])"
+msgstr "線の太さ ([ / ])"
+
+msgid "Text size ([ / ])"
+msgstr "文字サイズ ([ / ])"
+
+msgid "Ctrl+Enter to finish, Esc to cancel"
+msgstr "Ctrl+Enter で確定、Esc で取り消し"
+
+msgid "Grab and move a shape (S)"
+msgstr "図形をつかんで移動 (S)"
+
 msgid "Freehand pen (P)"
 msgstr "フリーハンドペン (P)"
 
@@ -264,6 +276,15 @@ msgstr "中央揃え"
 msgid "Align right"
 msgstr "右揃え"
 
+msgid "Plain text"
+msgstr "ふちなしの文字"
+
+msgid "Outlined text"
+msgstr "ふち付きの文字"
+
+msgid "Text on a dark box"
+msgstr "暗い帯の上の文字"
+
 msgid "Arrowheads"
 msgstr "矢印の先端"
 
@@ -398,6 +419,21 @@ msgstr "テキストのフォント"
 
 msgid "Drag: select area   •   Click / Enter: full screen   •   Esc: cancel"
 msgstr "ドラッグ: 範囲選択   •   クリック / Enter: 全画面   •   Esc: キャンセル"
+
+msgid "Click a screen to take it   •   Esc: cancel"
+msgstr "画面をクリックで全体を選択   •   Esc: キャンセル"
+
+msgid "Selection"
+msgstr "範囲"
+
+msgid "Screen"
+msgstr "画面"
+
+msgid "Drag to select a region"
+msgstr "ドラッグで範囲を選択"
+
+msgid "Click a screen to take all of it"
+msgstr "クリックした画面の全体を選択"
 
 msgid "Discard this screenshot?"
 msgstr "このスクリーンショットを破棄しますか?"

@@ -514,6 +514,10 @@ class EditorCanvas(Gtk.DrawingArea):
         self.editor.set_text_align(align)
         self.queue_draw()
 
+    def set_text_style(self, name: str) -> None:
+        self.editor.set_text_style(name)
+        self.queue_draw()
+
     def set_arrowhead(self, end: str, name: str) -> None:
         self.editor.set_arrowhead(end, name)
         self.queue_draw()
@@ -574,10 +578,6 @@ class EditorCanvas(Gtk.DrawingArea):
     def is_cropping(self) -> bool:
         return self._crop_mode
 
-    @property
-    def crop_aspect(self) -> str:
-        return self._crop_aspect
-
     def begin_crop(self) -> None:
         """Enter crop mode.
 
@@ -609,7 +609,7 @@ class EditorCanvas(Gtk.DrawingArea):
         self.queue_draw()
 
     def apply_crop(self) -> bool:
-        """Commit the crop rect: re-derive the view and remap the annotations."""
+        """Commit the crop: re-derive the view and remap the annotations."""
         if not self._crop_mode:
             return False
         rect = self._crop_rect
@@ -794,7 +794,6 @@ class EditorCanvas(Gtk.DrawingArea):
         cr.stroke()
         cr.set_dash([])
 
-        multi = len(self.editor.doc.selected) > 1
         for handle, (u, v) in HANDLE_UNIT.items():
             x, y = self.editor.viewport.to_widget(frame.unit_point(u, v))
             cr.set_source_rgb(1, 1, 1)

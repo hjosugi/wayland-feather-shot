@@ -117,9 +117,10 @@ def head_path(style: str, tip: Point, angle: float,
               stroke_width: float) -> Tuple[str, List[Point]]:
     """The head's outline and how to paint it.
 
-    Returns ``(kind, points)`` where kind is ``"fill"``, ``"outline"`` (a closed
-    path that is stroked) or ``"stroke"`` (an open one); *angle* points the way
-    the arrow is travelling, so the head sits behind the tip.
+    Returns ``(kind, points)``, where kind is ``"fill"``, ``"outline"``
+    (a closed path that is stroked) or ``"stroke"`` (an open one). *angle*
+    points the way the arrow is travelling, so the head sits behind the
+    tip.
     """
     if style == "none":
         return ("fill", [])
@@ -139,7 +140,7 @@ def head_path(style: str, tip: Point, angle: float,
 
     if style == "chevron":
         spread = size * 0.5
-        # An open V: back out to one side, in to the tip, back out to the other.
+        # An open V: out to one side, in to the tip, out to the other.
         return ("stroke", [back(size * 0.72, -spread), tip,
                            back(size * 0.72, spread)])
 
@@ -277,7 +278,8 @@ def direction_at(start: Point, end: Point, bend: float,
 
     centre, _radius, start_angle, sweep = resolved
     angle = start_angle + (sweep if at_end else 0.0)
-    # The tangent is perpendicular to the radius, turned the way the arc sweeps.
+    # The tangent is perpendicular to the radius, turned the way the
+    # arc sweeps.
     tangent = angle + (math.pi / 2 if sweep > 0 else -math.pi / 2)
     return tangent if at_end else tangent + math.pi
 

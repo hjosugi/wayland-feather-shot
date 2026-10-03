@@ -35,7 +35,8 @@ class PresetFileTests(unittest.TestCase):
                                   width=8.0, font_size=31.0,
                                   font_family="Cantarell",
                                   redaction_density=0.9, spotlight_scrim=0.3,
-                                  text_align="center", head_start="dot",
+                                  text_align="center", text_style="box",
+                                  head_start="dot",
                                   head_end="diamond")
         self.assertTrue(P.save(original, self.path))
         self.assertEqual(P.load(self.path), original)
@@ -84,6 +85,13 @@ class ToleranceTests(unittest.TestCase):
         preset = self._decoded({"width": "wide", "text_align": "center"})
         self.assertEqual(preset.width, P.EditorPreset().width)
         self.assertEqual(preset.text_align, "center")
+
+    def test_text_style_is_plain_unless_a_known_one_was_saved(self):
+        self.assertEqual(P.EditorPreset().text_style, "plain")
+        self.assertEqual(self._decoded({"text_style": "outline"}).text_style,
+                         "outline")
+        self.assertEqual(self._decoded({"text_style": "neon"}).text_style,
+                         "plain")
 
     def test_an_unknown_tool_falls_back(self):
         self.assertEqual(self._decoded({"tool": "teleport"}).tool, "pen")

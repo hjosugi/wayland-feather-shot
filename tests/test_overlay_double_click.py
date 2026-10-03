@@ -21,7 +21,7 @@ else:
 
 if HAVE_GTK_DISPLAY:
     from wayland_feather_shot import save as save_mod  # noqa: E402
-    from wayland_feather_shot.select_overlay import OverlayWindow  # noqa: E402
+    from wayland_feather_shot.overlay.window import OverlayWindow  # noqa: E402
     from wayland_feather_shot.settings import Settings  # noqa: E402
 
 
@@ -41,7 +41,7 @@ class OverlayDoubleClickTests(unittest.TestCase):
         self.window.area.allocate(400, 300, -1, None)
         self.window.set_visible(True)
         self.window.sel = (50, 50, 200, 150)
-        self.window._enter_edit_mode()
+        self.window._selection_made()
         controllers = self.window.area.observe_controllers()
         self.click = next(
             controllers.get_item(i)

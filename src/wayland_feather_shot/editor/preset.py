@@ -18,8 +18,8 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import asdict, dataclass, fields
-from typing import Any, Dict, Optional, Tuple
+from dataclasses import asdict, dataclass
+from typing import Any, Dict, Tuple
 
 from ..settings import CONFIG_DIR
 
@@ -43,6 +43,7 @@ class EditorPreset:
     redaction_density: float = 0.55
     spotlight_scrim: float = 0.55
     text_align: str = "left"
+    text_style: str = "plain"
     head_start: str = "none"
     head_end: str = "arrow"
 
@@ -69,6 +70,7 @@ def _decode(data: Any) -> EditorPreset:
         return preset
 
     from . import arrows
+    from . import shapes as S
 
     if data.get("tool") in TOOLS:
         # Never come back in a modal tool: reopening straight into crop mode
@@ -94,6 +96,8 @@ def _decode(data: Any) -> EditorPreset:
         preset.font_family = data["font_family"]
     if data.get("text_align") in ALIGNMENTS:
         preset.text_align = data["text_align"]
+    if data.get("text_style") in S.TEXT_STYLES:
+        preset.text_style = data["text_style"]
     for key in ("head_start", "head_end"):
         if data.get(key) in arrows.HEADS:
             setattr(preset, key, data[key])
@@ -134,6 +138,3 @@ def from_settings(settings) -> EditorPreset:
                                 preset.font_size)
     return preset
 
-
-def field_names() -> Tuple[str, ...]:
-    return tuple(f.name for f in fields(EditorPreset))

@@ -14,6 +14,7 @@ stitching core it feeds is unit-tested (tests/test_stitcher.py).
 
 from __future__ import annotations
 
+import time
 from typing import List, Optional
 
 import gi
@@ -96,6 +97,7 @@ class ManualScrollWindow(Gtk.ApplicationWindow):
 
     def begin(self):
         self._status.set_text(_("Choose the area to capture…"))
+        asked = time.time()   # the capture file is ours if written since (#52)
 
         def got(path, error):
             if path is None:
@@ -111,7 +113,7 @@ class ManualScrollWindow(Gtk.ApplicationWindow):
                 self._emit(None, str(e))
                 return
             finally:
-                cleanup_portal_file(path)
+                cleanup_portal_file(path, since=asked)
             self._enter_select()
 
         def got_interactive(path, error):
@@ -170,6 +172,7 @@ class ManualScrollWindow(Gtk.ApplicationWindow):
     def _grab_frame(self, *_a):
         if self._crop is None:
             return
+        asked = time.time()
 
         def got(path, error):
             if path is None:
@@ -183,7 +186,7 @@ class ManualScrollWindow(Gtk.ApplicationWindow):
             except GLib.Error:
                 return
             finally:
-                cleanup_portal_file(path)
+                cleanup_portal_file(path, since=asked)
             x, y, w, h = self._crop
             bw, bh = shot.get_width(), shot.get_height()
             x = max(0, min(x, bw - 1))

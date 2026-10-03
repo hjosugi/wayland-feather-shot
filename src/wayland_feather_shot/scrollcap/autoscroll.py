@@ -1,11 +1,12 @@
 """Auto-scroll control logic (issue #3).
 
-Pure, GTK-free decision logic for the optional RemoteDesktop-portal auto-scroll,
-so the "when do we scroll / when do we stop" policy can be reasoned about and
-unit-tested without a Wayland session.  The GTK side
-(:class:`~wayland_feather_shot.scrollcap.recorder.ScrollCaptureWindow`) is a thin
-adapter: on each timer tick it asks the controller what to do and either injects
-one scroll event through the RemoteDesktop portal or stops and stitches.
+Pure, GTK-free decision logic for the optional RemoteDesktop-portal
+auto-scroll, so the "when do we scroll / when do we stop" policy can be
+reasoned about and unit-tested without a Wayland session. The GTK side
+(:class:`~wayland_feather_shot.scrollcap.recorder.ScrollCaptureWindow`)
+is a thin adapter: on each timer tick it asks the controller what to do
+and either injects one scroll event through the RemoteDesktop portal or
+stops and stitches.
 
 Nothing here imports gi, so it is safe to pull into the import-light
 ``diagnose`` command as well.
@@ -23,7 +24,7 @@ DEFAULT_STALL_LIMIT = 3
 
 
 def clamp_delta(delta) -> float:
-    """A sane, strictly-positive per-step scroll distance (portal axis units)."""
+    """Per-step scroll distance, strictly positive (portal axis units)."""
     try:
         value = float(delta)
     except (TypeError, ValueError):
@@ -103,9 +104,10 @@ class AutoScrollController:
 def auto_scroll_availability(remote_desktop: bool, gstreamer: bool) -> tuple:
     """Whether ``scroll --auto`` can actually drive scrolling on this machine.
 
-    Auto-scroll needs *both* the RemoteDesktop portal (to inject scroll input)
-    and the GStreamer/PipeWire recorder — the GStreamer-free repeated-screenshot
-    fallback cannot be auto-driven.  Returns ``(usable, human_readable_reason)``.
+    Auto-scroll needs *both* the RemoteDesktop portal (to inject scroll
+    input) and the GStreamer/PipeWire recorder; the GStreamer-free
+    repeated-screenshot fallback cannot be auto-driven. Returns
+    ``(usable, human_readable_reason)``.
     """
     if remote_desktop and gstreamer:
         return True, "available (RemoteDesktop portal + GStreamer/PipeWire)"

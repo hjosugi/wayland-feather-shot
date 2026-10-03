@@ -82,6 +82,10 @@ JA = {
     "Step": "手順", "Bubble": "吹出", "Emoji": "絵文字",
     # tool tooltips
     "Move / resize selection (V)": "選択範囲の移動・リサイズ (V)",
+    "Line width ([ / ])": "線の太さ ([ / ])",
+    "Text size ([ / ])": "文字サイズ ([ / ])",
+    "Ctrl+Enter to finish, Esc to cancel": "Ctrl+Enter で確定、Esc で取り消し",
+    "Grab and move a shape (S)": "図形をつかんで移動 (S)",
     "Freehand pen (P)": "フリーハンドペン (P)",
     "Straight line (L)": "直線 (L)",
     "Arrow (A)": "矢印 (A)",
@@ -141,6 +145,9 @@ JA = {
     "Align left": "左揃え",
     "Align centre": "中央揃え",
     "Align right": "右揃え",
+    "Plain text": "ふちなしの文字",
+    "Outlined text": "ふち付きの文字",
+    "Text on a dark box": "暗い帯の上の文字",
     "Arrowheads": "矢印の先端",
     "Start": "始点",
     "End": "終点",
@@ -196,6 +203,12 @@ JA = {
     # selector hint
     "Drag: select area   •   Click / Enter: full screen   •   Esc: cancel":
         "ドラッグ: 範囲選択   •   クリック / Enter: 全画面   •   Esc: キャンセル",
+    "Click a screen to take it   •   Esc: cancel":
+        "画面をクリックで全体を選択   •   Esc: キャンセル",
+    "Selection": "範囲",
+    "Screen": "画面",
+    "Drag to select a region": "ドラッグで範囲を選択",
+    "Click a screen to take all of it": "クリックした画面の全体を選択",
     # close confirmation
     "Discard this screenshot?": "このスクリーンショットを破棄しますか?",
     "It has not been saved or copied.": "まだ保存もコピーもされていません。",

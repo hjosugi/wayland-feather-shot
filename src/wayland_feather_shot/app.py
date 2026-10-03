@@ -13,20 +13,20 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import time
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
+from gi.repository import GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 
 from . import APP_ID
-from .editor.window import EditorWindow
 from .i18n import _, tr
-from .lifecycle import release_on_window_removed
+from .lifecycle import acquire_capture_lock, release_on_window_removed  # noqa: F401
 from .portal import Portal, PortalError, cleanup_portal_file
-from .select_overlay import OverlayWindow
+from .overlay.window import OverlayWindow
 from .settings import Settings
 from .theme import apply_system_color_scheme, register_bundled_icons
 
@@ -55,7 +55,8 @@ def _die_dialog(app, message: str):
 class FeatherShotApp(Gtk.Application):
     def __init__(self, mode: str, delay: float, file: str | None = None,
                  region=None, output: str | None = None,
-                 no_editor: bool = False):
+                 no_editor: bool = False, pending_shot=None,
+                 capture_lock=None):
         super().__init__(application_id=APP_ID,
                          flags=Gio.ApplicationFlags.NON_UNIQUE)
         self.mode = mode
@@ -68,6 +69,9 @@ class FeatherShotApp(Gtk.Application):
         self.settings = Settings()
         self.portal = None
         self.exit_code = 0
+        self._capture_started = 0.0
+        self._capture_lock = capture_lock   # taken early by cli, or below
+        self._pending_shot = pending_shot    # a portal request cli sent early
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
@@ -90,6 +94,14 @@ class FeatherShotApp(Gtk.Application):
             from . import prefs
             win = prefs.open_settings(self, self.settings)
             release_on_window_removed(self, win)
+            return
+        if self._capture_lock is None:
+            self._capture_lock = acquire_capture_lock()
+        if self._capture_lock is None:
+            print("wayland-feather-shot: a capture is already open; finish "
+                  "or close it first", file=sys.stderr)
+            self.exit_code = 1
+            self.release()
             return
         try:
             self.portal = Portal()
@@ -133,7 +145,7 @@ class FeatherShotApp(Gtk.Application):
                     return
                 # Some portals refuse non-interactive shots; ask again with
                 # the portal's own dialog before giving up.
-                self.portal.screenshot(on_interactive_shot, interactive=True)
+                self._request_screenshot(on_interactive_shot, interactive=True)
                 return
             self._open_capture(path, overlay)
 
@@ -147,9 +159,39 @@ class FeatherShotApp(Gtk.Application):
             self._open_capture(path, overlay)
 
         if force_interactive:
-            self.portal.screenshot(on_interactive_shot, interactive=True)
+            self._request_screenshot(on_interactive_shot, interactive=True)
+        elif self._pending_shot is not None:
+            # cli sent the request before GTK was loaded; pick up its answer.
+            pending, self._pending_shot = self._pending_shot, None
+            self._capture_started = pending.started
+            pending.then(on_shot)
         else:
-            self.portal.screenshot(on_shot, interactive=False)
+            self._request_screenshot(on_shot, interactive=False)
+
+    def _request_screenshot(self, callback, interactive: bool):
+        self._capture_started = time.time()
+        self.portal.screenshot(callback, interactive=interactive)
+
+    def _release_capture_lock(self):
+        lock, self._capture_lock = self._capture_lock, None
+        if lock is not None:
+            lock.close()  # closing the descriptor drops the flock
+
+    def _unlock_when_removed(self, window):
+        """The next capture may start once *window* (the overlay, or a
+        scroll or GIF capture window) is gone.
+
+        An editor window does not hold the lock: it is not a capture, and
+        capturing again with one open is fine.
+        """
+
+        def on_removed(_app, removed):
+            if removed is not window:
+                return
+            self.disconnect(handler_id)
+            self._release_capture_lock()
+
+        handler_id = self.connect("window-removed", on_removed)
 
     def _crop(self, pixbuf):
         """Crop *pixbuf* to self.region, clamped to the image bounds."""
@@ -170,7 +212,7 @@ class FeatherShotApp(Gtk.Application):
             self._fail(tr("Could not read the captured image: {error}", error=e))
             return
         finally:
-            cleanup_portal_file(path)
+            cleanup_portal_file(path, since=self._capture_started)
 
         pixbuf = self._crop(pixbuf)
 
@@ -182,10 +224,15 @@ class FeatherShotApp(Gtk.Application):
             win = OverlayWindow(self, pixbuf, self.settings,
                                 open_editor=self._open_editor)
         else:
+            from .editor.window import EditorWindow
             win = EditorWindow(self, pixbuf, self.settings,
                                save_path=self.output)
         release_on_window_removed(self, win)
         win.present()
+        if overlay:
+            self._unlock_when_removed(win)
+        else:
+            self._release_capture_lock()
 
     def _save_and_exit(self, pixbuf):
         """Headless --no-editor path: save, print the path, quit."""
@@ -229,6 +276,7 @@ class FeatherShotApp(Gtk.Application):
             return
         pixbuf, shapes, crop, background, toast = self._restore_sidecar(
             path, pixbuf)
+        from .editor.window import EditorWindow
         win = EditorWindow(self, pixbuf, self.settings, shapes=shapes,
                            startup_toast=toast, crop=crop,
                            background=background)
@@ -272,10 +320,12 @@ class FeatherShotApp(Gtk.Application):
 
     def _open_editor(self, pixbuf, shapes=None, startup_toast=None):
         self.hold()
+        from .editor.window import EditorWindow
         win = EditorWindow(self, pixbuf, self.settings, shapes=shapes,
                            startup_toast=startup_toast)
         release_on_window_removed(self, win)
         win.present()
+        self._release_capture_lock()
 
     # -- scrolling capture ----------------------------------------------------
 
@@ -296,6 +346,7 @@ class FeatherShotApp(Gtk.Application):
             win = rec.ScrollCaptureWindow(self, self.settings, on_result,
                                           auto=self.auto)
             release_on_window_removed(self, win)
+            self._unlock_when_removed(win)
             win.present()
             win.begin(self.portal)
         else:
@@ -309,11 +360,12 @@ class FeatherShotApp(Gtk.Application):
             from .scrollcap.manual import ManualScrollWindow
             win = ManualScrollWindow(self, self.settings, self.portal, on_result)
             release_on_window_removed(self, win)
+            self._unlock_when_removed(win)
             win.present()
             win.begin()
 
     def _start_gif(self):
-        from .gifcap import GifCaptureWindow
+        from .gif.capture import GifCaptureWindow
 
         # release() is wired to window removal (see below), so closing it any
         # way — including the WM close button — releases exactly once.
@@ -325,10 +377,11 @@ class FeatherShotApp(Gtk.Application):
 
         win = GifCaptureWindow(self, self.settings, self.portal, on_done)
         release_on_window_removed(self, win)
+        self._unlock_when_removed(win)
         win.present()
         win.begin()
 
-    # -- global shortcut daemon --------------------------------------------------
+    # -- global shortcut daemon -----------------------------------------
 
     def run_daemon(self, shortcut: str | None = None,
                    bind_once: bool = False) -> int:
@@ -346,13 +399,12 @@ class FeatherShotApp(Gtk.Application):
               f"GlobalShortcuts portal support={support}", file=sys.stderr)
 
         try:
-            portal = Portal()
+            portal = Portal(registered=True)
         except PortalError as e:
             print(f"feather-shot daemon: {e}", file=sys.stderr)
             return 1
         loop = GLib.MainLoop()
-        mode_by_id = {"capture-region": "gui", "capture-full": "full",
-                      "capture-scroll": "scroll"}
+        mode_by_id = {"capture-region": "gui", "capture-full": "full"}
 
         # Build the shortcut set, applying the --shortcut override to region.
         defs = []
@@ -436,7 +488,11 @@ def spawn_capture(mode: str) -> bool:
         env["PYTHONPATH"] = (extra["PYTHONPATH"] if not existing
                              else extra["PYTHONPATH"] + os.pathsep + existing)
     try:
-        subprocess.Popen(cmd, env=env, start_new_session=True)
+        proc = subprocess.Popen(cmd, env=env, start_new_session=True)
+        # The daemon lives on after each capture; a child nobody waits for
+        # would stay a zombie, one per key press.
+        GLib.child_watch_add(GLib.PRIORITY_DEFAULT, proc.pid,
+                             lambda _pid, _status: proc.poll())
         print(f"feather-shot daemon: launched {' '.join(cmd)}", file=sys.stderr)
         return True
     except OSError as e:
@@ -458,6 +514,8 @@ def run(args) -> int:
         args.mode, args.delay,
         file=getattr(args, "file", None),
         region=getattr(args, "region", None),
+        pending_shot=getattr(args, "pending_shot", None),
+        capture_lock=getattr(args, "capture_lock", None),
         output=getattr(args, "output", None),
         no_editor=getattr(args, "no_editor", False))
     app.auto = getattr(args, "auto", False)

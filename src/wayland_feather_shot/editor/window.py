@@ -15,14 +15,15 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango  # noqa: E402
 
 from .. import save as save_mod
 from ..i18n import _, tr
-from ..theme import install_custom_css
+from ..theme import install_custom_css, style_live_text
 from . import arrows as arrow_mod
 from . import background as bg
 from . import crop as crop_mod
 from . import preset as preset_mod
+from . import shapes as S
 from . import sidecar
 from .canvas import EditorCanvas
-from .shapes import Style
+from .shapes import TEXT_STYLE_BUTTONS, Style
 
 TOOLS = [
     # (id, label, tooltip incl. shortcut key)
@@ -93,6 +94,7 @@ class EditorWindow(Gtk.ApplicationWindow):
         self.canvas.editor.redaction_density = self._preset.redaction_density
         self.canvas.editor.spotlight_scrim = self._preset.spotlight_scrim
         self.canvas.editor.text_align = self._preset.text_align
+        self.canvas.editor.text_style = self._preset.text_style
         self.canvas.editor.head_start = self._preset.head_start
         self.canvas.editor.head_end = self._preset.head_end
         if crop is not None:
@@ -137,7 +139,7 @@ class EditorWindow(Gtk.ApplicationWindow):
         if startup_toast:
             GLib.idle_add(lambda: (self.toast(startup_toast, 6.0), False)[1])
 
-    # -- UI ------------------------------------------------------------------
+    # -- UI -------------------------------------------------------------------
 
     def _build_header(self):
         header = Gtk.HeaderBar()
@@ -193,6 +195,7 @@ class EditorWindow(Gtk.ApplicationWindow):
         header.pack_start(self._build_presets(color, width))
         header.pack_start(self._build_arrowhead_menu())
         header.pack_start(self._build_align_buttons())
+        header.pack_start(self._build_text_style_buttons())
         header.pack_start(self._build_background_menu())
 
         extract = self._build_extract_menu()
@@ -273,6 +276,11 @@ class EditorWindow(Gtk.ApplicationWindow):
         if geometry is None:
             return
         x, y, width, height, font_px, rgba, align = geometry
+        editor = self.canvas.editor
+        shape = editor.doc.shape(editor.editing_sid)
+        if shape is not None:
+            style_live_text(self._text_view, S.text_style_of(shape.props),
+                            rgba, font_px)
         self._text_layer.move(self._text_view, int(x), int(y))
         self._text_view.set_size_request(int(width) + 12, int(height) + 6)
         self._text_view.set_justification({
@@ -633,6 +641,35 @@ class EditorWindow(Gtk.ApplicationWindow):
         if button.get_active():
             self.canvas.set_text_align(name)
 
+    def _build_text_style_buttons(self):
+        """Plain, outlined or boxed text, for new text and selected text."""
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
+        box.add_css_class("linked")
+        first = None
+        for name, icon, tip in TEXT_STYLE_BUTTONS:
+            btn = Gtk.ToggleButton()
+            btn.set_icon_name(icon)
+            btn.set_tooltip_text(_(tip))
+            if first is None:
+                first = btn
+            else:
+                btn.set_group(first)
+            btn.set_active(name == self.canvas.editor.text_style)
+            # "clicked", not "toggled": clicking the style that is already
+            # active must still restyle a selected text that differs (an
+            # older outlined text when the buttons say plain).
+            btn.connect("clicked", self._on_text_style_clicked, name)
+            box.append(btn)
+        return box
+
+    def _on_text_style_clicked(self, button, name):
+        if button.get_active():
+            self.canvas.set_text_style(name)
+            if self._text_layer.get_visible():
+                # Restyle the text being typed and go on typing it.
+                self._position_text_editor()
+                self._text_view.grab_focus()
+
     def _build_arrowhead_menu(self):
         """Which head each end of a new arrow gets.
 
@@ -668,7 +705,7 @@ class EditorWindow(Gtk.ApplicationWindow):
 
     def _build_extract_menu(self):
         """OCR / QR menu, or None when neither tool is installed."""
-        from .. import recognize
+        from . import recognize
         has_ocr, has_qr = recognize.ocr_available(), recognize.qr_available()
         if not (has_ocr or has_qr):
             return None
@@ -715,7 +752,7 @@ class EditorWindow(Gtk.ApplicationWindow):
         import tempfile
         import threading
 
-        from .. import recognize
+        from . import recognize
         from . import sensitive
 
         fd, tmp = tempfile.mkstemp(prefix="wfs-redact-", suffix=".png")
@@ -769,7 +806,7 @@ class EditorWindow(Gtk.ApplicationWindow):
     def extract_text(self, kind):
         import os
         import tempfile
-        from .. import recognize
+        from . import recognize
         fd, tmp = tempfile.mkstemp(prefix="wfs-ocr-", suffix=".png")
         os.close(fd)
         try:
@@ -822,7 +859,7 @@ class EditorWindow(Gtk.ApplicationWindow):
         GLib.timeout_add(int(seconds * 1000),
                          lambda: (self._toast.set_visible(False), False)[1])
 
-    # -- state ------------------------------------------------------------------
+    # -- state ----------------------------------------------------------------
 
     def _on_canvas_changed(self):
         self._dirty = True
@@ -879,7 +916,7 @@ class EditorWindow(Gtk.ApplicationWindow):
             font_size=size if size > 0 else s.font_size,
             font_family=family))
 
-    # -- text tool ---------------------------------------------------------------
+    # -- text tool ------------------------------------------------------------
 
     def _popover_at(self, wx, wy):
         popover = Gtk.Popover()
@@ -930,7 +967,7 @@ class EditorWindow(Gtk.ApplicationWindow):
         popover.set_child(grid)
         popover.popup()
 
-    # -- actions -------------------------------------------------------------------
+    # -- actions --------------------------------------------------------------
 
     def quick_save(self):
         path = self._save_path or save_mod.timestamp_path(self.settings)
@@ -946,10 +983,11 @@ class EditorWindow(Gtk.ApplicationWindow):
     def _write_sidecar(self, image_path: str) -> None:
         """Keep the annotations editable next to the saved image.
 
-        The saved file has them burned in, so the sidecar carries the untouched
-        base as well; without it `edit` could only ever reopen flat pixels.
-        Best effort — a screenshot that saved is saved, and failing to write the
-        re-edit document must never look like the save failed.
+        The saved file has them burned in, so the sidecar carries the
+        untouched base as well; without it `edit` could only ever reopen
+        flat pixels. Best effort — a screenshot that saved is saved, and
+        failing to write the re-edit document must never look like the save
+        failed.
         """
         if not self.settings.get("save_sidecar", True):
             return
@@ -1024,7 +1062,7 @@ class EditorWindow(Gtk.ApplicationWindow):
         PinWindow(self.get_application(),
                   self.canvas.export_pixbuf()).present()
 
-    # -- keys / close ----------------------------------------------------------------
+    # -- keys / close ---------------------------------------------------------
 
     def _on_key(self, _ctrl, keyval, _keycode, state):
         ctrl = bool(state & Gdk.ModifierType.CONTROL_MASK)
@@ -1116,6 +1154,7 @@ class EditorWindow(Gtk.ApplicationWindow):
         self._preset.redaction_density = editor.redaction_density
         self._preset.spotlight_scrim = editor.spotlight_scrim
         self._preset.text_align = editor.text_align
+        self._preset.text_style = editor.text_style
         self._preset.head_start = editor.head_start
         self._preset.head_end = editor.head_end
         preset_mod.save(self._preset)

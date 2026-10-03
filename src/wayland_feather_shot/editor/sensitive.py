@@ -1,14 +1,15 @@
 """Finding text worth redacting.
 
 Pure Python — no GTK, no OCR engine — so the rules, the merging and the
-deduplication are unit-testable on their own.  The caller supplies recognised
-words with their boxes; where those come from is :mod:`..recognize`.
+deduplication are unit-testable on their own. The caller supplies
+recognised words with their boxes; where those come from is
+:mod:`.recognize`.
 
-Redacting a screenshot before sharing means finding every token, email address
-and IP by eye, and missing one is the whole risk — the failure is silent.  This
-proposes the regions; **it never applies them**.  A false negative must not read
-as "this image is clean", so what comes back is a suggestion the user confirms,
-adjusts or throws away.
+Redacting a screenshot before sharing means finding every token, email
+address and IP by eye, and missing one is the whole risk — the failure is
+silent. This proposes the regions; **it never applies them**. A false
+negative must not read as "this image is clean", so what comes back is a
+suggestion the user confirms, adjusts or throws away.
 """
 
 from __future__ import annotations
@@ -167,27 +168,9 @@ def merge_matches(matches: Sequence[Match]) -> List[Match]:
     return merged
 
 
-def sensitive_spans(text: str) -> List[Tuple[int, int]]:
-    """Just the spans, for callers that do not care which rule fired."""
-    return [(m.start, m.end) for m in sensitive_matches(text)]
-
-
 def merge_spans(spans: Sequence[Tuple[int, int]]) -> List[Tuple[int, int]]:
     return [(m.start, m.end) for m in
             merge_matches([Match(s, e, "") for s, e in spans])]
-
-
-def matched_rules(text: str) -> List[str]:
-    """Which rules fire on *text* — for tests and for explaining a suggestion."""
-    names: List[str] = []
-    for rule in RULES:
-        for match in re.finditer(rule.pattern, text, re.IGNORECASE):
-            value = match.group(rule.group)
-            if value and (rule.accepts is None or rule.accepts(value)):
-                if rule.name not in names:
-                    names.append(rule.name)
-                break
-    return names
 
 
 # -- words to regions --------------------------------------------------------

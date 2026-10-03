@@ -218,8 +218,9 @@ class ScrollCaptureWindow(Gtk.ApplicationWindow):
         self._count = Gtk.Label(label=tr("frames kept: {n}", n=0))
         box.append(self._count)
 
-        # Auto-scroll toggle — disabled until we know the RemoteDesktop portal
-        # is present (decided in begin(); manual scrolling is the safe default).
+        # Auto-scroll toggle — disabled until we know the RemoteDesktop
+        # portal is present (decided in begin(); manual scrolling is the
+        # safe default).
         self._auto_check = Gtk.CheckButton(label=_("Auto-scroll (experimental)"))
         self._auto_check.set_halign(Gtk.Align.CENTER)
         self._auto_check.set_sensitive(False)
@@ -279,7 +280,8 @@ class ScrollCaptureWindow(Gtk.ApplicationWindow):
                 "Drive scrolling automatically via the RemoteDesktop portal.  "
                 "Hover the pointer over the scrollable content first."))
             if self.auto and not self._auto_check.get_active():
-                self._auto_check.set_active(True)   # -> _on_auto_toggled starts
+                # _on_auto_toggled starts auto-scrolling from here.
+                self._auto_check.set_active(True)
         else:
             self.auto = False
             self._auto_check.set_active(False)

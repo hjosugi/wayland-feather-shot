@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import itertools
 from dataclasses import dataclass, field, replace
-from typing import Callable, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 from . import arrows
 from . import freehand
@@ -640,6 +640,29 @@ def Text(pos: Point, text: str, style: Style, outline: bool = True,
     props = TextProps(text, style, outline=outline, background=background,
                       align=align).remeasured()
     return Shape(pos[0], pos[1], props)
+
+
+# How text is set off from the picture: bare letters (the default), letters
+# with a contrasting halo, or letters on a dark box.
+TEXT_STYLES = ("plain", "outline", "box")
+# (style, icon, tooltip) for the text style buttons of both windows.
+TEXT_STYLE_BUTTONS = (
+    ("plain", "wfs-text-plain-symbolic", "Plain text"),
+    ("outline", "wfs-text-outline-symbolic", "Outlined text"),
+    ("box", "wfs-text-box-symbolic", "Text on a dark box"),
+)
+
+
+def text_style_flags(name: str) -> Dict[str, bool]:
+    """The TextProps flags for a text style name, as keyword arguments."""
+    return {"outline": name == "outline", "background": name == "box"}
+
+
+def text_style_of(props: "TextProps") -> str:
+    """The style name for a text's flags (a box wins over an outline)."""
+    if props.background:
+        return "box"
+    return "outline" if props.outline else "plain"
 
 
 def Marker(pos: Point, number: int, style: Style,

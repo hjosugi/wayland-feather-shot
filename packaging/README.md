@@ -1,6 +1,3 @@
-<!-- i18n: language-switcher -->
-[English](README.md) | [日本語](README.ja.md)
-
 # Packaging
 
 Distribution packaging for wayland-feather-shot. Every format keeps the
@@ -77,10 +74,15 @@ public key. Add `--push` to upload them to the `pacman-repo` release; the
 package from the previous version is removed from the release afterwards.
 
 The release workflow does this automatically when the repository secret
-`PACMAN_REPO_GPG_PRIVATE_KEY` holds the armored private key
-(`gpg --armor --export-secret-keys A9C10C8ABD51260035B8EA525FEC84546891A5E4`). If the secret is absent, the
-workflow skips the pacman repository. The `Pacman repository` workflow can
-also be run by hand to publish a tag again.
+`PACMAN_REPO_GPG_PRIVATE_KEY` holds the armored private key:
+
+```console
+$ gpg --armor --export-secret-keys A9C10C8ABD51260035B8EA525FEC84546891A5E4
+```
+
+If the secret is absent, the workflow skips the pacman repository. The
+`Pacman repository` workflow can also be run by hand to publish a tag
+again.
 
 The package installs into the site-packages directory of the Python version it
 was built with, so it has to be rebuilt (a new release, or a `pkgrel` bump)

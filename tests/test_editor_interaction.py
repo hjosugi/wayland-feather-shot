@@ -14,7 +14,7 @@ from wayland_feather_shot.editor import shapes as S  # noqa: E402
 from wayland_feather_shot.editor.document import Document  # noqa: E402
 from wayland_feather_shot.editor.geometry import Box  # noqa: E402
 from wayland_feather_shot.editor.interaction import (  # noqa: E402
-    Editor, Idle, PointerInfo, SelectionFrame, Viewport)
+    Editor, Idle, PointerInfo, Viewport)
 
 
 def pointer(x, y, **flags):
@@ -203,6 +203,27 @@ class TextEditingTests(EditorTestCase):
         self.editor.doc.select([sid])
         self.editor.set_text_align("center")
         self.assertEqual(self.editor.doc.shape(sid).props.align, "center")
+
+    def test_new_text_is_plain_unless_another_style_is_picked(self):
+        sid = self._new_text(text="plain")
+        props = self.editor.doc.shape(sid).props
+        self.assertEqual((props.outline, props.background), (False, False))
+        self.editor.stop_editing()
+        self.editor.text_style = "box"
+        props = self.editor.doc.shape(
+            self._new_text(at=(300, 300), text="boxed")).props
+        self.assertEqual((props.outline, props.background), (False, True))
+
+    def test_text_style_applies_to_the_selection_and_undoes(self):
+        sid = self._new_text(text="x")
+        self.editor.stop_editing()
+        self.editor.doc.select([sid])
+        self.editor.set_text_style("outline")
+        self.assertEqual(S.text_style_of(self.editor.doc.shape(sid).props),
+                         "outline")
+        self.editor.doc.undo()
+        self.assertEqual(S.text_style_of(self.editor.doc.shape(sid).props),
+                         "plain")
 
     def test_a_side_handle_switches_text_from_growing_to_wrapping(self):
         sid = self._new_text(text="a fairly long line of text")

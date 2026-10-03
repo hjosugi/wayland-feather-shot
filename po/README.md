@@ -1,6 +1,3 @@
-<!-- i18n: language-switcher -->
-[English](README.md) | [日本語](README.ja.md)
-
 # Translations
 
 The UI strings live in English in the source and are translated through

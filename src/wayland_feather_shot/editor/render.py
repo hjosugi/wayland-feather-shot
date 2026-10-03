@@ -12,7 +12,9 @@ Japanese annotations and the whole emoji palette unusable.
 
 from __future__ import annotations
 
+import contextlib
 import math
+import weakref
 from collections import OrderedDict
 from typing import List, Optional, Tuple
 
@@ -220,8 +222,62 @@ def gaussian_pixbuf(pixbuf: GdkPixbuf.Pixbuf,
     return result.scale_simple(width, height, GdkPixbuf.InterpType.BILINEAR)
 
 
+_obscure_cache: "weakref.WeakKeyDictionary[GdkPixbuf.Pixbuf, dict]" = \
+    weakref.WeakKeyDictionary()
+_OBSCURE_CACHE_BYTES = 64 * 1024 * 1024     # per base image
+_obscure_cache_off = False
+
+
+@contextlib.contextmanager
+def uncached_obscure():
+    """Draw without remembering blurs: for a shape being dragged, whose
+    region changes every frame. Cached, each frame would push out the
+    blurs of finished shapes, which are what the cache is for."""
+    global _obscure_cache_off
+    _obscure_cache_off, previous = True, _obscure_cache_off
+    try:
+        yield
+    finally:
+        _obscure_cache_off = previous
+
+
 def _obscured_pixbuf(base: GdkPixbuf.Pixbuf, x: int, y: int, w: int, h: int,
                      density: float, pixelate: bool) -> Optional[GdkPixbuf.Pixbuf]:
+    """A blurred or pixelated copy of a region of *base*, cached per base.
+
+    A blur costs tens of milliseconds without numpy, and the overlay rebuilds
+    its annotation composite on every edit; remembering the result per
+    region keeps later edits as cheap as the shapes they add.
+    """
+    if _obscure_cache_off:
+        return _compute_obscured_pixbuf(base, x, y, w, h, density, pixelate)
+    key = (x, y, w, h, round(density, 4), pixelate)
+    try:
+        per_base = _obscure_cache.setdefault(base, {})
+    except TypeError:  # not weak-referenceable
+        per_base = None
+    if per_base is not None and key in per_base:
+        per_base[key] = per_base.pop(key)    # most recently used goes last
+        return per_base[key]
+    result = _compute_obscured_pixbuf(base, x, y, w, h, density, pixelate)
+    if per_base is not None:
+        per_base[key] = result
+        # A region being dragged out is drawn live and adds an entry per
+        # frame, each as big as the region: budget the bytes, not the count,
+        # and drop the least recently used first.
+        total = sum(_byte_length(p) for p in per_base.values())
+        while total > _OBSCURE_CACHE_BYTES and len(per_base) > 1:
+            total -= _byte_length(per_base.pop(next(iter(per_base))))
+    return result
+
+
+def _byte_length(pixbuf: Optional[GdkPixbuf.Pixbuf]) -> int:
+    return pixbuf.get_byte_length() if pixbuf is not None else 0
+
+
+def _compute_obscured_pixbuf(base: GdkPixbuf.Pixbuf, x: int, y: int, w: int,
+                             h: int, density: float,
+                             pixelate: bool) -> Optional[GdkPixbuf.Pixbuf]:
     if pixelate:
         sub = base.new_subpixbuf(x, y, w, h)
         block = max(2, int(round(pixel_block_size(density))))

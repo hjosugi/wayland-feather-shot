@@ -35,7 +35,7 @@ def _build_window(app, settings, open_file):
     gi.require_version("Gtk", "4.0")
     gi.require_version("Gdk", "4.0")
     gi.require_version("GdkPixbuf", "2.0")
-    from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
+    from gi.repository import GdkPixbuf, GLib, Gtk
 
     from .i18n import _, tr
 

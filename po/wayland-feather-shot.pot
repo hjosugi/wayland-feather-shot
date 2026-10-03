@@ -96,6 +96,18 @@ msgstr ""
 msgid "Move / resize selection (V)"
 msgstr ""
 
+msgid "Line width ([ / ])"
+msgstr ""
+
+msgid "Text size ([ / ])"
+msgstr ""
+
+msgid "Ctrl+Enter to finish, Esc to cancel"
+msgstr ""
+
+msgid "Grab and move a shape (S)"
+msgstr ""
+
 msgid "Freehand pen (P)"
 msgstr ""
 
@@ -264,6 +276,15 @@ msgstr ""
 msgid "Align right"
 msgstr ""
 
+msgid "Plain text"
+msgstr ""
+
+msgid "Outlined text"
+msgstr ""
+
+msgid "Text on a dark box"
+msgstr ""
+
 msgid "Arrowheads"
 msgstr ""
 
@@ -397,6 +418,21 @@ msgid "Text font"
 msgstr ""
 
 msgid "Drag: select area   •   Click / Enter: full screen   •   Esc: cancel"
+msgstr ""
+
+msgid "Click a screen to take it   •   Esc: cancel"
+msgstr ""
+
+msgid "Selection"
+msgstr ""
+
+msgid "Screen"
+msgstr ""
+
+msgid "Drag to select a region"
+msgstr ""
+
+msgid "Click a screen to take all of it"
 msgstr ""
 
 msgid "Discard this screenshot?"

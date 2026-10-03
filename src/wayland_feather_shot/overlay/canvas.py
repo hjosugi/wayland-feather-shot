@@ -48,9 +48,12 @@ class OverlayScene:
         self.pixbuf = pixbuf
         fmt = (Gdk.MemoryFormat.R8G8B8A8 if pixbuf.get_has_alpha()
                else Gdk.MemoryFormat.R8G8B8)
+        # read_pixel_bytes shares the pixbuf's own buffer; get_pixels plus
+        # GLib.Bytes.new copied a 4K screenshot twice (about 40 ms) on the way
+        # to the first frame. Nothing writes into the screenshot afterwards.
         self.background = Gdk.MemoryTexture.new(
             pixbuf.get_width(), pixbuf.get_height(), fmt,
-            GLib.Bytes.new(pixbuf.get_pixels()), pixbuf.get_rowstride())
+            pixbuf.read_pixel_bytes(), pixbuf.get_rowstride())
         self._shapes = ()
         self._content = self.background
 
@@ -86,11 +89,13 @@ class OverlayScene:
 
 
 class OverlayCanvas(Gtk.Widget):
-    """Snapshot-based canvas that accepts the existing overlay's controllers."""
+    """A plain widget whose snapshot is drawn by a callback (draw.py), so
+    the window's gesture controllers can be attached to it directly."""
 
     def __init__(self, snapshot_func):
         super().__init__(hexpand=True, vexpand=True)
         self._snapshot_func = snapshot_func
 
     def do_snapshot(self, snapshot):
-        self._snapshot_func(self, snapshot, self.get_width(), self.get_height())
+        self._snapshot_func(self, snapshot,
+                            self.get_width(), self.get_height())

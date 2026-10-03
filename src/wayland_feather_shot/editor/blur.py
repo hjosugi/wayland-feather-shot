@@ -18,7 +18,7 @@ makes the result genuinely unrecoverable rather than merely smeared.
 from __future__ import annotations
 
 import math
-from typing import List, Optional, Sequence
+from typing import List, Sequence
 
 try:  # pragma: no cover - depends on the host
     import numpy as _np
@@ -129,6 +129,3 @@ def gaussian_blur(pixels: Sequence[int], width: int, height: int,
         buffer = _box_blur_pass(buffer, width, height, radius, horizontal=False)
     return buffer
 
-
-def has_numpy() -> bool:
-    return _np is not None

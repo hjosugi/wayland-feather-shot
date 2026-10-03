@@ -125,6 +125,12 @@ def position_bars(window: Size, selection: Bounds, toolbar: Size,
         return max(EDGE_MARGIN, min(value, maximum))
 
     centered_tx = clamp(round((x0 + x1 - tb_w) / 2), max_tx)
+    # The toolbar's end lines up with the selection's edge on the side the
+    # actions hang from, so the two bars always meet at one corner of the
+    # selection (Lightshot and Snipaste do the same). A toolbar wider than
+    # the selection then sticks out on one side only, never both.
+    right_aligned_tx = clamp(round(x1 - tb_w), max_tx)
+    left_aligned_tx = clamp(round(x0), max_tx)
     placements = []
     below_ty = math.ceil(y1 + BAR_GAP)
     above_ty = math.floor(y0 - tb_h - BAR_GAP)
@@ -144,14 +150,17 @@ def position_bars(window: Size, selection: Bounds, toolbar: Size,
     for direction, preferred_ty in placements:
         candidates: list[tuple[tuple[float, ...], Position, Position]] = []
         for side, sx in sides:
-            # A short selection can share its bottom edge with the actions
-            # while leaving the horizontal toolbar below it.
+            # The actions hang from the selection's top edge and reach down,
+            # whatever the selection's height, so the L looks the same
+            # everywhere. A short selection may instead share its bottom edge
+            # with them, or they drop under the toolbar, when that is the
+            # only way to keep both bars attached.
+            preferred_sy = clamp(math.ceil(y0), max_sy)
             if direction == "below":
-                preferred_sy = clamp(math.floor(min(y0, y1 - act_h)),
-                                     max_sy)
-                action_ys = (preferred_sy, preferred_ty + tb_h + BAR_GAP)
+                action_ys = (preferred_sy,
+                             clamp(math.floor(y1 - act_h), max_sy),
+                             preferred_ty + tb_h + BAR_GAP)
             else:
-                preferred_sy = clamp(math.ceil(y0), max_sy)
                 action_ys = (preferred_sy, preferred_ty - act_h - BAR_GAP)
 
             for sy in action_ys:
@@ -162,11 +171,13 @@ def position_bars(window: Size, selection: Bounds, toolbar: Size,
                     toolbar_ys = (preferred_ty,
                                   min(preferred_ty, sy - tb_h - BAR_GAP))
 
+                preferred_tx = (right_aligned_tx if side == "right"
+                                else left_aligned_tx)
                 for ty in toolbar_ys:
                     # Put the toolbar beside the actions rather than pushing
                     # the actions away from the selection's edge.
-                    for tx in (centered_tx, sx - tb_w - BAR_GAP,
-                               sx + act_w + BAR_GAP):
+                    for tx in (preferred_tx, centered_tx,
+                               sx - tb_w - BAR_GAP, sx + act_w + BAR_GAP):
                         tb, act = (tx, ty), (sx, sy)
                         if not _bars_fit(window, tb, toolbar, act, actions):
                             continue
@@ -180,11 +191,13 @@ def position_bars(window: Size, selection: Bounds, toolbar: Size,
                         # bar can move beyond it when both cannot fit there.
                         detachment = (2 * (max(0, vertical_gap - BAR_GAP)
                                            + horizontal_gap) + action_gap)
+                        # Keeping the actions at the selection's top edge
+                        # matters more than keeping the toolbar centred.
                         rank = (detachment + (2 * BAR_GAP if side == "left"
                                               else 0),
                                 0 if side == "right" else 1,
-                                abs(tx - centered_tx),
-                                abs(sy - preferred_sy))
+                                abs(sy - preferred_sy),
+                                abs(tx - preferred_tx))
                         candidates.append((rank, tb, act))
 
         if candidates:
