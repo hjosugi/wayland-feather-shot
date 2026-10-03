@@ -25,6 +25,12 @@
   editor window does. The proposals arrive picked, so the hand moves them
   together, and Ctrl+Z drops them. The recognition runs in the
   background, so the overlay stays responsive.
+- **A background frame from the overlay.** "…" → "Background & framing…"
+  puts the result on a stage, as the editor window does: a solid,
+  gradient or image fill, padding, rounded corners, a shadow, a border and
+  a watermark, with a preview on the same page. Copy, save and pin take
+  the framed result, and the size label shows its size next to the
+  selection's.
 - **Move several shapes at once.** With the hand tool, Shift+click or
   Ctrl+click picks more shapes (or drops a picked one), and dragging any
   of them moves them all as one undo step. Picked shapes are framed; a

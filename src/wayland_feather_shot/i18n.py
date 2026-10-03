@@ -120,6 +120,8 @@ JA = {
     "Blur/pixelate covers annotations too (flatten)":
         "ぼかし/モザイクで注釈も覆う(フラット化)",
     "Background & framing": "背景と額装",
+    "Background & framing…": "背景と額装…",
+    "Back": "戻る",
     "Background": "背景",
     "Solid": "単色",
     "Gradient": "グラデーション",

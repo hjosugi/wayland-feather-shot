@@ -198,6 +198,12 @@ msgstr ""
 msgid "Background & framing"
 msgstr ""
 
+msgid "Background & framing…"
+msgstr ""
+
+msgid "Back"
+msgstr ""
+
 msgid "Background"
 msgstr ""
 

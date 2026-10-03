@@ -53,9 +53,8 @@ class OverlayExtractTests(unittest.TestCase):
 
     @staticmethod
     def menu_labels(window):
-        more = window._action_bar.get_last_child().get_prev_sibling()
         labels = []
-        child = more.get_popover().get_child().get_first_child()
+        child = window._more_pages.get_child_by_name("menu").get_first_child()
         while child is not None:
             if isinstance(child, Gtk.Button):
                 labels.append(child.get_child().get_last_child().get_label())

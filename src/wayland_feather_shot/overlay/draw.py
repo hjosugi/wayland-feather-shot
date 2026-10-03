@@ -161,6 +161,9 @@ class OverlayDrawMixin:
 
     def _draw_size_label(self, snapshot, w, h, selection, sw, sh):
         label = f"{sw} × {sh}"
+        framed = self._framed_size()
+        if framed is not None:
+            label += f"  »  {framed[0]} × {framed[1]}"
         ext = self._text_extents(label, 13, True)
         label_x, label_y = position_label(
             (w, h), selection,

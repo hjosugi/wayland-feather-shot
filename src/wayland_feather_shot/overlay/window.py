@@ -9,7 +9,8 @@ a floating toolbar attached to the selection, then Ctrl+S / Ctrl+C.
 This module holds the window, its pointer and key input, the undo history
 and the outputs (save, copy, pin, editor). The rest is split by concern into
 mixins: view (coordinates, zoom, handles), controls (the bars), text (typing
-in place), draw (each frame) and extract (OCR, QR, smart redaction).
+in place), draw (each frame), extract (OCR, QR, smart redaction) and frame
+(the background frame).
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 import cairo  # noqa: E402
 
 from .. import save as save_mod
+from ..editor import background as bg
 from ..editor import render
 from ..editor import shapes as shape_model
 from ..editor.shapes import (EMOJI_CHOICES, Arrow, EllipseShape, EmojiSticker,
@@ -38,6 +40,7 @@ from .canvas import OverlayCanvas, OverlayScene
 from .controls import OVERLAY_TOOLS, OverlayControlsMixin, menu_popover
 from .draw import OverlayDrawMixin
 from .extract import OverlayExtractMixin
+from .frame import OverlayFrameMixin
 from .text import OverlayTextMixin, TextLayer
 from .view import ZOOM_MAX, ZOOM_STEP, MonitorView, OverlayViewMixin, Rect
 
@@ -61,7 +64,7 @@ CLICK_TOOLS = {"text", "bubble", "marker", "emoji"}
 
 
 class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
-                    OverlayDrawMixin, OverlayExtractMixin,
+                    OverlayDrawMixin, OverlayExtractMixin, OverlayFrameMixin,
                     Gtk.ApplicationWindow):
     """Fullscreen frozen-image capture UI.
 
@@ -145,6 +148,8 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         self._bars_visible = False
         self._text_edit = None           # {"view", "pos"} while typing
         self._recognizing = False        # an OCR or QR run is going
+        self.background = bg.BackgroundSettings()     # no frame
+        self._frame_base = None          # (key, shrunk selection) for it
         self._toast_timer = None
 
         self._build_ui(monitor_layout)
@@ -833,7 +838,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     def save_and_close(self):
         path = save_mod.timestamp_path(self.settings)
         try:
-            path = save_mod.save_pixbuf(self._export_cropped(), path)
+            path = save_mod.save_pixbuf(self._export_result(), path)
         except Exception as e:
             self.toast(tr("Save failed: {error}", error=e))
             return
@@ -853,7 +858,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             except GLib.Error:
                 return
             try:
-                path = save_mod.save_pixbuf(self._export_cropped(),
+                path = save_mod.save_pixbuf(self._export_result(),
                                             gfile.get_path())
             except Exception as e:
                 self.toast(tr("Save failed: {error}", error=e))
@@ -868,7 +873,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         process to serve the clipboard (wl-copy or our holder process);
         otherwise the copy lasts as long as the window, so it stays open."""
         try:
-            how = save_mod.copy_pixbuf(self._export_cropped())
+            how = save_mod.copy_pixbuf(self._export_result())
         except Exception as e:
             self.toast(tr("Copy failed: {error}", error=e))
             return
@@ -888,7 +893,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
 
     def pin_to_screen(self):
         from ..editor.pin import PinWindow
-        PinWindow(self.get_application(), self._export_cropped()).present()
+        PinWindow(self.get_application(), self._export_result()).present()
 
     def _to_editor(self):
         """Hand the selection and its annotations to the editor window, in

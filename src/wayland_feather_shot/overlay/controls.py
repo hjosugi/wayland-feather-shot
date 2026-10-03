@@ -405,6 +405,9 @@ class OverlayControlsMixin:
     def _build_action_bar(self) -> Gtk.Widget:
         """Copy, save and pin, the rest under "…", and cancel.
 
+        The "…" menu has a second page for the background frame
+        (frame.py), which slides in over the list.
+
         Vertical beside the selection; _update_control_layout turns it
         horizontal when it has to sit under the toolbar instead.
         """
@@ -433,31 +436,51 @@ class OverlayControlsMixin:
         more.set_icon_name("view-more-horizontal-symbolic")
         more.set_tooltip_text(_("More"))
         menu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        popover = menu_popover(menu)
-        # None: a separator between groups.
+        pages = Gtk.Stack()
+        pages.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
+        pages.set_hhomogeneous(False)
+        pages.set_vhomogeneous(False)
+        pages.add_named(menu, "menu")
+        pages.add_named(self._build_frame_page(
+            back=lambda: pages.set_visible_child_name("menu")), "frame")
+        popover = menu_popover(pages)
+        popover.connect("closed",
+                        lambda *_: pages.set_visible_child_name("menu"))
+        self._more_button, self._more_pages = more, pages
+
+        def show_frame():
+            pages.set_visible_child_name("frame")
+            self._refresh_frame_preview()
+
+        # (icon, label, callback, closes the menu); None: a separator.
         entries = [("document-save-as-symbolic", "Save as… (Ctrl+Shift+S)",
-                    self.save_as),
+                    self.save_as, True),
                    ("folder-open-symbolic", "Open save folder (Ctrl+O)",
-                    self.open_save_folder)]
+                    self.open_save_folder, True),
+                   None,
+                   ("wfs-frame-symbolic", "Background & framing…",
+                    show_frame, False)]
         recognition = self._recognition_entries()
         if recognition:
-            entries += [None] + recognition
+            entries += [None] + [entry + (True,) for entry in recognition]
         if self.open_editor:
             entries += [None, ("window-new-symbolic",
-                               "Open in editor window (W)", self._to_editor)]
+                               "Open in editor window (W)", self._to_editor,
+                               True)]
         for entry in entries:
             if entry is None:
                 menu.append(Gtk.Separator(
                     orientation=Gtk.Orientation.HORIZONTAL))
                 continue
-            icon, tip, cb = entry
+            icon, tip, cb, closes = entry
             content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
             content.append(Gtk.Image.new_from_icon_name(icon))
             content.append(Gtk.Label(label=_(tip), xalign=0))
             item = Gtk.Button()
             item.set_child(content)
             item.add_css_class("wfs-menu-item")
-            item.connect("clicked", lambda _b, cb=cb: (popover.popdown(), cb()))
+            item.connect("clicked", lambda _b, cb=cb, closes=closes: (
+                popover.popdown() if closes else None, cb()))
             menu.append(item)
         more.set_popover(popover)
         bar.append(more)

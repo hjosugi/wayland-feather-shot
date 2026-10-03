@@ -198,6 +198,12 @@ msgstr "ぼかし/モザイクで注釈も覆う(フラット化)"
 msgid "Background & framing"
 msgstr "背景と額装"
 
+msgid "Background & framing…"
+msgstr "背景と額装…"
+
+msgid "Back"
+msgstr "戻る"
+
 msgid "Background"
 msgstr "背景"
 
