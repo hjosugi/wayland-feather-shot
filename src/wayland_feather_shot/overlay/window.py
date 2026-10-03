@@ -630,16 +630,19 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         # the text being typed; it belongs in the result.
         self._end_text(commit=True)
         iw, ih = self.pixbuf.get_width(), self.pixbuf.get_height()
-        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, iw, ih)
+        x, y, w, h = self.sel or (0, 0, iw, ih)
+        # Paint the selection only, shifted into place: a small selection on
+        # a two-monitor screenshot used to composite the whole image first.
+        # A blur still samples the screenshot around it, so its edges match.
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
         cr = cairo.Context(surface)
+        cr.translate(-x, -y)
         Gdk.cairo_set_source_pixbuf(cr, self.pixbuf, 0, 0)
         cr.paint()
         for shape in self.shapes:
             shape.draw(cr, self.pixbuf)
         surface.flush()
-        full = Gdk.pixbuf_get_from_surface(surface, 0, 0, iw, ih)
-        x, y, w, h = self.sel or (0, 0, iw, ih)
-        return full.new_subpixbuf(x, y, w, h).copy()
+        return Gdk.pixbuf_get_from_surface(surface, 0, 0, w, h)
 
     def save_and_close(self):
         path = save_mod.timestamp_path(self.settings)

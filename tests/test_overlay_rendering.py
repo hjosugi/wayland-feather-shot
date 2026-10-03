@@ -247,6 +247,47 @@ class OverlayWindowRenderingTests(unittest.TestCase):
             window._snapshot(window.area, snapshot, width, height)
         return raster(snapshot, width, height, device_scale)
 
+    def test_export_paints_only_the_selection_with_the_same_pixels(self):
+        # Reference: composite the whole image, then crop (the old export).
+        pixbuf = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 200, 150)
+        pixels = bytearray(pixbuf.get_pixels())
+        stride = pixbuf.get_rowstride()
+        for y in range(150):
+            for x in range(200):
+                o = y * stride + x * 4
+                pixels[o:o + 4] = bytes(((x * 7) % 256, (y * 5) % 256,
+                                         (x * y) % 256, 255))
+        pixbuf = GdkPixbuf.Pixbuf.new_from_bytes(
+            GLib.Bytes.new(bytes(pixels)), GdkPixbuf.Colorspace.RGB, True, 8,
+            200, 150, stride)
+        window = OverlayWindow(self.app, pixbuf, Settings())
+        self.addCleanup(window.destroy)
+        style = window.style
+        window.shapes = [
+            Obscure((30, 20, 80, 60), 0.55, pixelate=False),  # crosses the edge
+            Text((70, 70), "hi", style),
+            Pen(((60, 40), (90, 60), (120, 50)), style),
+        ]
+        window.sel = (50, 30, 100, 80)
+
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 200, 150)
+        cr = cairo.Context(surface)
+        Gdk.cairo_set_source_pixbuf(cr, pixbuf, 0, 0)
+        cr.paint()
+        for shape in window.shapes:
+            shape.draw(cr, pixbuf)
+        surface.flush()
+        expected = Gdk.pixbuf_get_from_surface(surface, 0, 0, 200, 150)
+        expected = expected.new_subpixbuf(50, 30, 100, 80).copy()
+
+        exported = window._export_cropped()
+        self.assertEqual((exported.get_width(), exported.get_height()), (100, 80))
+
+        def rows(pb):   # the crop keeps its parent's row stride; compare pixels
+            data, stride = pb.get_pixels(), pb.get_rowstride()
+            return [data[r * stride:r * stride + 100 * 4] for r in range(80)]
+        self.assertEqual(rows(exported), rows(expected))
+
     def test_selection_handles_and_hit_positions_survive_scaling(self):
         window = self.new_window()
         window.sel = (60, 45, 120, 90)
