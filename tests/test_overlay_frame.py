@@ -79,7 +79,9 @@ class OverlayFrameTests(unittest.TestCase):
         self.assertGreater(w, 200)
         self.assertGreater(h, 100)
         with patch("wayland_feather_shot.save.copy_pixbuf",
-                   return_value="wl-copy") as copy:
+                   return_value="wl-copy") as copy, \
+                patch("wayland_feather_shot.save.compositor_keeps_clipboard",
+                      return_value=False):
             self.window.copy_and_close()
         copied = copy.call_args[0][0]
         self.assertEqual((copied.get_width(), copied.get_height()), (w, h))

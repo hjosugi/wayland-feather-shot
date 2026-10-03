@@ -56,9 +56,14 @@ class OverlayDoubleClickTests(unittest.TestCase):
         self.copied = []
         self.copy_patch = patch.object(save_mod, "copy_pixbuf", self._copy_pixbuf)
         self.copy_patch.start()
+        # The wl-copy path, whatever desktop the tests run on.
+        self.desktop_patch = patch.object(
+            save_mod, "compositor_keeps_clipboard", return_value=False)
+        self.desktop_patch.start()
 
     def tearDown(self):
         self.copy_patch.stop()
+        self.desktop_patch.stop()
         self.window.destroy()
 
     def _copy_pixbuf(self, pixbuf):

@@ -16,6 +16,7 @@ in place), draw (each frame), extract (OCR, QR, smart redaction) and frame
 from __future__ import annotations
 
 import os
+import shutil
 from typing import Callable, List, Optional, Tuple
 
 import gi
@@ -842,11 +843,27 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         surface.flush()
         return Gdk.pixbuf_get_from_surface(surface, 0, 0, w, h)
 
+    def _hide_for_good(self):
+        """Take the overlay off the screen now, ahead of the slow work that
+        ends in closing it: the desktop comes back at once instead of after
+        the export and the encoding."""
+        self._end_text(commit=True)     # the text being typed is kept
+        for view in self._views:
+            view.window.set_visible(False)
+        Gdk.Display.get_default().flush()
+
+    def _show_again(self):
+        """Back on screen after _hide_for_good, to say what went wrong."""
+        for view in self._views:
+            view.window.present()
+
     def save_and_close(self):
         path = save_mod.timestamp_path(self.settings)
+        self._hide_for_good()
         try:
             path = save_mod.save_pixbuf(self._export_result(), path)
         except Exception as e:
+            self._show_again()
             self.toast(tr("Save failed: {error}", error=e))
             return
         print(path)
@@ -864,10 +881,12 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
                 gfile = dlg.save_finish(result)
             except GLib.Error:
                 return
+            self._hide_for_good()
             try:
                 path = save_mod.save_pixbuf(self._export_result(),
                                             gfile.get_path())
             except Exception as e:
+                self._show_again()
                 self.toast(tr("Save failed: {error}", error=e))
                 return
             print(path)
@@ -876,19 +895,62 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         dialog.save(self, None, done)
 
     def copy_and_close(self):
-        """Copy the result. Close only when something outlives this
-        process to serve the clipboard (wl-copy or our holder process);
-        otherwise the copy lasts as long as the window, so it stays open."""
+        """Copy the result to the clipboard and close.
+
+        On GNOME the overlay sets the clipboard itself, while it still has
+        the keyboard focus, and closes at once (_copy_in_process). With
+        wl-copy it goes off the screen first and hands the PNG over. With
+        our holder process, or nothing that outlives this one, the copy
+        lasts as long as the window, so it stays open.
+        """
+        if save_mod.compositor_keeps_clipboard():
+            self._copy_in_process()
+            return
+        handing_over = shutil.which("wl-copy") is not None
+        if handing_over:
+            self._hide_for_good()
         try:
             how = save_mod.copy_pixbuf(self._export_result())
         except Exception as e:
+            if handing_over:
+                self._show_again()
             self.toast(tr("Copy failed: {error}", error=e))
             return
         if how in ("wl-copy", "holder process"):
             self.close()  # a holder keeps owning the clipboard after we exit
         else:
+            self._show_again()
             self.toast(_("Copied — keep this window open while pasting "
                          "(install wl-clipboard to copy & close)"))
+
+    def _copy_in_process(self):
+        """Own the clipboard from here and close; see
+        save.compositor_keeps_clipboard.
+
+        The picture is made and encoded only when it is first asked for:
+        mutter asks at once to keep its copy, by then without a window on
+        the screen. The app is held until that has been written, or until
+        another client takes the clipboard over.
+        """
+        self._end_text(commit=True)
+        app = self.get_application()
+        clipboard = self.get_clipboard()
+        app.hold()
+        state = {"held": True, "handler": None}
+
+        def let_go():
+            if state["held"]:
+                state["held"] = False
+                if state["handler"] is not None:
+                    clipboard.disconnect(state["handler"])
+                app.release()
+
+        clipboard.set_content(
+            save_mod.lazy_png_content(self._export_result, on_served=let_go))
+        state["handler"] = clipboard.connect(
+            "notify::local",
+            lambda cb, _pspec: None if cb.get_property("local") else let_go())
+        self.close()
 
     def open_save_folder(self):
         try:

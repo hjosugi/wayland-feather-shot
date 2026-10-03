@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Back to the desktop at once after a copy or a save.** The overlay
+  stayed on the screen while the result was exported and encoded, about
+  0.1-0.25 s for a big screenshot, and on GNOME wl-copy then mapped a
+  window of its own to get the keyboard focus, so the focus jumped to it
+  and back. Now the overlay goes first. On GNOME it sets the clipboard
+  itself and the PNG is made when mutter asks for its copy, which it keeps
+  after the app exits; elsewhere wl-copy gets the PNG as before. Text
+  copied by OCR goes the same way on GNOME.
 - **A tidier toolbar.** Tools that do the same kind of thing share one
   button with a ▾ menu (rectangle, ellipse and highlighter; blur and
   pixelate), and the button shows the one last picked. Colour, size and

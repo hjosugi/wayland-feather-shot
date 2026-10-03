@@ -6,7 +6,9 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
+import threading
 import time
 
 import gi
@@ -77,8 +79,135 @@ def writable_image_formats():
     return writable_image_extensions(_writable_formats())
 
 
+def compositor_keeps_clipboard() -> bool:
+    """Whether the compositor keeps a copy of the clipboard once the client
+    that set it exits: GNOME's mutter does.
+
+    There a window can set the clipboard itself and the app may exit
+    afterwards. wl-copy would be worse: mutter has no data-control
+    protocol, so wl-copy maps a window of its own to get the keyboard
+    focus, and the focus jumps to it and back after every copy.
+    """
+    desktops = os.environ.get("XDG_CURRENT_DESKTOP", "").split(":")
+    return bool(os.environ.get("WAYLAND_DISPLAY")) and "GNOME" in desktops
+
+
+class _PendingPng(GObject.Object):
+    """A PNG that is made when first asked for; see lazy_png_content."""
+
+    def __init__(self, make_pixbuf, on_served):
+        super().__init__()
+        self.make_pixbuf = make_pixbuf
+        self.on_served = on_served
+        self.png = None
+        self.encoding = False
+        self.waiting = []           # serializers until the PNG is ready
+        self.in_flight = 0
+
+    def serve(self, serializer):
+        self.in_flight += 1
+        self.waiting.append(serializer)
+        if self.png is not None:
+            self._write_waiting()
+        elif not self.encoding:
+            self.encoding = True
+            try:
+                pixbuf = self.make_pixbuf()
+            except Exception as exc:  # nothing to paste; say why
+                self._fail_waiting(exc)
+                return
+            threading.Thread(target=self._encode, args=(pixbuf,),
+                             daemon=True).start()
+
+    def _encode(self, pixbuf):
+        try:
+            png, error = pixbuf_to_png_bytes(pixbuf, fast=True), None
+        except Exception as exc:
+            png, error = None, exc
+        GLib.idle_add(self._encoded, png, error)
+
+    def _encoded(self, png, error):
+        self.encoding = False
+        if error is not None:
+            self._fail_waiting(error)
+        else:
+            self.png = png
+            self._write_waiting()
+        return False
+
+    def _write_waiting(self):
+        waiting, self.waiting = self.waiting, []
+        for serializer in waiting:
+            def written(stream, result, serializer=serializer):
+                try:
+                    stream.write_all_finish(result)
+                    serializer.return_success()
+                except GLib.Error as exc:
+                    serializer.return_error(exc)
+                self._done_one()
+            serializer.get_output_stream().write_all_async(
+                self.png, serializer.get_priority(),
+                serializer.get_cancellable(), written)
+
+    def _fail_waiting(self, error):
+        print(f"wayland-feather-shot: clipboard image failed: {error}",
+              file=sys.stderr)
+        waiting, self.waiting = self.waiting, []
+        for serializer in waiting:
+            serializer.return_error(GLib.Error.new_literal(
+                Gio.io_error_quark(), str(error), Gio.IOErrorEnum.FAILED))
+            self._done_one()
+
+    def _done_one(self):
+        self.in_flight -= 1
+        if self.in_flight == 0 and self.on_served is not None:
+            # A moment for a second reader that asked at the same time.
+            GLib.timeout_add(300, self._settled)
+
+    def _settled(self):
+        if self.in_flight == 0 and self.on_served is not None:
+            on_served, self.on_served = self.on_served, None
+            on_served()
+        return False
+
+
+_pending_png_registered = False
+
+
+def lazy_png_content(make_pixbuf, on_served=None) -> Gdk.ContentProvider:
+    """Clipboard content offered as image/png and made when first asked
+    for.
+
+    Setting the clipboard on Wayland needs the keyboard focus, so it has to
+    happen while the window is up; making the picture and encoding it does
+    not, so it waits for the first request (mutter asks at once, to keep
+    its copy), by which time the window is gone. *make_pixbuf* runs on the
+    main thread, the encoding on a worker thread, once. *on_served* is
+    called when a request has been written in full and no other is in
+    flight.
+
+    A registered serializer rather than a Gdk.ContentProvider subclass:
+    PyGObject hands an async vfunc's user data over as None, which breaks
+    GDK's own callback.
+    """
+    global _pending_png_registered
+    if not _pending_png_registered:
+        Gdk.content_register_serializer(
+            _PendingPng.__gtype__, "image/png",
+            lambda serializer, *_: serializer.get_value().serve(serializer))
+        _pending_png_registered = True
+    pending = _PendingPng(make_pixbuf, on_served)
+    return Gdk.ContentProvider.new_for_value(
+        GObject.Value(_PendingPng, pending))
+
+
 def copy_text(text: str) -> str:
     """Copy plain *text* (e.g. a saved file path) to the clipboard."""
+    if compositor_keeps_clipboard():
+        # Set from this (focused) window; see compositor_keeps_clipboard.
+        Gdk.Display.get_default().get_clipboard().set(
+            GObject.Value(GObject.TYPE_STRING, text))
+        return "clipboard"
     wl_copy = shutil.which("wl-copy")
     if wl_copy:
         try:
