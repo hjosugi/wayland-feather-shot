@@ -172,7 +172,7 @@ With a region selected:
 | S | hand: grab a placed shape and move it; Shift+click or Ctrl+click picks several, which then move together; the picked shapes' frame resizes and rotates them (Shift keeps the proportions or snaps the angle) |
 | P, L, A, G | pen, line, arrow, numbered step arrow |
 | R, E, H | rectangle, ellipse, highlighter |
-| T, U | text, speech bubble (click, then type on the canvas: Enter is a newline, Ctrl+Enter finishes, Esc cancels) |
+| T, U | text, speech bubble (click, then type on the canvas: Enter is a newline, Ctrl+Enter finishes, Esc cancels); a click on a placed text or bubble, or a double-click on one with the hand, types into it again |
 | M, J | numbered marker, emoji sticker (click to place) |
 | B, X, O | blur, pixelate, spotlight (dims everything outside it) |
 | [ , ] | smaller or larger line width, or text size while the text, bubble or emoji tool is active |

@@ -610,6 +610,18 @@ class OverlayControlsMixin:
             self._style_size_label.set_text(
                 f"{self._size_spin.get_value():g}")
 
+    def _show_style(self):
+        """Set the controls to the current style, after it was taken from
+        a placed shape."""
+        for name, button in self._text_style_buttons.items():
+            button.set_active(name == self.text_style)
+        for name, button in self._align_buttons.items():
+            button.set_active(name == self.text_align)
+        desc = Pango.FontDescription()
+        desc.set_family(self.style.font_family)
+        self._font_button.set_font_desc(desc)
+        self._refresh_style_menu()
+
     def _refresh_style_menu(self):
         """Show the style menu's rows for the current tool, and point the
         size spinner at what it sizes."""

@@ -8,6 +8,8 @@ overlay.window.OverlayWindow.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -40,9 +42,10 @@ class TextLayer(Gtk.Fixed):
 
 
 class OverlayTextMixin:
-    """One text at a time: ``_text_edit`` holds its view, image position
-    and kind ("text" or "bubble") from _begin_text until _end_text turns it
-    into a shape (or drops it)."""
+    """One text at a time: ``_text_edit`` holds its view, image position,
+    kind ("text" or "bubble") and, when a placed one is edited again, its
+    place and original, from _begin_text until _end_text turns it into a
+    shape (or drops it)."""
 
     def _begin_text(self, ix, iy, kind="text"):
         """Type the text on the canvas, at the size and colour it will have.
@@ -52,6 +55,31 @@ class OverlayTextMixin:
         bubble whose top-left corner is at (ix, iy).
         """
         self._end_text(commit=True)
+        self._open_text_view(ix, iy, kind)
+
+    def _edit_placed_text(self, index):
+        """Type into the placed text or bubble at *index* again.
+
+        It leaves the composite while it is typed into, and its style
+        becomes the current one, so the controls show it and can change it.
+        """
+        self._end_text(commit=True)
+        shape = self.shapes[index]
+        style = shape.props.style
+        self.style = replace(self.style, rgba=style.rgba,
+                             font_size=style.font_size,
+                             font_family=style.font_family)
+        if shape.kind == "text":
+            self.text_style = shape_model.text_style_of(shape.props)
+            self.text_align = shape.props.align
+        self._show_style()
+        del self.shapes[index]
+        self._open_text_view(shape.x, shape.y, shape.kind,
+                             original=(index, shape))
+        self._text_edit["view"].get_buffer().set_text(shape.props.text)
+        self._redraw()
+
+    def _open_text_view(self, ix, iy, kind, original=None):
         view = Gtk.TextView()
         view.set_wrap_mode(Gtk.WrapMode.NONE)
         view.add_css_class("wfs-text-edit")
@@ -65,7 +93,8 @@ class OverlayTextMixin:
         self._place(self._text_layer, self._text_host)
         self._text_layer.put(view, 0, 0)
         self._text_layer.set_visible(True)
-        self._text_edit = {"view": view, "pos": (ix, iy), "kind": kind}
+        self._text_edit = {"view": view, "pos": (ix, iy), "kind": kind,
+                           "original": original}
         self._position_text_view()
         self._style_text_view()
         view.grab_focus()
@@ -142,8 +171,9 @@ class OverlayTextMixin:
     def _end_text(self, commit: bool):
         """Finish the text being typed, if any: with *commit* (and some
         non-blank text) it becomes a Text shape or a bubble, and an undo
-        step; either way the view goes. Safe to call when nothing is being
-        typed."""
+        step; either way the view goes. A placed text typed into again
+        takes its place back, changed, removed when emptied, or as it was
+        when cancelled. Safe to call when nothing is being typed."""
         edit, self._text_edit = self._text_edit, None
         if not edit:
             return
@@ -152,7 +182,19 @@ class OverlayTextMixin:
         text = view.get_buffer().get_text(start, end, False)
         self._text_layer.remove(view)
         self._text_layer.set_visible(False)
-        if commit and text.strip():
+        original = edit["original"]
+        if original is not None:
+            index, shape = original
+            self.shapes.insert(index, shape)
+            if commit:
+                changed = self._retexted(shape, text)
+                if changed != shape:
+                    self._push_history()
+                    if changed is None:
+                        del self.shapes[index]
+                    else:
+                        self.shapes[index] = changed
+        elif commit and text.strip():
             self._push_history()
             if edit["kind"] == "bubble":
                 w, h = render.bubble_body(text, self.style)
@@ -164,6 +206,23 @@ class OverlayTextMixin:
                                         **shape_model.text_style_flags(
                                             self.text_style)))
         self._redraw()
+
+    def _retexted(self, shape, text):
+        """*shape* with new words and the current style, or None when the
+        words are gone. Its place, turn and identity stay."""
+        if not text.strip():
+            return None
+        style = replace(shape.props.style, rgba=self.style.rgba,
+                        font_size=self.style.font_size,
+                        font_family=self.style.font_family)
+        if shape.kind == "bubble":
+            w, h = render.bubble_body(text, style)
+            return replace(shape, props=replace(shape.props, text=text,
+                                                style=style, w=w, h=h))
+        shape = shape.retexted(text)
+        return replace(shape, props=replace(
+            shape.props, style=style, align=self.text_align,
+            **shape_model.text_style_flags(self.text_style)).remeasured())
 
     def _on_text_key(self, _controller, keyval, _keycode, state):
         """The text view's own keys, ahead of its default handling."""

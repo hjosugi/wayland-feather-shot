@@ -15,7 +15,7 @@ try:
     gi.require_version("Gdk", "4.0")
     gi.require_version("GdkPixbuf", "2.0")
     gi.require_version("Pango", "1.0")
-    from gi.repository import Gdk, GdkPixbuf, Gtk, Pango  # noqa: E402
+    from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, Pango  # noqa: E402
     HAVE_GTK_DISPLAY = Gdk.Display.get_default() is not None
 except (ImportError, ValueError):
     HAVE_GTK_DISPLAY = False
@@ -24,6 +24,17 @@ if HAVE_GTK_DISPLAY:
     from wayland_feather_shot.settings import Settings  # noqa: E402
 
 CTRL = 1 << 2
+
+
+class FakeDrag:
+    def __init__(self, x, y):
+        self.start = (x, y)
+
+    def get_start_point(self):
+        return (True, *self.start)
+
+    def get_current_event_state(self):
+        return 0
 
 
 @unittest.skipUnless(HAVE_GTK_DISPLAY, "GTK display unavailable")
@@ -210,6 +221,90 @@ class OverlayTextTests(unittest.TestCase):
         self.window._begin_text(100, 100)
         self.assertFalse(self.window._on_key(None, Gdk.KEY_p, 0, 0))
         self.assertEqual(self.window.tool, "text")
+
+    # -- typing into a placed text again --
+
+    def place(self, text, at=(100, 100)):
+        self.window._begin_text(*at)
+        self.window._text_edit["view"].get_buffer().set_text(text)
+        self.window._end_text(commit=True)
+        return self.window.shapes[-1]
+
+    def click(self, x, y, n_press=1):
+        self.window._on_click_pressed(None, n_press, x, y)
+        self.window._on_click(None, n_press, x, y)
+
+    def test_a_click_with_the_text_tool_types_into_the_text_there(self):
+        placed = self.place("hello")
+        self.click(placed.x + 5, placed.y + 5)
+        edit = self.window._text_edit
+        buffer = edit["view"].get_buffer()
+        self.assertEqual(buffer.get_text(*buffer.get_bounds(), False),
+                         "hello")
+        self.assertEqual(self.window.shapes, [])        # lifted while typed
+        buffer.set_text("hello again")
+        history_before = len(self.window._undo)
+        self.window._on_text_key(None, Gdk.KEY_Return, 0, CTRL)
+        (changed,) = self.window.shapes
+        self.assertEqual(changed.props.text, "hello again")
+        self.assertEqual(changed.sid, placed.sid)
+        self.assertEqual((changed.x, changed.y), (placed.x, placed.y))
+        self.assertEqual(len(self.window._undo), history_before + 1)
+        self.window.undo()
+        self.assertEqual(self.window.shapes[0].props.text, "hello")
+
+    def test_a_double_click_with_the_hand_types_into_a_placed_text(self):
+        placed = self.place("hand me")
+        self.window.select_tool("hand")
+        self.click(placed.x + 5, placed.y + 5)
+        # As GTK does it: the click's release before the drag's end, which
+        # puts the lifted text back.
+        gesture = FakeDrag(placed.x + 5, placed.y + 5)
+        self.window._on_click_pressed(None, 2, placed.x + 5, placed.y + 5)
+        self.window._on_drag_begin(gesture, placed.x + 5, placed.y + 5)
+        self.window._on_click(None, 2, placed.x + 5, placed.y + 5)
+        self.window._on_drag_end(gesture, 0, 0)
+        context = GLib.MainContext.default()
+        while context.pending():
+            context.iteration(False)
+        self.assertIsNotNone(self.window._text_edit)
+        self.assertEqual(self.window._text_edit["original"][1], placed)
+
+    def test_it_takes_the_texts_style_and_escape_puts_it_back(self):
+        self.window._text_style_buttons["box"].set_active(True)
+        self.window._align_buttons["right"].set_active(True)
+        placed = self.place("styled")
+        self.window._text_style_buttons["plain"].set_active(True)
+        self.window._align_buttons["left"].set_active(True)
+        self.click(placed.x + 5, placed.y + 5)
+        self.assertEqual(self.window.text_style, "box")
+        self.assertTrue(self.window._text_style_buttons["box"].get_active())
+        self.assertEqual(self.window.text_align, "right")
+        self.window._on_text_key(None, Gdk.KEY_Escape, 0, 0)
+        self.assertEqual(self.window.shapes, [placed])
+
+    def test_emptying_a_placed_text_removes_it_as_one_step(self):
+        placed = self.place("gone soon")
+        self.click(placed.x + 5, placed.y + 5)
+        self.window._text_edit["view"].get_buffer().set_text("")
+        self.window._on_text_key(None, Gdk.KEY_Return, 0, CTRL)
+        self.assertEqual(self.window.shapes, [])
+        self.window.undo()
+        self.assertEqual(self.window.shapes, [placed])
+
+    def test_a_bubble_is_typed_into_again_with_the_bubble_tool(self):
+        self.window.select_tool("bubble")
+        self.window._begin_text(150, 120, kind="bubble")
+        self.window._text_edit["view"].get_buffer().set_text("Hi")
+        self.window._end_text(commit=True)
+        bubble = self.window.shapes[-1]
+        self.click(bubble.x + 10, bubble.y + 10)
+        self.assertEqual(self.window._text_edit["kind"], "bubble")
+        self.window._text_edit["view"].get_buffer().set_text("Hi there")
+        self.window._on_text_key(None, Gdk.KEY_Return, 0, CTRL)
+        (changed,) = self.window.shapes
+        self.assertEqual(changed.props.text, "Hi there")
+        self.assertGreater(changed.props.w, bubble.props.w)
 
 
 if __name__ == "__main__":

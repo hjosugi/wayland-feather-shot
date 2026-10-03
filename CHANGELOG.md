@@ -53,7 +53,9 @@
   move its ends and bend it. The editor's keys work on them too: Ctrl+A
   picks every shape, Delete removes the picked ones, the arrows nudge
   them (Shift: 10 px; a held key undoes in one go), and Ctrl+Up and
-  Ctrl+Down raise and lower them.
+  Ctrl+Down raise and lower them. A placed text or bubble is typed into
+  again with a click of its tool or a double-click with the hand, in its
+  own style; emptied, it goes.
 - **Each monitor keeps its own picture.** With several monitors the
   overlay squeezed all of them into one screen. It now opens on every
   monitor, each showing its own part of the screenshot at its own scale;

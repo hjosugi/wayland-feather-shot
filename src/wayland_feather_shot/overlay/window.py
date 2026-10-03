@@ -652,8 +652,10 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         """A click (press and release without a drag).
 
         Two clicks inside the selection copy it and close. Otherwise the
-        click tools act: text and bubble start typing there, the marker
-        places the next number, and emoji offers stickers to place.
+        click tools act: text and bubble start typing there (into the text
+        or bubble already there, if any), the marker places the next
+        number, and emoji offers stickers to place. Two clicks with the
+        hand on a text or a bubble type into it again.
         """
         eligible = self._copy_press_inside and self._copy_hit(x, y)
         self._copy_press_inside = False
@@ -665,9 +667,21 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             return
         else:
             self._copy_first_click = False
-        if self.sel is None or self.tool not in CLICK_TOOLS:
+        if self.sel is None:
             return
         ix, iy = self._to_image(x, y)
+        if self.tool == "hand" and n_press == 2:
+            # The release reaches this gesture before the drag gesture,
+            # which still holds the shape lifted; look once it is back.
+            GLib.idle_add(lambda: (self._edit_text_at(ix, iy), False)[1])
+            return
+        if self.tool not in CLICK_TOOLS:
+            return
+        if self.tool in ("text", "bubble"):
+            index = self._shape_at(ix, iy)
+            if index is not None and self.shapes[index].kind == self.tool:
+                self._edit_placed_text(index)
+                return
         if self.tool == "marker":
             self._add_shape(
                 Marker((ix, iy), shape_model.next_number(self.shapes),
@@ -676,6 +690,13 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             self._pick_emoji(x, y, ix, iy)
         else:
             self._begin_text(ix, iy, kind=self.tool)
+
+    def _edit_text_at(self, ix, iy):
+        """Type into the text or bubble at image point (ix, iy), if any."""
+        index = self._shape_at(ix, iy)
+        if index is not None and self.shapes[index].kind in ("text",
+                                                             "bubble"):
+            self._edit_placed_text(index)
 
     def _add_shape(self, shape):
         """Add one finished annotation, as an undo step."""
