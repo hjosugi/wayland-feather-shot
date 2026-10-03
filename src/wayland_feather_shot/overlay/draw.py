@@ -118,22 +118,10 @@ class OverlayDrawMixin:
                 snapshot.append_color(purple, bounds)
                 snapshot.pop()
 
-            label = f"{sw} × {sh}"
-            ext = self._text_extents(label, 13, True)
-            label_x, label_y = position_label(
-                (w, h), selection,
-                (math.ceil(ext.width + 10), math.ceil(ext.height + 9)),
-                self._bar_rects if self._bars_visible else (),
-            )
-            bounds = rect(label_x, label_y,
-                          math.ceil(ext.width + 10), math.ceil(ext.height + 9))
-            cr = snapshot.append_cairo(bounds)
-            cr.set_source_rgba(0, 0, 0, .7)
-            cr.rectangle(label_x, label_y, ext.width + 10, ext.height + 9)
-            cr.fill()
-            self._paint_text(cr, label, label_x + 5,
-                             label_y + ext.height + 4, 13, True)
-            del cr
+            # The size goes with the selection's own monitor, like the bars;
+            # another monitor's window would pin it to its edge.
+            if self._view is self._home_view():
+                self._draw_size_label(snapshot, w, h, selection, sw, sh)
         else:
             hint = (_("Drag: copy area   •   Click / Enter: copy full "
                       "screen   •   Esc: cancel") if self.copy_on_select else
@@ -151,6 +139,25 @@ class OverlayDrawMixin:
             cr.fill()
             self._paint_text(cr, hint, hx, hy, 15, False)
             del cr
+
+    def _draw_size_label(self, snapshot, w, h, selection, sw, sh):
+        label = f"{sw} × {sh}"
+        ext = self._text_extents(label, 13, True)
+        label_x, label_y = position_label(
+            (w, h), selection,
+            (math.ceil(ext.width + 10), math.ceil(ext.height + 9)),
+            self._bar_rects if self._bars_visible
+            and self._view is self._bars_view else (),
+        )
+        bounds = rect(label_x, label_y,
+                      math.ceil(ext.width + 10), math.ceil(ext.height + 9))
+        cr = snapshot.append_cairo(bounds)
+        cr.set_source_rgba(0, 0, 0, .7)
+        cr.rectangle(label_x, label_y, ext.width + 10, ext.height + 9)
+        cr.fill()
+        self._paint_text(cr, label, label_x + 5,
+                         label_y + ext.height + 4, 13, True)
+        del cr
 
     # Small Cairo text helpers for the size label and the hint, which are
     # chrome rather than annotations: plain Sans, white, no Pango layout.

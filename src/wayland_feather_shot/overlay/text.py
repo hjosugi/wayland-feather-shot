@@ -51,6 +51,9 @@ class OverlayTextMixin:
         view.add_controller(keys)
         view.get_buffer().connect("changed",
                                   lambda *_: self._style_text_view())
+        # The text is typed in the window of the monitor it was placed on.
+        self._text_host = self._view
+        self._place(self._text_layer, self._text_host)
         self._text_layer.put(view, 0, 0)
         self._text_layer.set_visible(True)
         self._text_edit = {"view": view, "pos": (ix, iy)}
@@ -63,7 +66,8 @@ class OverlayTextMixin:
         """Keep the view on its image point; called again on zoom and pan."""
         if not self._text_edit:
             return
-        wx, wy = self._to_widget(*self._text_edit["pos"])
+        with self._looking_through(self._text_host):
+            wx, wy = self._to_widget(*self._text_edit["pos"])
         self._text_layer.move(self._text_edit["view"], int(wx), int(wy))
 
     def _style_text_view(self):
@@ -79,7 +83,8 @@ class OverlayTextMixin:
         view = self._text_edit["view"]
         buffer = view.get_buffer()
         start, end = buffer.get_bounds()
-        scale = self._view_params()[0]
+        with self._looking_through(self._text_host):
+            scale = self._view_params()[0]
         font = self.style.font_size
         w, h = shape_model.measure_text(buffer.get_text(start, end, False),
                                         self.style)
@@ -121,7 +126,7 @@ class OverlayTextMixin:
             self.shapes.append(Text(edit["pos"], text, self.style,
                                     **shape_model.text_style_flags(
                                         self.text_style)))
-        self.area.queue_draw()
+        self._redraw()
 
     def _on_text_key(self, _controller, keyval, _keycode, state):
         """The text view's own keys, ahead of its default handling."""

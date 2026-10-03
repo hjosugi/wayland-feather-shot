@@ -15,8 +15,8 @@ src/wayland_feather_shot/
   overlay/               Flameshot-style fullscreen region overlay
     window.py            OverlayWindow: pointer and key input, undo history,
                          save/copy/pin/editor; assembled from the mixins below
-    view.py              image/widget coordinates, zoom and pan, monitors,
-                         resize handles
+    view.py              image/widget coordinates, zoom and pan, resize
+                         handles; one MonitorView (window) per monitor
     controls.py          toolbar, action bar, size and text style controls,
                          where the bars sit
     text.py              typing text in place on the canvas

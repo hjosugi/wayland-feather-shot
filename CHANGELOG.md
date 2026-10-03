@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Each monitor keeps its own picture.** With several monitors the
+  overlay squeezed all of them into one screen. It now opens on every
+  monitor, each showing its own part of the screenshot at its own scale;
+  the selection, the annotations and the undo history are shared, a
+  selection can start on any monitor, and the toolbar goes to the monitor
+  the selection is on. It is lighter too: no window draws the whole
+  multi-monitor screenshot shrunk on every frame any more.
+
 ## 0.12.0 (2026-10-03)
 
 - **Ctrl+PrtSc takes the full screen, Ctrl+Shift+PrtSc a region.** The

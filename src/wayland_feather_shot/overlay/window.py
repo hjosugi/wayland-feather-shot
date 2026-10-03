@@ -36,7 +36,7 @@ from .canvas import OverlayCanvas, OverlayScene
 from .controls import OVERLAY_TOOLS, OverlayControlsMixin
 from .draw import OverlayDrawMixin
 from .text import OverlayTextMixin, TextLayer
-from .view import ZOOM_MAX, ZOOM_STEP, OverlayViewMixin, Rect
+from .view import ZOOM_MAX, ZOOM_STEP, MonitorView, OverlayViewMixin, Rect
 
 # What other modules and the tests take from here.
 __all__ = ["OverlayWindow", "OVERLAY_TOOLS", "ZOOM_MAX"]
@@ -72,7 +72,8 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
 
     def __init__(self, app, pixbuf: GdkPixbuf.Pixbuf, settings,
                  open_editor: Optional[Callable] = None,
-                 copy_on_select: bool = False, select_all: bool = False):
+                 copy_on_select: bool = False, select_all: bool = False,
+                 monitor_layout=None):
         super().__init__(application=app, title="Feather Shot")
         self.pixbuf = pixbuf
         self._scene = OverlayScene(pixbuf)
@@ -117,20 +118,20 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         self._copy_first_click = False
         self._copy_press_inside = False
 
-        # The view: zoom 1 means the whole screenshot fits the window; pan
-        # is in widget pixels, added to the fitted origin.
-        self._mon_rects = self._monitor_rects_image()  # for edge snapping
-        self._zoom = 1.0
-        self._pan = (0.0, 0.0)
-        self._pinch_zoom0 = 1.0          # zoom level when a pinch started
-        self._pointer: Optional[Tuple[float, float]] = None
+        # Where things are: each MonitorView (view.py) has its own zoom,
+        # pan and pointer; these are the monitors' rects for edge snapping.
+        self._mon_rects = self._monitor_rects_image()
 
         self._bars_visible = False
         self._text_edit = None           # {"view", "pos"} while typing
 
-        self._build_ui()
+        self._build_ui(monitor_layout)
         self.set_decorated(False)
-        self.fullscreen()
+        monitor = self._views[0].monitor
+        if monitor is not None:
+            self.fullscreen_on_monitor(monitor)
+        else:
+            self.fullscreen()
         if select_all:
             # Not in the undo history: there is no empty overlay to go back
             # to. The bars are placed again once the window has its size.
@@ -139,81 +140,147 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
 
     # ---------------------------------------------------------------- UI --
 
-    def _build_ui(self):
-        """The canvas, its input controllers, and the widgets laid over it.
+    def _build_ui(self, monitor_layout=None):
+        """One view per monitor, their input controllers, and the widgets
+        laid over the canvases.
 
-        The canvas draws the screenshot, the selection and the annotations
-        (see draw.py). Two gestures share its button 1: the drag gesture
-        selects, moves, resizes and draws; the click gesture places text and
-        markers and turns a double-click inside the selection into a copy.
-        Over the canvas, in stacking order: the in-place text layer, the
-        toolbar and action bar, and the toast.
+        Each view's canvas draws its part of the screenshot, the selection
+        and the annotations (see draw.py). Two gestures share its button 1:
+        the drag gesture selects, moves, resizes and draws; the click
+        gesture places text and markers and turns a double-click inside the
+        selection into a copy. The widgets over the canvases (the in-place
+        text layer, the toolbar and action bar, the toast) exist once and
+        move to the view they are needed in (_place).
         """
-        self._root = Gtk.Overlay()
-        self.set_child(self._root)
         self._bar_rects = ()
         self._action_sizes = None
 
-        self.area = OverlayCanvas(self._snapshot,
-                                  on_resize=self._on_canvas_resized)
-        self.area.set_cursor(Gdk.Cursor.new_from_name("crosshair"))
-        self._root.set_child(self.area)
-
-        drag = Gtk.GestureDrag()
-        drag.set_button(1)
-        drag.connect("drag-begin", self._on_drag_begin)
-        drag.connect("drag-update", self._on_drag_update)
-        drag.connect("drag-end", self._on_drag_end)
-        self.area.add_controller(drag)
-
-        click = Gtk.GestureClick()
-        click.set_button(1)
-        click.connect("pressed", self._on_click_pressed)
-        click.connect("released", self._on_click)
-        self.area.add_controller(click)
-
-        motion = Gtk.EventControllerMotion()
-        motion.connect("motion", self._on_motion)
-        self.area.add_controller(motion)
-
-        scroll = Gtk.EventControllerScroll.new(
-            Gtk.EventControllerScrollFlags.BOTH_AXES)
-        scroll.connect("scroll", self._on_scroll)
-        self.area.add_controller(scroll)
-
-        pinch = Gtk.GestureZoom()
-        pinch.connect("begin", self._on_pinch_begin)
-        pinch.connect("scale-changed", self._on_pinch_scale)
-        self.area.add_controller(pinch)
-
-        keys = Gtk.EventControllerKey()
-        keys.connect("key-pressed", self._on_key)
-        self.add_controller(keys)
+        self._views = []
+        layout = monitor_layout or self._monitor_layout()
+        for index, (monitor, rect) in enumerate(layout):
+            window = self if index == 0 else self._monitor_window()
+            root = Gtk.Overlay()
+            window.set_child(root)
+            area = OverlayCanvas(self._draw_view,
+                                 on_resize=self._on_canvas_resized)
+            area.set_cursor(Gdk.Cursor.new_from_name("crosshair"))
+            root.set_child(area)
+            view = MonitorView(window, root, area, rect, monitor)
+            self._views.append(view)
+            self._listen(view)
+        self._view = self._bars_view = self._text_host = self._views[0]
+        self._root = self._views[0].root
 
         self._install_css()
         self._toolbar = self._build_toolbar()
         self._action_bar = self._build_action_bar()
         for bar in (self._toolbar, self._action_bar):
             self._keep_keys_on_the_overlay(bar)
-        # GTK gives a new window's focus to its first focusable widget; with
-        # the bars already showing (full mode) that is a toolbar button,
-        # which would swallow Enter. The overlay takes the keys itself.
-        self.connect("map", lambda *_: GLib.idle_add(self._drop_initial_focus))
         self._toast = Gtk.Label()
         self._toast.add_css_class("wfs-toast")
         self._toast.set_halign(Gtk.Align.CENTER)
         self._toast.set_valign(Gtk.Align.END)
         self._toast.set_margin_bottom(48)
+        self._toast.set_can_target(False)
         self._toast.set_visible(False)
         self._text_layer = TextLayer()
         self._text_layer.set_visible(False)
         for w in (self._text_layer, self._toolbar, self._action_bar,
                   self._toast):
             self._root.add_overlay(w)
+        if len(self._views) > 1:
+            # The other monitors' windows come and go with this one: close()
+            # (and the window manager) goes through close-request, destroy()
+            # through destroy.
+            self.connect("map", lambda *_: self._show_monitor_windows())
+            self.connect("close-request",
+                         lambda *_: (self._close_monitor_windows(), False)[1])
+            self.connect("destroy", lambda *_: self._close_monitor_windows())
 
-    def _drop_initial_focus(self):
+    def _listen(self, view):
+        """Attach the input controllers to *view*'s canvas and window. Each
+        handler first makes *view* the current one, so coordinates, cursor
+        and zoom are that monitor's."""
+        def on(handler):
+            def run(*args):
+                self._view = view
+                return handler(*args)
+            return run
+
+        drag = Gtk.GestureDrag()
+        drag.set_button(1)
+        drag.connect("drag-begin", on(self._on_drag_begin))
+        drag.connect("drag-update", on(self._on_drag_update))
+        drag.connect("drag-end", on(self._on_drag_end))
+        view.area.add_controller(drag)
+
+        click = Gtk.GestureClick()
+        click.set_button(1)
+        click.connect("pressed", on(self._on_click_pressed))
+        click.connect("released", on(self._on_click))
+        view.area.add_controller(click)
+
+        motion = Gtk.EventControllerMotion()
+        motion.connect("motion", on(self._on_motion))
+        view.area.add_controller(motion)
+
+        scroll = Gtk.EventControllerScroll.new(
+            Gtk.EventControllerScrollFlags.BOTH_AXES)
+        scroll.connect("scroll", on(self._on_scroll))
+        view.area.add_controller(scroll)
+
+        pinch = Gtk.GestureZoom()
+        pinch.connect("begin", on(self._on_pinch_begin))
+        pinch.connect("scale-changed", on(self._on_pinch_scale))
+        view.area.add_controller(pinch)
+
+        keys = Gtk.EventControllerKey()
+        keys.connect("key-pressed", on(self._on_key))
+        view.window.add_controller(keys)
+
+        # GTK gives a new window's focus to its first focusable widget; with
+        # the bars already showing (full mode) that is a toolbar button,
+        # which would swallow Enter. The overlay takes the keys itself.
+        view.window.connect(
+            "map", lambda win: GLib.idle_add(self._drop_initial_focus, win))
+
+    def _monitor_window(self):
+        """A plain fullscreen window for another monitor's view."""
+        window = Gtk.Window(title="Feather Shot")
+        window.set_decorated(False)
+        # Closing any of the windows closes the capture.
+        window.connect("close-request", lambda *_: (self.close(), True)[1])
+        return window
+
+    def _show_monitor_windows(self):
+        for view in self._views[1:]:
+            if view.monitor is not None:
+                view.window.fullscreen_on_monitor(view.monitor)
+            else:
+                view.window.fullscreen()
+            view.window.present()
+
+    def _close_monitor_windows(self):
+        for view in self._views[1:]:
+            view.window.destroy()
+
+    def _draw_view(self, area, snapshot, width, height):
+        with self._looking_through(self._view_of(area)):
+            self._snapshot(area, snapshot, width, height)
+
+    def _place(self, widget, view):
+        """Move one of the widgets laid over the canvases (a bar, the text
+        layer, the toast) into *view*'s window."""
+        parent = widget.get_parent()
+        if parent is view.root:
+            return
+        if parent is not None:
+            parent.remove_overlay(widget)
+        view.root.add_overlay(widget)
+
+    def _drop_initial_focus(self, window):
         if self._text_edit is None:
-            self.set_focus(None)
+            window.set_focus(None)
         return False
 
     def _on_canvas_resized(self, _width, _height):
@@ -306,7 +373,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         else:
             self._set_bars_visible(True)
             self._update_control_layout()
-        self.area.queue_draw()
+        self._redraw()
 
     # ------------------------------------------------------------- input --
 
@@ -357,7 +424,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
                     self._pen_points = [(ix, iy)]
             else:
                 self._drag_kind = None
-        self.area.queue_draw()
+        self._redraw()
 
     def _on_drag_update(self, gesture, dx, dy):
         if self._drag_kind is None or self._drag_start_img is None:
@@ -370,7 +437,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             return
         ix, iy = self._to_image(sx + dx, sy + dy)
         self._apply_drag(ix, iy)
-        self.area.queue_draw()
+        self._redraw()
 
     def _on_drag_end(self, gesture, dx, dy):
         """Apply the last position and turn the drag into history: a new
@@ -414,7 +481,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             if self.sel != self._drag_sel0:
                 self._push_history(prev_sel=self._drag_sel0)
             self._update_control_layout()
-        self.area.queue_draw()
+        self._redraw()
 
     def _apply_drag(self, ix, iy):
         """Follow the pointer, now at image point (ix, iy), for the current
@@ -526,7 +593,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             self.shapes.append(
                 Marker((ix, iy), shape_model.next_number(self.shapes),
                        self.style))
-            self.area.queue_draw()
+            self._redraw()
         else:
             self._begin_text(ix, iy)
 

@@ -175,7 +175,8 @@ class OverlayControlsMixin:
                 child = child.get_next_sibling()
 
     def toast(self, message: str, seconds: float = 2.2):
-        """A short message at the bottom of the screen."""
+        """A short message at the bottom of the screen in use."""
+        self._place(self._toast, self._view)
         self._toast.set_text(message)
         self._toast.set_visible(True)
         GLib.timeout_add(int(seconds * 1000),
@@ -190,7 +191,8 @@ class OverlayControlsMixin:
             self._end_text(commit=True)
             self.tool = tool_id
             cursor = "default" if tool_id in ("move", "hand") else "crosshair"
-            self.area.set_cursor(Gdk.Cursor.new_from_name(cursor))
+            for view in self._views:
+                view.area.set_cursor(Gdk.Cursor.new_from_name(cursor))
             self._refresh_size_control()
 
     def select_tool(self, tool_id):
@@ -275,7 +277,8 @@ class OverlayControlsMixin:
             self._bar_rects = ()
 
     def _update_control_layout(self):
-        """Put the toolbar and action bar around the selection.
+        """Put the toolbar and action bar around the selection, in the
+        window of the monitor that holds it.
 
         overlay/layout.py decides where (GTK-free, unit-tested); this
         measures the bars, applies the result as margins and remembers the
@@ -284,6 +287,14 @@ class OverlayControlsMixin:
         """
         if not self.sel:
             return
+        home = self._home_view()
+        self._bars_view = home
+        for bar in (self._toolbar, self._action_bar):
+            self._place(bar, home)
+        with self._looking_through(home):
+            self._lay_out_bars()
+
+    def _lay_out_bars(self):
         win_w = max(1, self.area.get_width())
         win_h = max(1, self.area.get_height())
         x, y, w, h = self.sel
@@ -329,4 +340,4 @@ class OverlayControlsMixin:
             (action_pos[0], action_pos[1],
              action_pos[0] + action_w, action_pos[1] + action_h),
         )
-        self.area.queue_draw()
+        self._redraw()
