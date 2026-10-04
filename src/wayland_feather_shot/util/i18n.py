@@ -143,9 +143,7 @@ JA = {
     "Reading the selection…": "選択範囲を読み取り中…",
     "Nothing recognised as sensitive. Check the image yourself before sharing it.": "機密と判定されたものはありません。共有前にご自身でも確認してください。",
     "Redaction strength": "伏せ字の強さ",
-    "Blur radius and mosaic block size — applies to a selected region too": "ぼかし半径とモザイクのブロックサイズ — 選択中の領域にも適用",
     "Marker": "マーカー",
-    "Spotlight — dim everything outside (S)": "スポットライト — 範囲外を暗く (S)",
     "Spotlight dim": "スポットライトの暗さ",
     "Font": "フォント",
     "Blur radius and mosaic block size": "ぼかしの半径とモザイクのブロックの大きさ",
@@ -176,7 +174,6 @@ JA = {
     "Redo (Ctrl+Shift+Z)": "やり直し (Ctrl+Shift+Z)",
     "Save (Ctrl+S)": "保存 (Ctrl+S)",
     "Save as… (Ctrl+Shift+S)": "名前を付けて保存… (Ctrl+Shift+S)",
-    "Copy to clipboard (Ctrl+C)": "クリップボードへコピー (Ctrl+C)",
     "Copy to clipboard (Ctrl+C / Enter)":
         "クリップボードへコピー (Ctrl+C / Enter)",
     "Open save folder (Ctrl+O)": "保存先フォルダーを開く (Ctrl+O)",

@@ -231,13 +231,7 @@ msgstr ""
 msgid "Redaction strength"
 msgstr ""
 
-msgid "Blur radius and mosaic block size — applies to a selected region too"
-msgstr ""
-
 msgid "Marker"
-msgstr ""
-
-msgid "Spotlight — dim everything outside (S)"
 msgstr ""
 
 msgid "Spotlight dim"
@@ -328,9 +322,6 @@ msgid "Save (Ctrl+S)"
 msgstr ""
 
 msgid "Save as… (Ctrl+Shift+S)"
-msgstr ""
-
-msgid "Copy to clipboard (Ctrl+C)"
 msgstr ""
 
 msgid "Copy to clipboard (Ctrl+C / Enter)"

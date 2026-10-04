@@ -231,14 +231,8 @@ msgstr "機密と判定されたものはありません。共有前にご自身
 msgid "Redaction strength"
 msgstr "伏せ字の強さ"
 
-msgid "Blur radius and mosaic block size — applies to a selected region too"
-msgstr "ぼかし半径とモザイクのブロックサイズ — 選択中の領域にも適用"
-
 msgid "Marker"
 msgstr "マーカー"
-
-msgid "Spotlight — dim everything outside (S)"
-msgstr "スポットライト — 範囲外を暗く (S)"
 
 msgid "Spotlight dim"
 msgstr "スポットライトの暗さ"
@@ -329,9 +323,6 @@ msgstr "保存 (Ctrl+S)"
 
 msgid "Save as… (Ctrl+Shift+S)"
 msgstr "名前を付けて保存… (Ctrl+Shift+S)"
-
-msgid "Copy to clipboard (Ctrl+C)"
-msgstr "クリップボードへコピー (Ctrl+C)"
 
 msgid "Copy to clipboard (Ctrl+C / Enter)"
 msgstr "クリップボードへコピー (Ctrl+C / Enter)"
