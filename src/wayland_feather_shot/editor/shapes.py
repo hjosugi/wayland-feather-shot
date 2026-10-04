@@ -138,13 +138,8 @@ class Props:
     def geometry(self) -> Geometry:
         raise NotImplementedError
 
-    def scaled(self, sx: float, sy: float, width_only: bool = False) -> "Props":
-        """Return a copy scaled about the local origin.
-
-        *width_only* means the drag was a side handle rather than a corner;
-        only text cares, and for it the distinction is the difference between
-        resizing the box and resizing the type.
-        """
+    def scaled(self, sx: float, sy: float) -> "Props":
+        """Return a copy scaled about the local origin."""
         raise NotImplementedError
 
     def restyled(self, style: Style) -> "Props":
@@ -180,7 +175,7 @@ class PenProps(Props):
             return Polygon2d(line, filled=False, padding=padding)
         return Polyline2d(line, padding=padding)
 
-    def scaled(self, sx, sy, width_only: bool = False):
+    def scaled(self, sx, sy):
         return replace(self, points=tuple((x * sx, y * sy) for x, y in self.points))
 
 
@@ -224,7 +219,7 @@ class ArrowProps(Props):
         r = self.badge_radius
         return Group2d([shaft, _Placed(Circle2d(r * 2, filled=True), (-r, -r))])
 
-    def scaled(self, sx, sy, width_only: bool = False):
+    def scaled(self, sx, sy):
         return replace(self, end=(self.end[0] * sx, self.end[1] * sy),
                        bend=self.bend * _mean_scale(sx, sy))
 
@@ -244,7 +239,7 @@ class GeoProps(Props):
         cls = Ellipse2d if self.geo == "ellipse" else Rect2d
         return cls(self.w, self.h, filled=self.filled)
 
-    def scaled(self, sx, sy, width_only: bool = False):
+    def scaled(self, sx, sy):
         return replace(self, w=max(1.0, abs(self.w * sx)), h=max(1.0, abs(self.h * sy)))
 
 
@@ -260,7 +255,7 @@ class HighlightProps(Props):
     def geometry(self):
         return Rect2d(self.w, self.h, filled=True)
 
-    def scaled(self, sx, sy, width_only: bool = False):
+    def scaled(self, sx, sy):
         return replace(self, w=max(1.0, abs(self.w * sx)), h=max(1.0, abs(self.h * sy)))
 
 
@@ -282,7 +277,7 @@ class SpotlightProps(Props):
     def geometry(self):
         return Rect2d(self.w, self.h, filled=True)
 
-    def scaled(self, sx, sy, width_only: bool = False):
+    def scaled(self, sx, sy):
         return replace(self, w=max(1.0, abs(self.w * sx)),
                        h=max(1.0, abs(self.h * sy)))
 
@@ -304,7 +299,7 @@ class ObscureProps(Props):
     def geometry(self):
         return Rect2d(self.w, self.h, filled=True)
 
-    def scaled(self, sx, sy, width_only: bool = False):
+    def scaled(self, sx, sy):
         return replace(self, w=max(1.0, abs(self.w * sx)), h=max(1.0, abs(self.h * sy)))
 
 
@@ -352,15 +347,14 @@ class TextProps(Props):
         return _Placed(Rect2d(self.w + 2 * pad, self.h + 2 * pad, filled=True),
                        (-pad, -pad))
 
-    def scaled(self, sx, sy, width_only: bool = False):
-        if width_only:
-            # A side handle sets the width text wraps into rather than scaling
-            # the type: that is the whole gesture for turning a growing box
-            # into a wrapping one.
-            width = self.w if not self.auto_size else self.w
-            return replace(self, auto_size=False,
-                           wrap_width=max(MIN_TEXT_WIDTH,
-                                          abs(width * sx))).remeasured()
+    def rewrapped(self, sx: float) -> "TextProps":
+        """A side handle sets the width text wraps into rather than scaling
+        the type: that is the whole gesture for turning a growing box into a
+        wrapping one."""
+        return replace(self, auto_size=False,
+                       wrap_width=max(MIN_TEXT_WIDTH, abs(self.w * sx))).remeasured()
+
+    def scaled(self, sx, sy):
         scale = _mean_scale(sx, sy)
         style = replace(self.style, font_size=max(4.0, self.style.font_size * scale))
         wrap = self.wrap_width * scale if not self.auto_size else self.wrap_width
@@ -389,7 +383,7 @@ class MarkerProps(Props):
     def geometry(self):
         return Circle2d(self.diameter, filled=True)
 
-    def scaled(self, sx, sy, width_only: bool = False):
+    def scaled(self, sx, sy):
         return replace(self, diameter=max(8.0, self.diameter * _mean_scale(sx, sy)))
 
 
@@ -410,7 +404,7 @@ class BubbleProps(Props):
     def geometry(self):
         return Rect2d(self.w, self.h + self.tail_depth, filled=True)
 
-    def scaled(self, sx, sy, width_only: bool = False):
+    def scaled(self, sx, sy):
         return replace(self, w=max(6.0, abs(self.w * sx)), h=max(6.0, abs(self.h * sy)))
 
 
@@ -429,7 +423,7 @@ class EmojiProps(Props):
     def geometry(self):
         return Rect2d(self.w, self.size, filled=True)
 
-    def scaled(self, sx, sy, width_only: bool = False):
+    def scaled(self, sx, sy):
         return replace(self, size=max(8.0, self.size * _mean_scale(sx, sy)))
 
 
@@ -512,7 +506,12 @@ class Shape:
         return replace(self, x=nx, y=ny, rotation=self.rotation + delta)
 
     def scaled(self, sx: float, sy: float, width_only: bool = False) -> "Shape":
-        return replace(self, props=self.props.scaled(sx, sy, width_only))
+        """*width_only* means the drag was a side handle rather than a corner;
+        only text cares, and for it that is the difference between resizing
+        the box and resizing the type."""
+        if width_only and isinstance(self.props, TextProps):
+            return replace(self, props=self.props.rewrapped(sx))
+        return replace(self, props=self.props.scaled(sx, sy))
 
     def retexted(self, text: str) -> "Shape":
         """Set a text shape's content, keeping its alignment anchor fixed.
