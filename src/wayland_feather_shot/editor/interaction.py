@@ -1,13 +1,10 @@
-"""The editor's pointer state machine.
+"""The frame around picked shapes: its handles, and resizing, rotating and
+bending the shapes from them.
 
-Pure Python: no GTK, no cairo.  The canvas turns GTK events into
-:class:`PointerInfo` values and asks this module what happens; everything about
-*what* a drag means lives here, which is what makes it testable.
-
-A press decides which interaction starts, based on the current tool.  After
-that, motion and release dispatch on the **interaction**, not on the tool — so
-adding a tool is one branch in :meth:`Editor.pointer_down` plus a renderer,
-instead of another arm in five different handlers.
+Pure Python: no GTK, no cairo. The overlay's hand tool (overlay/hand.py)
+gives a :class:`Reshaper` the picked shapes and the view, asks it which
+handle is under the pointer, and hands it the drag; all of the geometry
+lives here, which is what makes it testable.
 """
 
 from __future__ import annotations
@@ -17,12 +14,8 @@ from dataclasses import dataclass, replace
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from . import arrows
-from .document import Document
-from .geometry import Box, Point, norm_rect, rotate
 from . import shapes as S
-
-CLICK_TOOLS = {"text", "marker", "bubble", "emoji"}
-BOX_TOOLS = {"rect", "ellipse", "highlight", "spotlight", "blur", "pixelate"}
+from .geometry import Box, Point, rotate
 
 CORNER_HANDLES = ("nw", "ne", "se", "sw")
 ROTATE_HANDLES = ("rot-nw", "rot-ne", "rot-se", "rot-sw")
@@ -44,7 +37,6 @@ HANDLE_ANCHOR: Dict[str, Point] = {
 }
 
 HANDLE_HIT_RADIUS = 9.0     # widget px
-MIN_MARQUEE = 2.0            # page units below which a drag is really a click
 ROTATE_HANDLE_OFFSET = 16.0  # widget px outside the corner
 ANGLE_SNAP = math.pi / 12    # 15°
 
@@ -61,27 +53,12 @@ def scales_y(handle: str) -> bool:
 class Viewport:
     """Where the page sits in the widget."""
 
-    image_size: Tuple[float, float] = (1.0, 1.0)
     scale: float = 1.0
     offset: Point = (0.0, 0.0)
-
-    def to_page(self, wx: float, wy: float) -> Point:
-        s = self.scale or 1.0
-        return ((wx - self.offset[0]) / s, (wy - self.offset[1]) / s)
 
     def to_widget(self, p: Point) -> Point:
         s = self.scale or 1.0
         return (p[0] * s + self.offset[0], p[1] * s + self.offset[1])
-
-    def page_distance(self, widget_distance: float) -> float:
-        """A widget-space distance in page units, so hit margins and handles
-        stay the same size to grab at any zoom level."""
-        s = self.scale or 1.0
-        return widget_distance / s
-
-    @property
-    def image_edge(self) -> float:
-        return max(self.image_size)
 
 
 @dataclass
@@ -89,12 +66,11 @@ class PointerInfo:
     widget: Point
     page: Point
     shift: bool = False
-    ctrl: bool = False
 
 
 @dataclass
 class SelectionFrame:
-    """The box drawn around the selection.
+    """The box drawn around the picked shapes.
 
     A lone shape keeps its own rotated frame, so it resizes along its own axes;
     several shapes share an axis-aligned page-space frame.
@@ -109,7 +85,8 @@ class SelectionFrame:
         return (rx + self.origin[0], ry + self.origin[1])
 
     def to_frame(self, p: Point) -> Point:
-        return rotate((p[0] - self.origin[0], p[1] - self.origin[1]), -self.rotation)
+        return rotate((p[0] - self.origin[0], p[1] - self.origin[1]),
+                      -self.rotation)
 
     def unit_point(self, u: float, v: float) -> Point:
         return self.to_page(self.box.point(u, v))
@@ -123,42 +100,7 @@ class SelectionFrame:
         return self.to_page(self.box.center)
 
 
-# -- interaction states ------------------------------------------------------
-
-@dataclass
-class Idle:
-    pass
-
-
-@dataclass
-class Drawing:
-    sid: str
-    origin: Point
-
-
-@dataclass
-class CreatingBox:
-    sid: str
-    origin: Point
-
-
-@dataclass
-class CreatingArrow:
-    sid: str
-    origin: Point
-
-
-@dataclass
-class Brushing:
-    origin: Point
-    additive: bool = False
-
-
-@dataclass
-class Translating:
-    origin: Point
-    initial: Dict[str, Point]
-
+# -- what a drag from a handle does ------------------------------------------
 
 @dataclass
 class Resizing:
@@ -176,65 +118,32 @@ class Rotating:
 
 @dataclass
 class DraggingArrow:
-    sid: str
     handle: str
 
 
-class Editor:
-    """Document + viewport + tool + the in-flight interaction."""
+class Reshaper:
+    """Reshapes *shapes*, picked together, from their frame's handles.
 
-    def __init__(self, document: Optional[Document] = None,
-                 style: Optional[S.Style] = None):
-        self.doc = document or Document()
-        self.viewport = Viewport()
-        self.tool = "pen"
-        self.style = style or S.Style()
-        self.redaction_density = 0.55
-        self.spotlight_scrim = 0.55
-        self.head_start = "none"
-        self.head_end = "arrow"
-        self.text_align = "left"
-        self.text_style = "plain"
-        #: The text shape currently being typed into.  The canvas skips drawing
-        #: it, because the editor overlay is showing the same text on top.
-        self.editing_sid: Optional[str] = None
-        self.on_editing_changed = None
-        self.state = Idle()
-        self.brush: Optional[Box] = None
-        self.on_change = None
-        # The canvas owns the base image; a snapshot has to carry it, because
-        # a composite redaction and a crop change the pixels as well as the
-        # shapes and the two have to undo together.
-        self.base_provider = None
+    ``shapes`` follows the drag; a press away from the handles changes
+    nothing.
+    """
 
-    # -- style -------------------------------------------------------------
+    def __init__(self, shapes: Sequence[S.Shape], viewport: Viewport):
+        self.shapes: List[S.Shape] = list(shapes)
+        self.viewport = viewport
+        self.state = None
 
-    @property
-    def page_style(self) -> S.Style:
-        """The active style with its width converted into page units, so the
-        same setting looks the same on a 1080p and a 4K capture."""
-        return replace(self.style, width=S.page_stroke_width(
-            self.style.width, self.viewport.image_edge))
-
-    def _mark_undo(self) -> None:
-        self.doc.mark_undo(self.base_provider() if self.base_provider else None)
-
-    def _notify(self):
-        if self.on_change:
-            self.on_change()
-
-    # -- selection frame ---------------------------------------------------
+    # -- the frame and its handles --
 
     @property
     def lone_arrow(self) -> Optional[S.Shape]:
-        """The one selected shape, when it is an arrow and the only one."""
-        selected = self.doc.selected_shapes
-        if len(selected) == 1 and selected[0].kind == "arrow":
-            return selected[0]
+        """The one picked shape, when it is an arrow."""
+        if len(self.shapes) == 1 and self.shapes[0].kind == "arrow":
+            return self.shapes[0]
         return None
 
     def arrow_handle_points(self) -> Dict[str, Point]:
-        """The three handles of a lone selected arrow, in page space."""
+        """The three handles of a lone arrow, in page space."""
         shape = self.lone_arrow
         if shape is None:
             return {}
@@ -247,20 +156,20 @@ class Editor:
 
     @property
     def selection_frame(self) -> Optional[SelectionFrame]:
-        selected = self.doc.selected_shapes
-        if not selected:
+        if not self.shapes:
             return None
-        if len(selected) == 1:
-            shape = selected[0]
-            return SelectionFrame(shape.local_bounds, shape.origin, shape.rotation)
-        box = S.selection_bounds(selected)
+        if len(self.shapes) == 1:
+            shape = self.shapes[0]
+            return SelectionFrame(shape.local_bounds, shape.origin,
+                                  shape.rotation)
+        box = S.selection_bounds(self.shapes)
         return SelectionFrame(box) if box else None
 
     def handle_at(self, widget_point: Point) -> Optional[str]:
-        """Which selection handle is under a widget point.
+        """Which handle is under a widget point.
 
         Tested in widget space so handles stay the same size to grab however
-        far the canvas is zoomed.
+        far the view is zoomed.
         """
         # An arrow's own three handles take the place of the resize frame.
         for handle, page_point in self.arrow_handle_points().items():
@@ -284,7 +193,7 @@ class Editor:
 
     def rotate_handle_points(self) -> Dict[str, Point]:
         """The rotation handles, in widget space: just outside each corner
-        of the selection frame, away from its centre."""
+        of the frame, away from its centre."""
         frame = self.selection_frame
         if frame is None or self.lone_arrow is not None:
             return {}
@@ -299,197 +208,37 @@ class Editor:
                               screen[1] + dy / length * ROTATE_HANDLE_OFFSET)
         return points
 
-    def hit_margin(self) -> float:
-        return max(3.0, self.viewport.page_distance(8.0))
+    # -- the drag --
 
-    # -- press -------------------------------------------------------------
-
-    def pointer_down(self, p: PointerInfo) -> None:
-        if self.editing_sid is not None:
-            index = S.hit_shape(self.doc.shapes, p.page, self.hit_margin())
-            hit = self.doc.shapes[index].sid if index is not None else None
-            if hit != self.editing_sid:
-                self.stop_editing()
-        if self.tool == "select":
-            self._begin_select(p)
-        elif self.tool == "pen":
-            self._begin_pen(p)
-        elif self.tool in BOX_TOOLS:
-            self._begin_box(p)
-        elif self.tool in ("line", "arrow", "steparrow"):
-            self._begin_arrow(p)
-        self._notify()
-
-    def _begin_select(self, p: PointerInfo) -> None:
+    def press(self, p: PointerInfo) -> bool:
+        """Start a drag from the handle under *p*; False when there is
+        none."""
         handle = self.handle_at(p.widget)
-
-        # An arrow's own handles take priority: a lone arrow has three of them
-        # instead of a resize frame.
+        if handle is None:
+            return False
         if handle in ARROW_HANDLES:
-            shape = self.lone_arrow
-            if shape is not None:
-                self._mark_undo()
-                self.state = DraggingArrow(shape.sid, handle)
-                return
-
-        frame = self.selection_frame
-        if handle and frame:
-            self._mark_undo()
-            if handle in ROTATE_HANDLES:
-                center = frame.page_center
-                self.state = Rotating(center, _angle(center, p.page),
-                                      tuple(self.doc.shapes))
-            else:
-                self.state = Resizing(handle, frame, tuple(self.doc.shapes))
-            return
-
-        index = S.hit_shape(self.doc.shapes, p.page, self.hit_margin())
-        if index is not None:
-            sid = self.doc.shapes[index].sid
-            if p.shift:
-                self.doc.toggle(sid)
-            elif sid not in self.doc.selected:
-                self.doc.select([sid])
-            if self.doc.selected:
-                self._mark_undo()
-                self.state = Translating(p.page, self._initial_origins())
-            return
-
-        # Nothing under the pointer — but the selection's own frame acts as a
-        # drag handle, so a hollow shape can be moved from its empty middle.
-        # Arrows opt out: their bounding box is mostly empty space, and
-        # dragging one from a corner nowhere near the shaft feels wrong.
-        if (frame and self.lone_arrow is None
-                and _point_in_polygon(p.page, frame.page_corners)):
-            self._mark_undo()
-            self.state = Translating(p.page, self._initial_origins())
-            return
-
-        if not p.shift:
-            self.doc.clear_selection()
-        self.state = Brushing(p.page, additive=p.shift)
-        self.brush = Box(p.page[0], p.page[1], 0.0, 0.0)
-
-    def _initial_origins(self) -> Dict[str, Point]:
-        return {s.sid: s.origin for s in self.doc.selected_shapes}
-
-    def _begin_pen(self, p: PointerInfo) -> None:
-        self._mark_undo()
-        shape = self.doc.add(S.Pen([p.page], self.page_style))
-        self.state = Drawing(shape.sid, p.page)
-
-    def _begin_box(self, p: PointerInfo) -> None:
-        self._mark_undo()
-        rect = (p.page[0], p.page[1], 1.0, 1.0)
-        if self.tool == "rect":
-            shape = S.RectShape(rect, self.page_style)
-        elif self.tool == "ellipse":
-            shape = S.EllipseShape(rect, self.page_style)
-        elif self.tool == "highlight":
-            shape = S.Highlight(rect, self.page_style)
-        elif self.tool == "spotlight":
-            shape = S.Spotlight(rect, scrim=self.spotlight_scrim)
+            self.state = DraggingArrow(handle)
+        elif handle in ROTATE_HANDLES:
+            center = self.selection_frame.page_center
+            self.state = Rotating(center, _angle(center, p.page),
+                                  tuple(self.shapes))
         else:
-            shape = S.Obscure(rect, density=self.redaction_density,
-                              pixelate=self.tool == "pixelate")
-        self.doc.add(shape)
-        self.state = CreatingBox(shape.sid, p.page)
+            self.state = Resizing(handle, self.selection_frame,
+                                  tuple(self.shapes))
+        return True
 
-    def _begin_arrow(self, p: PointerInfo) -> None:
-        self._mark_undo()
-        if self.tool == "line":
-            shape = S.Line(p.page, p.page, self.page_style)
-        elif self.tool == "steparrow":
-            shape = S.StepArrow(p.page, p.page,
-                                S.next_number(self.doc.shapes), self.page_style)
-        else:
-            shape = S.Arrow(p.page, p.page, self.page_style)
-            shape = replace(shape, props=replace(
-                shape.props, head_start=self.head_start, head_end=self.head_end))
-        self.doc.add(shape)
-        self.state = CreatingArrow(shape.sid, p.page)
-
-    # -- move --------------------------------------------------------------
-
-    def pointer_move(self, p: PointerInfo) -> None:
-        state = self.state
-        if isinstance(state, Idle):
-            return
-        if isinstance(state, Drawing):
-            self._append_pen_point(state, p)
-        elif isinstance(state, CreatingBox):
-            self._resize_while_creating(state, p)
-        elif isinstance(state, CreatingArrow):
-            self._update_arrow_end(state, p)
-        elif isinstance(state, Brushing):
-            self.brush = Box(*norm_rect(state.origin[0], state.origin[1],
-                                        p.page[0], p.page[1]))
-        elif isinstance(state, Translating):
-            self._translate(state, p)
-        elif isinstance(state, Resizing):
-            self._resize(state, p)
-        elif isinstance(state, Rotating):
-            self._rotate(state, p)
-        elif isinstance(state, DraggingArrow):
-            self._drag_arrow(state, p)
-        self._notify()
-
-    def _append_pen_point(self, state: Drawing, p: PointerInfo) -> None:
-        shape = self.doc.shape(state.sid)
-        if shape is None:
-            return
-        local = shape.to_local(p.page)
-        points = shape.props.points
-        # Skip points on top of the previous one: they add nothing and cost a
-        # full redraw.
-        if points and math.dist(points[-1], local) < 0.75:
-            return
-        self.doc.update(replace(shape, props=replace(
-            shape.props, points=points + (local,))))
-
-    def _resize_while_creating(self, state: CreatingBox, p: PointerInfo) -> None:
-        shape = self.doc.shape(state.sid)
-        if shape is None:
-            return
-        ox, oy = state.origin
-        x, y, w, h = norm_rect(ox, oy, p.page[0], p.page[1])
-        if p.shift:
-            side = max(w, h)
-            x = ox - side if p.page[0] < ox else ox
-            y = oy - side if p.page[1] < oy else oy
-            w = h = side
-        self.doc.update(replace(shape, x=x, y=y, props=replace(
-            shape.props, w=max(1.0, w), h=max(1.0, h))))
-
-    def _update_arrow_end(self, state: CreatingArrow, p: PointerInfo) -> None:
-        shape = self.doc.shape(state.sid)
-        if shape is None:
-            return
-        end = shape.to_local(p.page)
-        if p.shift:
-            end = _snap_angle((0.0, 0.0), end)
-        self.doc.update(replace(shape, props=replace(shape.props, end=end)))
-
-    def _translate(self, state: Translating, p: PointerInfo) -> None:
-        dx = p.page[0] - state.origin[0]
-        dy = p.page[1] - state.origin[1]
-        if p.shift:
-            # Lock to whichever axis has moved further.
-            if abs(dx) > abs(dy):
-                dy = 0.0
-            else:
-                dx = 0.0
-        moved = []
-        for sid, (x0, y0) in state.initial.items():
-            shape = self.doc.shape(sid)
-            if shape is not None:
-                moved.append(shape.moved_to(x0 + dx, y0 + dy))
-        self.doc.update_many(moved)
+    def drag(self, p: PointerInfo) -> None:
+        """Follow the pointer with the handle being dragged."""
+        if isinstance(self.state, Resizing):
+            self._resize(self.state, p)
+        elif isinstance(self.state, Rotating):
+            self._rotate(self.state, p)
+        elif isinstance(self.state, DraggingArrow):
+            self._drag_arrow(self.state, p)
 
     def _resize(self, state: Resizing, p: PointerInfo) -> None:
         # Re-apply from the snapshot every time rather than accumulating
         # deltas: accumulating drifts and makes the drag unreversible.
-        self.doc.shapes = list(state.initial)
         frame = state.frame
         handle = state.handle
         anchor_u, anchor_v = HANDLE_ANCHOR[handle]
@@ -516,38 +265,29 @@ class Editor:
         sy = math.copysign(max(abs(sy), 0.01), sy or 1.0)
 
         width_only = not scales_y(handle)
-        out = []
-        for shape in state.initial:
-            if shape.sid not in self.doc.selected:
-                continue
-            out.append(_scaled_about(shape, frame, anchor, sx, sy, width_only))
-        self.doc.update_many(out)
+        self.shapes = [_scaled_about(shape, frame, anchor, sx, sy, width_only)
+                       for shape in state.initial]
 
     def _rotate(self, state: Rotating, p: PointerInfo) -> None:
-        self.doc.shapes = list(state.initial)
         delta = _angle(state.center, p.page) - state.start_angle
         if p.shift:
             delta = round(delta / ANGLE_SNAP) * ANGLE_SNAP
-        out = [s.rotated(delta, state.center) for s in state.initial
-               if s.sid in self.doc.selected]
-        self.doc.update_many(out)
+        self.shapes = [s.rotated(delta, state.center) for s in state.initial]
 
     def _drag_arrow(self, state: DraggingArrow, p: PointerInfo) -> None:
-        shape = self.doc.shape(state.sid)
-        if shape is None:
-            return
+        shape = self.shapes[0]
         props = shape.props
         local = shape.to_local(p.page)
 
         if state.handle == "arrow-end":
             end = _snap_angle(props.start, local) if p.shift else local
-            self.doc.update(replace(shape, props=replace(props, end=end)))
+            self.shapes = [replace(shape, props=replace(props, end=end))]
             return
 
         if state.handle == "arrow-middle":
             bend = arrows.bend_from_point(props.start, props.end, local)
-            self.doc.update(replace(shape, props=replace(
-                props, bend=arrows.snap_bend(bend, props.style.width))))
+            self.shapes = [replace(shape, props=replace(
+                props, bend=arrows.snap_bend(bend, props.style.width)))]
             return
 
         # Dragging the start moves the shape's origin, so the end has to be
@@ -557,211 +297,7 @@ class Editor:
         end = moved.to_local(page_end)
         if p.shift:
             end = _snap_angle(props.start, end)
-        self.doc.update(replace(moved, props=replace(props, end=end)))
-
-    # -- release -----------------------------------------------------------
-
-    def pointer_up(self, p: PointerInfo) -> None:
-        state = self.state
-        if isinstance(state, Drawing):
-            self._finish_pen(state)
-        elif isinstance(state, CreatingBox):
-            self._finish_box(state)
-        elif isinstance(state, CreatingArrow):
-            self._finish_arrow(state)
-        elif isinstance(state, Brushing):
-            self._finish_brush(state, p)
-        self.state = Idle()
-        self.brush = None
-        self._notify()
-
-    def _finish_pen(self, state: Drawing) -> None:
-        shape = self.doc.shape(state.sid)
-        if shape is None:
-            return
-        points = shape.props.points
-        if len(points) < 2:
-            self.doc.cancel_undo()
-            return
-        # A stroke that comes back near its own start closes, so it reads as a
-        # ring rather than a near-miss.
-        closed = math.dist(points[0], points[-1]) <= shape.props.style.width * 2
-        if closed:
-            self.doc.update(replace(shape, props=replace(shape.props, closed=True)))
-
-    def _degenerate(self, shape: S.Shape) -> bool:
-        props = shape.props
-        return getattr(props, "w", 2) <= 2 and getattr(props, "h", 2) <= 2
-
-    def _finish_box(self, state: CreatingBox) -> None:
-        shape = self.doc.shape(state.sid)
-        if shape is None:
-            return
-        if self._degenerate(shape):
-            # A click without a drag: drop it rather than leaving a speck.
-            self.doc.cancel_undo()
-            return
-        self.doc.select([state.sid])
-
-    def _finish_arrow(self, state: CreatingArrow) -> None:
-        shape = self.doc.shape(state.sid)
-        if shape is None:
-            return
-        if math.dist((0.0, 0.0), shape.props.end) < 4.0:
-            self.doc.cancel_undo()
-            return
-        self.doc.select([state.sid])
-
-    def _finish_brush(self, state: Brushing, p: PointerInfo) -> None:
-        box = Box(*norm_rect(state.origin[0], state.origin[1],
-                             p.page[0], p.page[1]))
-        if box.w < MIN_MARQUEE and box.h < MIN_MARQUEE:
-            # A click, not a drag.  Without this a click in the hollow middle
-            # of a big rectangle would select it, because a zero-size marquee
-            # sits "inside" its outline — and that contradicts the click
-            # behaviour, where a hollow shape lets the click through.
-            return
-        hits = [self.doc.shapes[i].sid for i in S.shapes_in(self.doc.shapes, box)]
-        self.doc.select(hits, additive=state.additive)
-
-    # -- click tools -------------------------------------------------------
-
-    def click(self, p: PointerInfo) -> Optional[str]:
-        """Handle a click for the click-to-place tools.
-
-        Returns the name of a tool whose content the window has to ask the user
-        for (bubble, emoji), or None when the click was handled here.
-        """
-        if self.tool not in CLICK_TOOLS:
-            return None
-        if self.tool == "text":
-            # Clicking existing text edits it; clicking empty canvas starts a
-            # new one, with the caret already in it.
-            index = S.hit_shape(self.doc.shapes, p.page, self.hit_margin())
-            if index is not None and self.doc.shapes[index].kind == "text":
-                self.start_editing(self.doc.shapes[index].sid)
-            else:
-                self.create_text(p.page)
-            return None
-        if self.tool == "marker":
-            self._mark_undo()
-            diameter = max(26.0, self.viewport.image_edge * 0.028)
-            self.doc.add(S.Marker(p.page, S.next_number(self.doc.shapes),
-                                  self.page_style, diameter=diameter))
-            self.doc.clear_selection()
-            self._notify()
-            return None
-        return self.tool
-
-    def set_redaction_density(self, density: float) -> None:
-        """How strong a redaction is, for new regions and for selected ones.
-
-        Adjustable after the fact on purpose: "this token needs more" should
-        not mean redrawing the region.
-        """
-        self.redaction_density = density
-        selected = [s for s in self.doc.selected_shapes if s.kind == "obscure"]
-        if not selected:
-            return
-        self._mark_undo()
-        self.doc.update_many([replace(s, props=replace(s.props, density=density))
-                              for s in selected])
-        self._notify()
-
-    def set_spotlight_scrim(self, scrim: float) -> None:
-        """How dark the surround is, for new spotlights and selected ones."""
-        self.spotlight_scrim = scrim
-        selected = [s for s in self.doc.selected_shapes
-                    if s.kind == "spotlight"]
-        if not selected:
-            return
-        self._mark_undo()
-        self.doc.update_many([replace(s, props=replace(s.props, scrim=scrim))
-                              for s in selected])
-        self._notify()
-
-    def set_arrowhead(self, end: str, name: str) -> bool:
-        """Set the head for new arrows, and for any selected ones."""
-        setattr(self, end, name)
-        selected = [s for s in self.doc.selected_shapes
-                    if s.kind == "arrow" and s.props.number is None]
-        if not selected:
-            return False
-        self._mark_undo()
-        self.doc.update_many([replace(s, props=replace(s.props, **{end: name}))
-                              for s in selected])
-        self._notify()
-        return True
-
-    # -- text editing ------------------------------------------------------
-
-    def create_text(self, page_point: Point) -> str:
-        """Place an empty text shape and put the caret in it."""
-        self._mark_undo()
-        shape = S.Text(page_point, "", self.page_style, align=self.text_align,
-                       **S.text_style_flags(self.text_style))
-        self.doc.add(shape)
-        self.doc.select([shape.sid])
-        self.start_editing(shape.sid)
-        return shape.sid
-
-    def start_editing(self, sid: str) -> None:
-        shape = self.doc.shape(sid)
-        if shape is None or shape.kind != "text":
-            return
-        self.editing_sid = sid
-        self.doc.select([sid])
-        if self.on_editing_changed:
-            self.on_editing_changed(sid)
-        self._notify()
-
-    def update_text(self, sid: str, text: str) -> None:
-        shape = self.doc.shape(sid)
-        if shape is None or shape.kind != "text" or shape.props.text == text:
-            return
-        self.doc.update(shape.retexted(text))
-        self._notify()
-
-    def stop_editing(self) -> None:
-        """Commit what was typed.  An empty text shape is thrown away."""
-        sid, self.editing_sid = self.editing_sid, None
-        if sid is None:
-            return
-        shape = self.doc.shape(sid)
-        if shape is not None and not shape.props.text.strip():
-            self.doc.remove([sid])
-            # The click that created it was not an edit after all.
-            self.doc.cancel_undo()
-        if self.on_editing_changed:
-            self.on_editing_changed(None)
-        self._notify()
-
-    def set_text_align(self, align: str) -> None:
-        self.text_align = align
-        selected = [s for s in self.doc.selected_shapes if s.kind == "text"]
-        if not selected:
-            return
-        self._mark_undo()
-        self.doc.update_many([replace(s, props=replace(
-            s.props, align=align).remeasured()) for s in selected])
-        self._notify()
-
-    def set_text_style(self, name: str) -> None:
-        """Plain, outlined or boxed text, for new text and selected text."""
-        self.text_style = name
-        selected = [s for s in self.doc.selected_shapes if s.kind == "text"]
-        if not selected:
-            return
-        self._mark_undo()
-        self.doc.update_many([replace(s, props=replace(
-            s.props, **S.text_style_flags(name))) for s in selected])
-        self._notify()
-
-    def add_shape(self, shape: S.Shape) -> None:
-        self._mark_undo()
-        self.doc.add(shape)
-        self.doc.clear_selection()
-        self._notify()
+        self.shapes = [replace(moved, props=replace(props, end=end))]
 
 
 # -- helpers -----------------------------------------------------------------
@@ -778,11 +314,6 @@ def _snap_angle(anchor: Point, p: Point) -> Point:
     angle = round(math.atan2(dy, dx) / ANGLE_SNAP) * ANGLE_SNAP
     return (anchor[0] + math.cos(angle) * length,
             anchor[1] + math.sin(angle) * length)
-
-
-def _point_in_polygon(p: Point, poly: Sequence[Point]) -> bool:
-    from .geometry import point_in_polygon
-    return point_in_polygon(p, poly)
 
 
 def _scaled_about(shape: S.Shape, frame: SelectionFrame, anchor: Point,

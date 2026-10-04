@@ -5,8 +5,8 @@ A press picks the shape under the pointer (Shift or Ctrl adds to the pick),
 and a drag moves every picked shape. The picked shapes get the editor
 window's frame: its handles resize them, the ones beyond the corners rotate
 them, and a lone arrow has handles for its ends and its bend instead. The
-editor's interaction engine (editor/interaction.py) does that geometry,
-over a document of the picked shapes alone. Shapes on the move are lifted
+frame engine (editor/interaction.py) does that geometry, over the picked
+shapes alone. Shapes on the move are lifted
 out of the cached composite and drawn live (draw.py). A mixin of
 overlay.window.OverlayWindow.
 """
@@ -22,7 +22,6 @@ gi.require_version("Gdk", "4.0")
 from gi.repository import Gdk  # noqa: E402
 
 from ..editor import interaction
-from ..editor.document import Document
 from ..editor.geometry import point_in_polygon
 from .canvas import rect
 
@@ -78,7 +77,7 @@ def with_props(shape, kinds, remeasure=False, **fields):
 class OverlayHandMixin:
     """``_picked`` holds the picked shapes' sids; ``_lifted`` the shapes on
     the move, with their places in the stacking order; ``_engine`` the
-    interaction engine while a handle is dragged."""
+    frame engine while a handle is dragged."""
 
     def _shape_at(self, ix, iy) -> Optional[int]:
         """Index of the topmost shape under an image point, within 8 screen px.
@@ -105,21 +104,16 @@ class OverlayHandMixin:
                              | Gdk.ModifierType.CONTROL_MASK))
 
     def _pick_engine(self, shapes=None):
-        """The editor's interaction engine over the picked shapes (or
-        *shapes*), all selected, seen through the current view. None with
-        nothing picked or another tool."""
+        """The frame engine over the picked shapes (or *shapes*), seen
+        through the current view. None with nothing picked or another
+        tool."""
         if shapes is None:
             shapes = [s for s in self.shapes if s.sid in self._picked]
         if self.tool != "hand" or not shapes:
             return None
-        engine = interaction.Editor(Document(shapes))
-        engine.tool = "select"
-        engine.doc.select(s.sid for s in shapes)
         scale, ox, oy = self._view_params()
-        engine.viewport = interaction.Viewport(
-            (float(self.pixbuf.get_width()), float(self.pixbuf.get_height())),
-            scale, (ox, oy))
-        return engine
+        return interaction.Reshaper(shapes,
+                                    interaction.Viewport(scale, (ox, oy)))
 
     def _pick_handle_at(self, x, y) -> Optional[str]:
         """The picked shapes' handle under widget point (x, y), if any."""
@@ -147,7 +141,7 @@ class OverlayHandMixin:
         if engine is not None and not adding:
             if engine.handle_at((x, y)) is not None:
                 self._lift_picked()
-                engine.pointer_down(interaction.PointerInfo((x, y), (ix, iy)))
+                engine.press(interaction.PointerInfo((x, y), (ix, iy)))
                 self._engine = engine
                 return "reshape"
         index = self._shape_at(ix, iy)
@@ -173,13 +167,13 @@ class OverlayHandMixin:
     def _reshape(self, ix, iy, shift):
         """Follow the pointer with the handle being dragged."""
         x, y = self._to_widget(ix, iy)
-        self._engine.pointer_move(
+        self._engine.drag(
             interaction.PointerInfo((x, y), (ix, iy), shift=shift))
 
     def _drop_reshaped(self):
         """Put the reshaped shapes back in their places (one undo step)."""
         engine, self._engine = self._engine, None
-        reshaped = {shape.sid: shape for shape in engine.doc.shapes}
+        reshaped = {shape.sid: shape for shape in engine.shapes}
         lifted, self._lifted = self._lifted, []
         for i, shape in lifted:
             self.shapes.insert(i, shape)
@@ -320,7 +314,7 @@ class OverlayHandMixin:
         if self._preview is not None:
             return [self._preview]
         if self._engine is not None:
-            return list(self._engine.doc.shapes)
+            return list(self._engine.shapes)
         dx, dy = self._lift_offset
         return [shape.translate(dx, dy) for _i, shape in self._lifted]
 
