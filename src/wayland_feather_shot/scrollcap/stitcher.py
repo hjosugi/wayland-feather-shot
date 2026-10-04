@@ -25,6 +25,10 @@ ROW_SAMPLES = 24
 OVERLAP_SAMPLES = 24
 # Mean-absolute-difference threshold (0..255) above which a match is rejected.
 MATCH_THRESHOLD = 9.0
+# Row signatures in the coarse whole-frame signature the frame selector uses.
+FRAME_SIGNATURE_ROWS = 36
+# Largest static header or footer, as a fraction of the frame height.
+MAX_STATIC_MARGIN = 0.35
 
 
 @dataclass
@@ -80,11 +84,12 @@ def _row_signature(frame: Frame, y: int) -> List[int]:
     return sig
 
 
-def frame_signature(frame: Frame, rows: int = 36) -> List[List[int]]:
+def frame_signature(frame: Frame) -> List[List[int]]:
     """Coarse whole-frame signature used by the frame selector (motion/still
-    detection). Returns *rows* row-signatures evenly spread over the frame."""
-    step = max(1, frame.height // rows)
-    return [_row_signature(frame, min(y * step, frame.height - 1)) for y in range(rows)]
+    detection): row signatures evenly spread over the frame."""
+    step = max(1, frame.height // FRAME_SIGNATURE_ROWS)
+    return [_row_signature(frame, min(y * step, frame.height - 1))
+            for y in range(FRAME_SIGNATURE_ROWS)]
 
 
 def signature_diff(a: Sequence[Sequence[int]], b: Sequence[Sequence[int]]) -> float:
@@ -182,15 +187,15 @@ def _match(prev_sigs, cur_sigs, top: int, usable_h: int):
     return None
 
 
-def detect_static_margins(frames: List[Frame], max_frac: float = 0.35) -> tuple:
+def detect_static_margins(frames: List[Frame]) -> tuple:
     """Detect fixed headers/footers (rows identical across all frames), e.g.
     a browser toolbar or a sticky page header.  Returns (top, bottom) row
-    counts to exclude, each capped at *max_frac* of the frame height."""
+    counts to exclude, each capped at MAX_STATIC_MARGIN of the frame height."""
     if len(frames) < 3:
         return (0, 0)
     sigs = [_all_signatures(f) for f in frames]
     h = frames[0].height
-    cap = int(h * max_frac)
+    cap = int(h * MAX_STATIC_MARGIN)
 
     def rows_equal(y: int) -> bool:
         first = sigs[0][y]
@@ -227,8 +232,8 @@ def _append_rows(out: bytearray, frame: Frame, y0: int, y1: int) -> int:
     return max(0, y1 - y0)
 
 
-def stitch(frames: List[Frame], top_margin: int = -1, bottom_margin: int = -1,
-           progress=None) -> Optional[StitchResult]:
+def stitch(frames: List[Frame], top_margin: int = -1,
+           bottom_margin: int = -1) -> Optional[StitchResult]:
     """Stitch *frames* (top-to-bottom scroll) into one tall image.
 
     top_margin / bottom_margin: rows to exclude from every frame (static
@@ -258,8 +263,6 @@ def stitch(frames: List[Frame], top_margin: int = -1, bottom_margin: int = -1,
     notes: List[FrameNote] = []
 
     for idx, cur in enumerate(frames[1:], start=1):
-        if progress:
-            progress(idx, len(frames) - 1)
         cur_sigs = _all_signatures(cur)
         fwd = _match(prev_sigs, cur_sigs, top_margin, usable_h)
 

@@ -247,7 +247,12 @@ def _overlap(a: Rect, b: Rect) -> float:
     return max(0.0, right - left) * max(0.0, bottom - top)
 
 
-def dedupe(regions: Sequence[Region], threshold: float = 0.85) -> List[Region]:
+# How much of the smaller of two boxes the other must cover to count as the
+# same region.
+DUPLICATE_OVERLAP = 0.85
+
+
+def dedupe(regions: Sequence[Region]) -> List[Region]:
     """Drop regions that mostly cover one already kept.
 
     Different rules land on the same token often — an API key is also an opaque
@@ -262,7 +267,7 @@ def dedupe(regions: Sequence[Region], threshold: float = 0.85) -> List[Region]:
             # Compared against the smaller of the two, so a small box sitting
             # inside a big one counts as covered.
             reference = min(area, _area(existing.rect))
-            if reference > 0 and shared >= reference * threshold:
+            if reference > 0 and shared >= reference * DUPLICATE_OVERLAP:
                 duplicate = True
                 break
         if not duplicate:

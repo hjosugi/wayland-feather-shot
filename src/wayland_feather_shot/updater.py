@@ -8,7 +8,6 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TextIO
 
 from . import APP_ID
 
@@ -125,21 +124,17 @@ def remove_installation(prefix: Path | None = None, home: Path | None = None,
     )
 
 
-def run_updater(command: str | None, stdout: TextIO | None = None,
-                stderr: TextIO | None = None) -> int:
+def run_updater(command: str | None) -> int:
     """Run an updater subcommand. Returns a process exit code."""
-    stdout = stdout or sys.stdout
-    stderr = stderr or sys.stderr
-
     if command != "remove":
-        print("usage: wayland-feather-shot updater remove", file=stderr)
+        print("usage: wayland-feather-shot updater remove", file=sys.stderr)
         return 2
 
     result = remove_installation()
     if result.removed:
         print(f"Removed {len(result.removed)} install path(s) from "
-              f"{result.prefix}.", file=stdout)
+              f"{result.prefix}.")
     else:
-        print(f"No install files found under {result.prefix}.", file=stdout)
-    print(f"Config kept: {result.config_dir}", file=stdout)
+        print(f"No install files found under {result.prefix}.")
+    print(f"Config kept: {result.config_dir}")
     return 0

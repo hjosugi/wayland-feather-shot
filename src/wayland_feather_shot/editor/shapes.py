@@ -588,11 +588,11 @@ class Shape:
 # stay readable: `Arrow(tail, head, style)` rather than an origin plus a local
 # delta.
 
-def Pen(points: Sequence[Point], style: Style, closed: bool = False) -> Shape:
+def Pen(points: Sequence[Point], style: Style) -> Shape:
     pts = list(points) or [(0.0, 0.0)]
     ox, oy = pts[0]
     local = tuple((x - ox, y - oy) for x, y in pts)
-    return Shape(ox, oy, PenProps(local, style, closed))
+    return Shape(ox, oy, PenProps(local, style))
 
 
 def Line(p0: Point, p1: Point, style: Style) -> Shape:
@@ -686,11 +686,9 @@ EMOJI_CHOICES = ("✅", "❌", "⭐", "❤️", "👍", "👎", "⚠️", "🔥"
                  "🎯", "🚀")
 
 
-def EmojiSticker(pos: Point, char: str, style: Style,
-                 size: Optional[float] = None) -> Shape:
+def EmojiSticker(pos: Point, char: str, style: Style) -> Shape:
     return Shape(pos[0], pos[1],
-                 EmojiProps(char, size if size is not None
-                            else max(28.0, style.font_size * 2.2)))
+                 EmojiProps(char, max(28.0, style.font_size * 2.2)))
 
 
 # -- collection helpers ------------------------------------------------------

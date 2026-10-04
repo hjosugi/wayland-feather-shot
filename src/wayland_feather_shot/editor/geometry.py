@@ -108,13 +108,13 @@ def polylines_cross(a: Sequence[Point], b: Sequence[Point]) -> bool:
     return False
 
 
-def ellipse_points(w: float, h: float, segments: int = ELLIPSE_SEGMENTS) -> List[Point]:
+def ellipse_points(w: float, h: float) -> List[Point]:
     """An axis-aligned ellipse inscribed in (0, 0, w, h), flattened."""
     rx, ry = w / 2.0, h / 2.0
     cx, cy = rx, ry
-    step = 2.0 * math.pi / segments
+    step = 2.0 * math.pi / ELLIPSE_SEGMENTS
     return [(cx + rx * math.cos(i * step), cy + ry * math.sin(i * step))
-            for i in range(segments)]
+            for i in range(ELLIPSE_SEGMENTS)]
 
 
 # -- boxes -------------------------------------------------------------------

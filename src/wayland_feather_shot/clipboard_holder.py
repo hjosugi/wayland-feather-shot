@@ -63,9 +63,8 @@ def parse_args(argv):
     return path, timeout
 
 
-def main(argv=None) -> int:
-    argv = list(sys.argv[1:] if argv is None else argv)
-    path, timeout = parse_args(argv)
+def main() -> int:
+    path, timeout = parse_args(sys.argv[1:])
 
     import gi
     gi.require_version("Gtk", "4.0")

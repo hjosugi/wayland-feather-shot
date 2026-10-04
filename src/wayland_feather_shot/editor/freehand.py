@@ -342,7 +342,8 @@ def _semicircle(centre: Point, vector: Point, radius: float) -> List[Point]:
             for step in range(CAP_STEPS + 1)]
 
 
-def _circle(centre: Point, radius: float, steps: int = CAP_STEPS * 2) -> List[Point]:
+def _circle(centre: Point, radius: float) -> List[Point]:
+    steps = CAP_STEPS * 2
     return [(centre[0] + radius * math.cos(2 * math.pi * i / steps),
              centre[1] + radius * math.sin(2 * math.pi * i / steps))
             for i in range(steps)]

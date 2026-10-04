@@ -100,7 +100,7 @@ def _box_blur_pass_numpy(array, radius: int, axis: int):  # pragma: no cover
 
 
 def gaussian_blur(pixels: Sequence[int], width: int, height: int,
-                  sigma: float, passes: int = 3) -> bytearray:
+                  sigma: float) -> bytearray:
     """Blur a tightly packed RGBA buffer.
 
     ``len(pixels)`` must be ``width * height * 4``; the result is a new buffer
@@ -112,7 +112,7 @@ def gaussian_blur(pixels: Sequence[int], width: int, height: int,
     if width < 1 or height < 1 or sigma <= 0:
         return bytearray(pixels)
 
-    boxes = boxes_for_gauss(sigma, passes)
+    boxes = boxes_for_gauss(sigma)
     if _np is not None:  # pragma: no cover - exercised only where numpy exists
         array = _np.frombuffer(bytes(pixels), dtype=_np.uint8).reshape(
             height, width, CHANNELS)
