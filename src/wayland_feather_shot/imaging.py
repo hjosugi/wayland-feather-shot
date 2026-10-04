@@ -30,10 +30,3 @@ def format_for_path(path: str, writable):
     return ("png", path, [])
 
 
-def writable_image_extensions(writable):
-    """Save-dialog extensions available given the *writable* format names."""
-    exts = ["png"]
-    for name in ("jpeg", "webp", "avif", "tiff", "bmp"):
-        if name in writable:
-            exts.append("jpg" if name == "jpeg" else name)
-    return exts

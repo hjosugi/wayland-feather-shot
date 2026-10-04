@@ -23,8 +23,6 @@ from __future__ import annotations
 import os
 import shutil
 
-DEFAULT_SHORTCUT = "CTRL+SHIFT+Print"   # region capture
-
 # id -> (default trigger, human description) for the daemon's portal session.
 # Ctrl+PrtSc takes the full screen (in the overlay, already selected, so a
 # part can still be cut out) and Ctrl+Shift+PrtSc selects a region. Scrolling

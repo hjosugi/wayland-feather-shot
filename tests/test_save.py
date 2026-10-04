@@ -39,12 +39,6 @@ class FormatForPathTests(unittest.TestCase):
     def test_webp_unavailable_becomes_png(self):
         self.assertEqual(imaging.format_for_path("a.webp", set())[0], "png")
 
-    def test_writable_extensions_lists_png_first(self):
-        exts = imaging.writable_image_extensions({"jpeg", "webp"})
-        self.assertEqual(exts[0], "png")
-        self.assertIn("jpg", exts)
-        self.assertIn("webp", exts)
-
 
 try:
     import gi

@@ -21,13 +21,10 @@ from .document import Document
 from .geometry import Box, Point, norm_rect, rotate
 from . import shapes as S
 
-DRAG_TOOLS = {"pen", "line", "arrow", "steparrow", "rect", "ellipse",
-              "highlight", "spotlight", "blur", "pixelate"}
 CLICK_TOOLS = {"text", "marker", "bubble", "emoji"}
 BOX_TOOLS = {"rect", "ellipse", "highlight", "spotlight", "blur", "pixelate"}
 
 CORNER_HANDLES = ("nw", "ne", "se", "sw")
-EDGE_HANDLES = ("n", "e", "s", "w")
 ROTATE_HANDLES = ("rot-nw", "rot-ne", "rot-se", "rot-sw")
 # A lone arrow gets these three instead of a resize frame: its bounding box is
 # mostly empty space, so a frame is the wrong affordance for it.
@@ -93,7 +90,6 @@ class PointerInfo:
     page: Point
     shift: bool = False
     ctrl: bool = False
-    alt: bool = False
 
 
 @dataclass

@@ -98,7 +98,7 @@ class OverlayCanvas(Gtk.Widget):
         self._on_resize = on_resize
         self._size = (0, 0)
 
-    def do_size_allocate(self, width, height, baseline):
+    def do_size_allocate(self, width, height, _baseline):
         # Tell the window after the allocation, not during it: it moves
         # the bars, which are siblings being allocated in the same pass.
         if self._on_resize is not None and (width, height) != self._size:

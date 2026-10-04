@@ -168,11 +168,6 @@ def merge_matches(matches: Sequence[Match]) -> List[Match]:
     return merged
 
 
-def merge_spans(spans: Sequence[Tuple[int, int]]) -> List[Tuple[int, int]]:
-    return [(m.start, m.end) for m in
-            merge_matches([Match(s, e, "") for s, e in spans])]
-
-
 # -- words to regions --------------------------------------------------------
 
 @dataclass

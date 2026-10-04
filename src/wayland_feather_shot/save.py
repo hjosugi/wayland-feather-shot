@@ -20,7 +20,7 @@ from gi.repository import Gdk, GdkPixbuf, GLib, GObject  # noqa: E402
 from gi.repository import Gio  # noqa: E402
 
 from . import clipboard_holder
-from .imaging import format_for_path, writable_image_extensions
+from .imaging import format_for_path
 
 
 def timestamp_path(settings) -> str:
@@ -73,10 +73,6 @@ def open_folder(path: str) -> str:
 def _writable_formats():
     return {f.get_name() for f in GdkPixbuf.Pixbuf.get_formats() if f.is_writable()}
 
-
-def writable_image_formats():
-    """Extensions we can save to on this system (always includes png)."""
-    return writable_image_extensions(_writable_formats())
 
 
 def compositor_keeps_clipboard() -> bool:

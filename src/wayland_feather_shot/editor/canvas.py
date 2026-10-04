@@ -326,8 +326,7 @@ class EditorCanvas(Gtk.DrawingArea):
         return PointerInfo(
             widget=(wx, wy), page=page,
             shift=bool(state & Gdk.ModifierType.SHIFT_MASK),
-            ctrl=bool(state & Gdk.ModifierType.CONTROL_MASK),
-            alt=bool(state & Gdk.ModifierType.ALT_MASK))
+            ctrl=bool(state & Gdk.ModifierType.CONTROL_MASK))
 
     def _on_drag_begin(self, gesture, x, y):
         state = gesture.get_current_event_state()

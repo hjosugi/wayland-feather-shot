@@ -99,12 +99,14 @@ class MergeTests(unittest.TestCase):
         text = "user@example.com and 192.168.1.1"
         self.assertEqual(len(S.sensitive_matches(text)), 2)
 
-    def test_merge_spans_handles_touching_ranges(self):
-        self.assertEqual(S.merge_spans([(0, 5), (5, 9), (20, 22)]),
+    def test_touching_matches_merge(self):
+        merged = S.merge_matches([S.Match(0, 5, "a"), S.Match(5, 9, "b"),
+                                  S.Match(20, 22, "c")])
+        self.assertEqual([(m.start, m.end) for m in merged],
                          [(0, 9), (20, 22)])
 
-    def test_merge_spans_of_nothing(self):
-        self.assertEqual(S.merge_spans([]), [])
+    def test_merging_nothing(self):
+        self.assertEqual(S.merge_matches([]), [])
 
 
 class LineTests(unittest.TestCase):

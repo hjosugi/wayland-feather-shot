@@ -24,6 +24,7 @@ gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 
 from . import APP_ID
+from .cli import EXIT_CANCELLED
 from .i18n import _, tr
 from .lifecycle import acquire_capture_lock, release_on_window_removed  # noqa: F401
 from .portal import Portal, PortalError, cleanup_portal_file
@@ -262,7 +263,7 @@ class FeatherShotApp(Gtk.Application):
 
     def _cancel(self):
         if self._scripted():
-            self.exit_code = 130
+            self.exit_code = EXIT_CANCELLED
         self.release()
 
     def _open_existing(self, path: str, hold: bool = False):

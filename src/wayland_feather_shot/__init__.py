@@ -6,5 +6,3 @@ Local only: no upload, no accounts, no telemetry, no network code.
 __version__ = "0.13.0"
 
 APP_ID = "io.github.hjosugi.WaylandFeatherShot"
-APP_NAME = "Feather Shot"
-DEFAULT_SHORTCUT = "CTRL+SHIFT+Print"   # region capture

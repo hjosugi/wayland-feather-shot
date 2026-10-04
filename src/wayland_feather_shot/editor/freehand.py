@@ -31,7 +31,6 @@ Point = Tuple[float, float]
 
 # perfect-freehand's own constant: a plain pi leaves a seam in the round caps.
 FIXED_PI = math.pi + 0.0001
-MIN_PRESSURE = 0.025
 RATE_OF_PRESSURE_CHANGE = 0.275
 # Steps around a round cap or a sharp corner.  More is smoother and slower;
 # 13 is what the reference uses and it is indistinguishable from a circle at
@@ -49,10 +48,6 @@ def ease_out_quad(t: float) -> float:
 
 def ease_out_cubic(t: float) -> float:
     return 1 - (1 - t) ** 3
-
-
-def linear(t: float) -> float:
-    return t
 
 
 @dataclass(frozen=True)

@@ -236,7 +236,6 @@ class OverlayControlsMixin:
         spotlight's dimming."""
         rgba = Gdk.RGBA()
         rgba.parse(self.settings.pen_color)
-        self._custom_rgba = rgba
 
         face = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         self._style_swatch = _swatch(lambda: self.style.rgba)

@@ -17,11 +17,10 @@ from . import __version__
 MODES = ["gui", "copy", "full", "window", "scroll", "gif", "edit",
          "history", "settings", "daemon", "diagnose", "updater"]
 
-# Stable exit codes, so `wayland-feather-shot` can be used in scripts.
-EXIT_OK = 0
+# Stable exit codes, so `wayland-feather-shot` can be used in scripts: 0
+# done, 1 an error, 2 a usage error (argparse's own), 130 cancelled.
 EXIT_ERROR = 1
-EXIT_USAGE = 2          # also argparse's own error code
-EXIT_CANCELLED = 130    # user cancelled (matches SIGINT convention)
+EXIT_CANCELLED = 130    # matches the SIGINT convention
 
 # Modes that actually capture the screen and can be scripted with
 # --region / --output / --no-editor.
