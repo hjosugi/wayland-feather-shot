@@ -12,14 +12,15 @@ IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".avif", ".bmp", ".tiff",
               ".gif")
 
 
-def recent_screenshots(directory, limit: int = 40, exts=IMAGE_EXTS):
+def recent_screenshots(directory, limit: int = 40):
     """Return up to *limit* image paths in *directory*, newest first."""
     try:
         entries = []
         with os.scandir(directory) as it:
             for e in it:
                 if (e.is_file()
-                        and os.path.splitext(e.name)[1].lower() in exts):
+                        and os.path.splitext(e.name)[1].lower()
+                        in IMAGE_EXTS):
                     try:
                         entries.append((e.stat().st_mtime, e.path))
                     except OSError:

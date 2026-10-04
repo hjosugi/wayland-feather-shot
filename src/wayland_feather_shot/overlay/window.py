@@ -688,14 +688,14 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
                 and self._inside_sel(*self._to_image(x, y))
                 and not self._handle_at(x, y))
 
-    def _on_click_pressed(self, gesture, n_press, x, y):
+    def _on_click_pressed(self, _gesture, n_press, x, y):
         # A press anywhere finishes the text being typed, as in the editor.
         self._end_text(commit=True)
         if n_press == 1:
             self._copy_first_click = False
         self._copy_press_inside = self._copy_hit(x, y)
 
-    def _on_click(self, gesture, n_press, x, y):
+    def _on_click(self, _gesture, n_press, x, y):
         """A click (press and release without a drag).
 
         Two clicks inside the selection copy it and close. Otherwise the

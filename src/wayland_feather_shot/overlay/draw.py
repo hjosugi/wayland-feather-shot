@@ -27,7 +27,7 @@ OVERLAY_DIM_ALPHA = 0.32
 
 
 class OverlayDrawMixin:
-    def _snapshot(self, area, snapshot, w, h):
+    def _snapshot(self, _area, snapshot, w, h):
         """Draw one frame of the overlay, bottom to top:
 
         1. the screenshot with the finished annotations, as one texture

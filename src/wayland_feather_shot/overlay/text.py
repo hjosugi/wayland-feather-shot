@@ -37,7 +37,7 @@ class TextLayer(Gtk.Fixed):
     can grab the selection, instead of landing on the layer and doing nothing.
     """
 
-    def do_contains(self, x, y):
+    def do_contains(self, _x, _y):
         return False
 
 

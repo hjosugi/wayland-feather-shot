@@ -147,7 +147,7 @@ class OverlayViewMixin:
         """Zoom by *factor* around *anchor* (see zoom_to)."""
         self.zoom_to(self._zoom * factor, anchor)
 
-    def _on_pinch_begin(self, gesture, _sequence):
+    def _on_pinch_begin(self, _gesture, _sequence):
         self._pinch_zoom0 = self._zoom
 
     def _on_pinch_scale(self, gesture, scale):

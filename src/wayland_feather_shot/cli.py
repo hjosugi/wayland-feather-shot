@@ -130,9 +130,9 @@ def _validate(parser: argparse.ArgumentParser, args) -> None:
                      "wayland-feather-shot updater remove")
 
 
-def main(argv=None) -> int:
+def main() -> int:
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args()
 
     if args.mode == "diagnose":
         from .diagnostics import print_diagnostics
