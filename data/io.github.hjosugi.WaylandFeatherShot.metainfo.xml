@@ -52,6 +52,20 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.14.0" date="2026-10-04">
+      <description>
+        <p>
+          Every picture now opens in the region overlay, and the editor
+          window is gone: a file, a screenshot reopened from the history,
+          a window or scrolling capture and a scripted capture all open
+          there, and annotations saved from the overlay can be reopened
+          from the history. Ctrl+S works while text is being typed, the
+          settings window leads to the desktop's keyboard settings, the
+          overlay appears about 0.1 s sooner, lines start thinner, and the
+          AppImage runs without libfuse2.
+        </p>
+      </description>
+    </release>
     <release version="0.13.0" date="2026-10-04">
       <description>
         <p>

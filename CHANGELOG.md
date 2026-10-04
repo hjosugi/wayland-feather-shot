@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.14.0 (2026-10-04)
+
 - **Every picture opens in the overlay; the editor window is gone.** A
   file (`edit`), a screenshot reopened from the history, a window capture,
   a scrolling capture's result and a scripted capture (`-o PATH`) open in
