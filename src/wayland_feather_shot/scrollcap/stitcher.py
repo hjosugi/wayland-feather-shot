@@ -60,7 +60,6 @@ class StitchResult:
     data: bytearray  # tightly packed RGBA, alpha forced opaque
     width: int
     height: int
-    frames_used: int
     frames_dropped: int
     notes: List[FrameNote] = field(default_factory=list)
 
@@ -259,7 +258,7 @@ def stitch(frames: List[Frame], top_margin: int = -1,
 
     prev = first
     prev_sigs = _all_signatures(prev)
-    used, dropped = 1, 0
+    dropped = 0
     notes: List[FrameNote] = []
 
     for idx, cur in enumerate(frames[1:], start=1):
@@ -285,13 +284,11 @@ def stitch(frames: List[Frame], top_margin: int = -1,
         if s == 0:  # identical to the previous kept frame
             notes.append(FrameNote(idx, "duplicate", 0, score, "no new content"))
             prev, prev_sigs = cur, cur_sigs
-            used += 1
             continue
 
         height += _append_rows(out, cur, usable_h - s, usable_h)
         notes.append(FrameNote(idx, "kept", s, score))
         prev, prev_sigs = cur, cur_sigs
-        used += 1
 
     if bottom_margin > 0:  # re-attach the fixed footer once, at the bottom
         height += _append_rows(out, prev, prev.height - bottom_margin, prev.height)
@@ -299,4 +296,4 @@ def stitch(frames: List[Frame], top_margin: int = -1,
     # Force alpha opaque (frames may be RGBx with undefined alpha bytes).
     out[3::4] = b"\xff" * (len(out) // 4)
     return StitchResult(data=out, width=width, height=height,
-                        frames_used=used, frames_dropped=dropped, notes=notes)
+                        frames_dropped=dropped, notes=notes)

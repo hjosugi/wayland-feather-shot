@@ -476,7 +476,7 @@ class OverlayControlsMixin:
         popover = menu_popover(pages)
         popover.connect("closed",
                         lambda *_: pages.set_visible_child_name("menu"))
-        self._more_button, self._more_pages = more, pages
+        self._more_pages = pages
 
         def show_frame():
             pages.set_visible_child_name("frame")
