@@ -11,6 +11,9 @@
 - **A third smaller AppImage.** It carried bytecode compiled by the release
   machine's Python, which the host's Python ignores; it now ships the
   sources alone (390 KB instead of 579 KB).
+- **The Flatpak starts about 0.1 s sooner.** Its build threw away the
+  compiled bytecode, and since the sandbox cannot write it back, every
+  launch compiled the sources again.
 
 ## 0.13.0 (2026-10-04)
 

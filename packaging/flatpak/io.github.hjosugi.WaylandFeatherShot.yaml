@@ -24,9 +24,9 @@ finish-args:
   # Screenshot / ScreenCast / GlobalShortcuts go through xdg-desktop-portal,
   # which is reachable from the sandbox by default.
 
-cleanup:
-  - '*.pyc'
-  - '/lib/python*/site-packages/*/__pycache__'
+# The .pyc files pip compiles are kept on purpose: /app is read-only at run
+# time, so without them every launch compiles the sources again.
+# flatpak-builder rewrites their timestamps to match what ostree stores.
 
 modules:
   - name: wayland-feather-shot
