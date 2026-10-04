@@ -299,23 +299,6 @@ def install_custom_css() -> None:
     .wfs-text-edit text {
         background-color: rgba(0, 0, 0, 0);
     }
-    .wfs-crop-bar {
-        background-color: rgba(17, 24, 39, 0.96);
-        border: 1px solid rgba(255, 255, 255, 0.24);
-        border-radius: 11px;
-        padding: 7px 10px;
-    }
-    .wfs-crop-bar button {
-        color: #ffffff;
-        background-image: none;
-        background-color: rgba(255, 255, 255, 0.10);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-    }
-    .wfs-crop-bar button:checked,
-    .wfs-crop-bar button.suggested-action {
-        background-color: #2f7ff5;
-        border-color: #2f7ff5;
-    }
     .wfs-pin {
         border: 1px solid rgba(255, 255, 255, 0.85);
     }
