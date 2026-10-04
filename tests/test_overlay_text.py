@@ -214,6 +214,26 @@ class OverlayTextTests(unittest.TestCase):
         self.window._begin_text(100, 100)
         self.assertFalse(self.window._on_key(None, Gdk.KEY_p, 0, 0))
         self.assertEqual(self.window.tool, "text")
+        # Ctrl+C and Ctrl+Z belong to the text being typed.
+        self.assertFalse(self.window._on_key(None, Gdk.KEY_c, 0, CTRL))
+        self.assertFalse(self.window._on_key(None, Gdk.KEY_z, 0, CTRL))
+
+    def test_ctrl_s_saves_while_typing_with_the_text_in_it(self):
+        from unittest.mock import patch
+        self.window._begin_text(100, 100)
+        self.window._text_edit["view"].get_buffer().set_text("in it")
+        with patch.object(self.window, "save_and_close",
+                          wraps=lambda: self.window._end_text(commit=True)
+                          ) as save:
+            self.assertTrue(self.window._on_key(None, Gdk.KEY_s, 0, CTRL))
+        save.assert_called_once()
+        self.assertEqual(self.window.shapes[-1].props.text, "in it")
+
+    def test_zoom_keys_work_while_typing(self):
+        self.window._begin_text(100, 100)
+        self.assertTrue(self.window._on_key(None, Gdk.KEY_plus, 0, CTRL))
+        self.assertGreater(self.window._zoom, 1.0)
+        self.assertIsNotNone(self.window._text_edit)     # still typing
 
     # -- typing into a placed text again --
 

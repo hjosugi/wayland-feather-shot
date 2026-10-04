@@ -59,6 +59,14 @@ TOOL_KEYS = {
     Gdk.KEY_j: "emoji",
 }
 
+# Ctrl shortcuts that still work while text is typed: the text view has
+# no use for them. Ctrl+C, Ctrl+Z and the like stay with it, for the text.
+TYPING_SHORTCUTS = {
+    Gdk.KEY_s, Gdk.KEY_o, Gdk.KEY_plus, Gdk.KEY_equal, Gdk.KEY_KP_Add,
+    Gdk.KEY_minus, Gdk.KEY_underscore, Gdk.KEY_KP_Subtract,
+    Gdk.KEY_0, Gdk.KEY_KP_0, Gdk.KEY_1, Gdk.KEY_KP_1,
+}
+
 # Tools that drag out a box, tools that drag from one point to another, and
 # tools that act on a click.
 RECT_TOOLS = {"rect", "ellipse", "highlight", "blur", "pixelate", "spotlight"}
@@ -751,19 +759,22 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     def _on_key(self, _ctrl, keyval, _keycode, state):
         """The overlay's keys (docs/HOTKEYS.md has the full list).
 
-        While text is being typed the text view gets the keys first and
-        only Esc reaches here; mid-drag everything but Esc waits.
+        While text is being typed the text view gets the keys first; Esc
+        and the Ctrl shortcuts it has no use for (save, the save folder,
+        zoom) reach here, and a save takes the text along. Mid-drag
+        everything but Esc waits.
         """
+        ctrl = bool(state & Gdk.ModifierType.CONTROL_MASK)
+        shift = bool(state & Gdk.ModifierType.SHIFT_MASK)
+        key = Gdk.keyval_to_lower(keyval)
         if self._text_edit is not None:
             if keyval == Gdk.KEY_Escape:
                 # Reached here only when a toolbar control has the focus;
                 # Esc still means "cancel the text", not "do nothing".
                 self._end_text(commit=False)
                 return True
-            return False                      # the text view has the keys
-        ctrl = bool(state & Gdk.ModifierType.CONTROL_MASK)
-        shift = bool(state & Gdk.ModifierType.SHIFT_MASK)
-        key = Gdk.keyval_to_lower(keyval)
+            if not (ctrl and key in TYPING_SHORTCUTS):
+                return False                  # the text view has the keys
 
         if keyval == Gdk.KEY_Escape:
             self.close()

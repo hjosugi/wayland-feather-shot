@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Fixed: Ctrl+S did nothing while text was being typed.** The text box
+  took every key. The shortcuts it has no use for now reach the overlay:
+  Ctrl+S (with the text in what is saved), Ctrl+Shift+S, Ctrl+O and the
+  zoom keys. Ctrl+C, Ctrl+Z and the other editing keys stay with the text.
 - **A way to the keyboard settings.** The capture keys belong to the
   desktop, which shows and changes them in its own keyboard settings. The
   settings window now says so and has a "Keyboard settings…" button that
