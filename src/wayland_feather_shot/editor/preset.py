@@ -37,7 +37,7 @@ class EditorPreset:
 
     tool: str = "pen"
     rgba: Tuple[float, float, float, float] = (1.0, 0.23, 0.19, 1.0)
-    width: float = 3.0
+    width: float = 2.0
     font_size: float = 22.0
     font_family: str = "Sans"
     redaction_density: float = 0.55

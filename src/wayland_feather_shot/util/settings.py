@@ -20,7 +20,7 @@ DEFAULTS = {
     "filename_pattern": "feather-%Y-%m-%d_%H-%M-%S.png",
     # Default annotation style.
     "pen_color": "#ff3b30",
-    "pen_width": 3.0,
+    "pen_width": 2.0,
     "font_size": 22.0,
     # Blur strength (higher = stronger). Pixelate block size derives from it.
     "blur_factor": 8,

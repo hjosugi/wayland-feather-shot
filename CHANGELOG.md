@@ -28,6 +28,8 @@
 - **The Flatpak starts about 0.1 s sooner.** Its build threw away the
   compiled bytecode, and since the sandbox cannot write it back, every
   launch compiled the sources again.
+- **Thinner lines to start with.** The default line width is 2 instead of
+  3. A width you picked before is remembered as it was.
 
 ## 0.13.0 (2026-10-04)
 
