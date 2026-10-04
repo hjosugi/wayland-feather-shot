@@ -84,10 +84,8 @@ JA = {
     "Bind the capture keys in the desktop's configuration":
         "キャプチャのキーはデスクトップの設定ファイルで割り当てます",
     # tool labels
-    "Pen": "ペン", "Line": "直線", "Arrow": "矢印",
-    "Rect": "矩形", "Ellipse": "楕円", "Text": "文字",
-    "Blur": "ぼかし", "Pixel": "モザイク", "Crop": "切抜", "Select": "選択",
-    "Step": "手順", "Bubble": "吹出", "Emoji": "絵文字",
+    "Pen": "ペン", "Line": "直線",
+    "Text": "文字",
     # tool tooltips
     "Move / resize selection (V)": "選択範囲の移動・リサイズ (V)",
     "Line width ([ / ])": "線の太さ ([ / ])",
@@ -105,20 +103,12 @@ JA = {
     "Blur region (B)": "ぼかし (B)",
     "Pixelate region (X)": "モザイク (X)",
     "Numbered marker — click (M)": "番号マーカー — クリックで配置 (M)",
-    "Numbered marker — click to place (M)": "番号マーカー — クリックで配置 (M)",
     "Numbered step arrow (G)": "番号付き矢印 (G)",
-    "Speech bubble (U)": "吹き出し (U)",
     "Speech bubble — click to type (U)": "吹き出し — クリックして入力 (U)",
-    "Emoji sticker (J)": "絵文字スタンプ (J)",
     "Emoji sticker — click (J)": "絵文字スタンプ — クリックで配置 (J)",
     "Spotlight — dim everything outside (O)": "スポットライト — 範囲外を暗く (O)",
-    "Crop image (C)": "画像を切り抜き (C)",
-    "Select / move a shape (V)": "図形を選択・移動 (V)",
     # header/toolbar buttons
     "Annotation color": "注釈の色",
-    "Line width": "線の太さ",
-    "Colour & width presets": "色と太さのプリセット",
-    "Extract text / QR (local)": "テキスト/QR を抽出(ローカル)",
     "Copy text (OCR)": "テキストをコピー(OCR)",
     "Copy QR / barcode": "QR/バーコードをコピー",
     "Recognition failed: {error}": "認識に失敗しました: {error}",
@@ -149,15 +139,12 @@ JA = {
     "Choose a background image": "背景画像を選択",
     "Smart redaction…": "スマート伏せ字…",
     "Proposed {count} redactions — adjust them, or Ctrl+Z to drop them.": "{count}件の伏せ字を提案しました — 調整するか、Ctrl+Zで取り消せます。",
-    "Find text that looks sensitive and propose blur regions": "機密らしいテキストを探してぼかし領域を提案します",
     "Scanning for sensitive text…": "機密テキストを走査中…",
     "Reading the selection…": "選択範囲を読み取り中…",
     "Nothing recognised as sensitive. Check the image yourself before sharing it.": "機密と判定されたものはありません。共有前にご自身でも確認してください。",
     "Redaction strength": "伏せ字の強さ",
     "Blur radius and mosaic block size — applies to a selected region too": "ぼかし半径とモザイクのブロックサイズ — 選択中の領域にも適用",
     "Marker": "マーカー",
-    "Highlighter pen (H)": "蛍光ペン (H)",
-    "Spot": "スポット",
     "Spotlight — dim everything outside (S)": "スポットライト — 範囲外を暗く (S)",
     "Spotlight dim": "スポットライトの暗さ",
     "Font": "フォント",
@@ -184,14 +171,7 @@ JA = {
     "Diamond": "ひし形",
     "Bar": "棒",
     "Inverted": "逆向き",
-    "Freeform": "自由",
-    "Original": "元の比率",
     "Cancel (Esc)": "キャンセル (Esc)",
-    "Crop (Enter)": "切り抜き (Enter)",
-    "Cropped. Undo restores the full image.": "切り抜きました。元に戻すで全体が復元されます。",
-    "Zoom out (Ctrl+-)": "縮小 (Ctrl+-)",
-    "Zoom in (Ctrl++)": "拡大 (Ctrl++)",
-    "Fit / actual size (Ctrl+1 / Ctrl+0)": "全体表示 / 等倍 (Ctrl+1 / Ctrl+0)",
     "Undo (Ctrl+Z)": "元に戻す (Ctrl+Z)",
     "Redo (Ctrl+Shift+Z)": "やり直し (Ctrl+Shift+Z)",
     "Save (Ctrl+S)": "保存 (Ctrl+S)",
@@ -201,27 +181,19 @@ JA = {
         "クリップボードへコピー (Ctrl+C / Enter)",
     "Open save folder (Ctrl+O)": "保存先フォルダーを開く (Ctrl+O)",
     "Pin to screen (frameless window)": "画面にピン留め(枠なしウィンドウ)",
-    "Pin to screen (Ctrl+P)": "画面にピン留め (Ctrl+P)",
     "Cancel (Esc)": "キャンセル (Esc)",
     # toasts / messages
-    "Saved  {path}": "保存しました  {path}",
-    "Copied path  {path}": "パスをコピーしました  {path}",
     "Opened save folder  {path}": "保存先フォルダーを開きました  {path}",
     "Open folder failed: {error}": "フォルダーを開けませんでした: {error}",
     "Save failed: {error}": "保存に失敗しました: {error}",
     "Copy failed: {error}": "コピーに失敗しました: {error}",
-    "Copied to clipboard via {how}": "クリップボードへコピーしました ({how})",
     "Copied — keep this window open while pasting (install wl-clipboard to copy & close)":
         "コピーしました — 貼り付けるまでこのウィンドウを開いたままにしてください"
         "(wl-clipboard を入れるとコピー後すぐ閉じられます)",
     "clipboard (valid while the editor stays open)":
         "クリップボード(エディタを開いている間有効)",
     "holder process": "保持プロセス",
-    "Text… (Enter to add)": "テキスト…(Enterで追加)",
-    "Outline": "縁取り",
     "Background": "背景",
-    "Add": "追加",
-    "Enter: newline · Ctrl+Enter: add": "Enter: 改行 · Ctrl+Enter: 追加",
     "Text font": "テキストのフォント",
     # selector hint
     "Drag: select area   •   Click / Enter: full screen   •   Esc: cancel":
@@ -229,11 +201,7 @@ JA = {
     "Drag: copy area   •   Click / Enter: copy full screen   •   Esc: cancel":
         "ドラッグ: 範囲をコピー   •   クリック / Enter: 全画面をコピー   •   Esc: キャンセル",
     # close confirmation
-    "Discard this screenshot?": "このスクリーンショットを破棄しますか?",
-    "It has not been saved or copied.": "まだ保存もコピーもされていません。",
     "Cancel": "キャンセル",
-    "Discard": "破棄",
-    "Save & Close": "保存して閉じる",
     # scroll capture window
     "Choose the window or screen to record\nin the portal dialog…":
         "ポータルのダイアログで、録画するウィンドウ\nまたは画面を選んでください…",
@@ -292,9 +260,6 @@ JA = {
         "スクリーンショットポータルが失敗しました: {error}",
     "Could not read the captured image: {error}":
         "キャプチャ画像を読み込めませんでした: {error}",
-    "Scrolling capture needs GStreamer (gst-plugins-base + pipewire plugin) with GObject introspection.":
-        "スクロールキャプチャには GStreamer(gst-plugins-base と "
-        "pipewire プラグイン、GObject introspection 対応)が必要です。",
     "Scrolling capture failed: {error}":
         "スクロールキャプチャに失敗しました: {error}",
 }

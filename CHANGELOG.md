@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Every picture opens in the overlay; the editor window is gone.** A
+  file (`edit`), a screenshot reopened from the history, a window capture,
+  a scrolling capture's result and a scripted capture (`-o PATH`) open in
+  the overlay with all of the picture selected, as Ctrl+PrtSc does; a tall
+  scrolling capture starts at the window's width, from its top, and zooms
+  in further. Saving from the overlay now writes the editable
+  `<image>.wfs.json` next to an annotated screenshot, so the history can
+  reopen its annotations; one written by the editor window reopens with its
+  crop as the selection.
 - **Fixed: Ctrl+S did nothing while text was being typed.** The text box
   took every key. The shortcuts it has no use for now reach the overlay:
   Ctrl+S (with the text in what is saved), Ctrl+Shift+S, Ctrl+O and the

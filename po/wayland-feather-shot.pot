@@ -72,37 +72,7 @@ msgstr ""
 msgid "Line"
 msgstr ""
 
-msgid "Arrow"
-msgstr ""
-
-msgid "Rect"
-msgstr ""
-
-msgid "Ellipse"
-msgstr ""
-
 msgid "Text"
-msgstr ""
-
-msgid "Blur"
-msgstr ""
-
-msgid "Pixel"
-msgstr ""
-
-msgid "Crop"
-msgstr ""
-
-msgid "Select"
-msgstr ""
-
-msgid "Step"
-msgstr ""
-
-msgid "Bubble"
-msgstr ""
-
-msgid "Emoji"
 msgstr ""
 
 msgid "Move / resize selection (V)"
@@ -150,19 +120,10 @@ msgstr ""
 msgid "Numbered marker — click (M)"
 msgstr ""
 
-msgid "Numbered marker — click to place (M)"
-msgstr ""
-
 msgid "Numbered step arrow (G)"
 msgstr ""
 
-msgid "Speech bubble (U)"
-msgstr ""
-
 msgid "Speech bubble — click to type (U)"
-msgstr ""
-
-msgid "Emoji sticker (J)"
 msgstr ""
 
 msgid "Emoji sticker — click (J)"
@@ -171,22 +132,7 @@ msgstr ""
 msgid "Spotlight — dim everything outside (O)"
 msgstr ""
 
-msgid "Crop image (C)"
-msgstr ""
-
-msgid "Select / move a shape (V)"
-msgstr ""
-
 msgid "Annotation color"
-msgstr ""
-
-msgid "Line width"
-msgstr ""
-
-msgid "Colour & width presets"
-msgstr ""
-
-msgid "Extract text / QR (local)"
 msgstr ""
 
 msgid "Copy text (OCR)"
@@ -273,9 +219,6 @@ msgstr ""
 msgid "Proposed {count} redactions — adjust them, or Ctrl+Z to drop them."
 msgstr ""
 
-msgid "Find text that looks sensitive and propose blur regions"
-msgstr ""
-
 msgid "Scanning for sensitive text…"
 msgstr ""
 
@@ -292,12 +235,6 @@ msgid "Blur radius and mosaic block size — applies to a selected region too"
 msgstr ""
 
 msgid "Marker"
-msgstr ""
-
-msgid "Highlighter pen (H)"
-msgstr ""
-
-msgid "Spot"
 msgstr ""
 
 msgid "Spotlight — dim everything outside (S)"
@@ -354,6 +291,9 @@ msgstr ""
 msgid "None"
 msgstr ""
 
+msgid "Arrow"
+msgstr ""
+
 msgid "Outlined triangle"
 msgstr ""
 
@@ -375,28 +315,7 @@ msgstr ""
 msgid "Inverted"
 msgstr ""
 
-msgid "Freeform"
-msgstr ""
-
-msgid "Original"
-msgstr ""
-
 msgid "Cancel (Esc)"
-msgstr ""
-
-msgid "Crop (Enter)"
-msgstr ""
-
-msgid "Cropped. Undo restores the full image."
-msgstr ""
-
-msgid "Zoom out (Ctrl+-)"
-msgstr ""
-
-msgid "Zoom in (Ctrl++)"
-msgstr ""
-
-msgid "Fit / actual size (Ctrl+1 / Ctrl+0)"
 msgstr ""
 
 msgid "Undo (Ctrl+Z)"
@@ -423,15 +342,6 @@ msgstr ""
 msgid "Pin to screen (frameless window)"
 msgstr ""
 
-msgid "Pin to screen (Ctrl+P)"
-msgstr ""
-
-msgid "Saved  {path}"
-msgstr ""
-
-msgid "Copied path  {path}"
-msgstr ""
-
 msgid "Opened save folder  {path}"
 msgstr ""
 
@@ -444,9 +354,6 @@ msgstr ""
 msgid "Copy failed: {error}"
 msgstr ""
 
-msgid "Copied to clipboard via {how}"
-msgstr ""
-
 msgid "Copied — keep this window open while pasting (install wl-clipboard to copy & close)"
 msgstr ""
 
@@ -454,18 +361,6 @@ msgid "clipboard (valid while the editor stays open)"
 msgstr ""
 
 msgid "holder process"
-msgstr ""
-
-msgid "Text… (Enter to add)"
-msgstr ""
-
-msgid "Outline"
-msgstr ""
-
-msgid "Add"
-msgstr ""
-
-msgid "Enter: newline · Ctrl+Enter: add"
 msgstr ""
 
 msgid "Text font"
@@ -477,19 +372,7 @@ msgstr ""
 msgid "Drag: copy area   •   Click / Enter: copy full screen   •   Esc: cancel"
 msgstr ""
 
-msgid "Discard this screenshot?"
-msgstr ""
-
-msgid "It has not been saved or copied."
-msgstr ""
-
 msgid "Cancel"
-msgstr ""
-
-msgid "Discard"
-msgstr ""
-
-msgid "Save & Close"
 msgstr ""
 
 msgid "Choose the window or screen to record\nin the portal dialog…"
@@ -586,9 +469,6 @@ msgid "Screenshot portal failed: {error}"
 msgstr ""
 
 msgid "Could not read the captured image: {error}"
-msgstr ""
-
-msgid "Scrolling capture needs GStreamer (gst-plugins-base + pipewire plugin) with GObject introspection."
 msgstr ""
 
 msgid "Scrolling capture failed: {error}"

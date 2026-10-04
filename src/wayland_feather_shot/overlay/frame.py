@@ -107,14 +107,16 @@ class OverlayFrameMixin:
             bg.ALIGNMENTS.index(settings.alignment)), 3, 0)
         watermark = Gtk.Entry()
         watermark.set_placeholder_text(_("Watermark text"))
+        watermark.set_text(settings.watermark.text)
         watermark.connect("changed", self._on_frame_changed)
         put("watermark", _("Watermark"), watermark, 4, 0)
-        tile = scale(0, 6, 1, 0)
+        tile = scale(0, 6, 1, settings.watermark.density)
         tile.set_tooltip_text(
             _("0 places one mark in the corner; higher tiles it"))
         put("tile", _("Repeat"), tile, 4, 1)
 
         border = Gtk.CheckButton(label=_("Border around the screenshot"))
+        border.set_active(settings.border.enabled)
         border.connect("toggled", self._on_frame_changed)
         grid.attach(border, 2, 3, 2, 1)
         widgets["border"] = border

@@ -31,6 +31,7 @@ import cairo  # noqa: E402
 from .. import save as save_mod
 from ..editor import background as bg
 from ..editor import preset as preset_mod
+from ..editor import sidecar
 from ..editor import render
 from ..editor import shapes as shape_model
 from ..editor.shapes import (EMOJI_CHOICES, Arrow, EllipseShape, EmojiSticker,
@@ -87,6 +88,12 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     shows the whole screenshot in one window on the active monitor instead
     of one window per monitor.
 
+    It opens a picture that is not a fresh screenshot the same way: a file
+    (`edit`), one reopened from the history with its annotations (*shapes*,
+    in image coordinates, the *selection* it was cut to and its
+    *background*), a window capture, a scrolling capture's result, or a
+    scripted capture, which saves to *save_path*.
+
     With remember_style the overlay starts from the style the last session
     (overlay or editor) ended with, and saves its own on closing
     (editor/preset.py). The tests leave it off.
@@ -98,7 +105,10 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
 
     def __init__(self, app, pixbuf: GdkPixbuf.Pixbuf, settings,
                  copy_on_select: bool = False, select_all: bool = False,
-                 monitor_layout=None, remember_style: bool = False):
+                 monitor_layout=None, remember_style: bool = False,
+                 selection: Optional[Rect] = None, shapes=None,
+                 background=None, save_path: Optional[str] = None,
+                 startup_toast: Optional[str] = None):
         super().__init__(application=app, title="Feather Shot")
         self.pixbuf = pixbuf
         self._scene = OverlayScene(pixbuf)
@@ -143,7 +153,8 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         # until one is made), the annotations, and their undo history.
         self.tool = "move"
         self.sel: Optional[Rect] = None
-        self.shapes: List = []
+        self.shapes: List = list(shapes or [])
+        self.save_path = save_path       # where Ctrl+S saves; None: dated
         # (selection, shapes, base image) to go back to; the base changes
         # only when a redaction covers the annotations under it.
         self._undo: List[tuple] = []
@@ -182,15 +193,18 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         self._bars_visible = False
         self._text_edit = None           # {"view", "pos"} while typing
         self._recognizing = False        # an OCR or QR run is going
-        self.background = bg.BackgroundSettings()     # no frame
+        self.background = background or bg.BackgroundSettings()
         self._frame_base = None          # (key, shrunk selection) for it
         self._toast_timer = None
 
-        if select_all and monitor_layout is None:
+        whole = (0, 0, pixbuf.get_width(), pixbuf.get_height())
+        if selection is None and select_all:
+            selection = whole
+        if selection is not None and monitor_layout is None:
             # The whole picture at a glance: one window, on the monitor the
             # compositor puts it on, fitting every monitor's part.
-            monitor_layout = [(None, (0, 0, pixbuf.get_width(),
-                                      pixbuf.get_height()))]
+            monitor_layout = [(None, whole)]
+        self._fit_width_pending = selection is not None
         self._build_ui(monitor_layout)
         if self._preset is not None:
             self.connect("close-request",
@@ -201,11 +215,13 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             self.fullscreen_on_monitor(monitor)
         else:
             self.fullscreen()
-        if select_all:
+        if selection is not None:
             # Not in the undo history: there is no empty overlay to go back
             # to. The bars are placed again once the window has its size.
-            self.sel = (0, 0, pixbuf.get_width(), pixbuf.get_height())
+            self.sel = self._clamp_rect(*selection)
             self._selection_made()
+        if startup_toast:
+            GLib.idle_add(lambda: (self.toast(startup_toast, 4.0), False)[1])
 
     def _remember_style(self):
         """Save the style for the next session, when it changed; best
@@ -373,6 +389,9 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     def _on_canvas_resized(self, _width, _height):
         # The bars sit around the selection in widget pixels; a selection
         # made before the window had its size (full mode) is placed now.
+        if self._fit_width_pending:
+            self._fit_width_pending = False
+            self._fit_tall_picture()
         if self.sel is not None and self._bars_visible:
             self._update_control_layout()
 
@@ -884,7 +903,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             view.window.present()
 
     def save_and_close(self):
-        path = save_mod.timestamp_path(self.settings)
+        path = self.save_path or save_mod.timestamp_path(self.settings)
         self._hide_for_good()
         try:
             path = save_mod.save_pixbuf(self._export_result(), path)
@@ -892,8 +911,31 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             self._show_again()
             self.toast(tr("Save failed: {error}", error=e))
             return
+        self._write_sidecar(path)
         print(path)
         self.close()
+
+    def _write_sidecar(self, image_path):
+        """Keep the annotations editable next to the saved image, for the
+        history and `edit`: the selection's untouched pixels, the shapes in
+        its coordinates and the frame (editor/sidecar.py). Best effort: a
+        screenshot that saved is saved, whatever happens here."""
+        if not self.settings.get("save_sidecar", True):
+            return
+        try:
+            if not self.shapes:
+                # Nothing to reopen; drop a stale one for this path.
+                sidecar.remove(image_path)
+                return
+            x, y, w, h = self.sel or (0, 0, self.pixbuf.get_width(),
+                                      self.pixbuf.get_height())
+            base = self.pixbuf.new_subpixbuf(x, y, w, h)
+            sidecar.save(image_path,
+                         [s.translate(-x, -y) for s in self.shapes],
+                         save_mod.pixbuf_to_png_bytes(base, fast=True),
+                         background=self.background)
+        except Exception:
+            pass
 
     def save_as(self):
         dialog = Gtk.FileDialog()
@@ -915,6 +957,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
                 self._show_again()
                 self.toast(tr("Save failed: {error}", error=e))
                 return
+            self._write_sidecar(path)
             print(path)
             self.close()
 

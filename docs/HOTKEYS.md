@@ -4,7 +4,7 @@ Two different things get called "shortcut" around a screenshot tool:
 
 - **Global keys** such as Ctrl+PrtSc, which launch a capture from anywhere.
   On Wayland an application cannot grab a key by itself; the desktop decides.
-- **In-app keys** that work while the region overlay or the editor is open.
+- **In-app keys** that work while the overlay is open.
 
 This page covers both. `wayland-feather-shot diagnose` detects your desktop
 and prints the exact commands for it.
@@ -159,7 +159,7 @@ $ journalctl --user -b -g "feather-shot daemon"
 
 ## In-app keys
 
-### Region overlay (`gui`)
+### The overlay (every capture, `edit` and the history)
 
 Before a region is selected:
 
@@ -194,31 +194,3 @@ With a region selected:
 | Ctrl+1, Ctrl+0 | zoom to the selection, back to the whole screen |
 | wheel, Shift+wheel | pan while zoomed in |
 | Esc | quit without saving |
-
-### Editor (`edit`, the history, window and scrolling captures, scripted captures)
-
-| Key | Tool |
-| --- | --- |
-| V | select / move a shape |
-| P, L, A, G | pen, line, arrow, numbered step arrow |
-| R, E, H, S | rectangle, ellipse, highlighter, spotlight |
-| T, U, J | text, speech bubble, emoji sticker |
-| B, X, M | blur, pixelate, numbered marker |
-| C | crop (Enter applies, Esc cancels) |
-
-| Key | Action |
-| --- | --- |
-| Ctrl+S | quick save |
-| Ctrl+Shift+S | save as… |
-| Ctrl+C | copy the image to the clipboard |
-| Ctrl+Shift+C | copy the saved file's path |
-| Ctrl+O | open the save folder |
-| Ctrl+P | pin the image to the screen |
-| Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y | undo, redo |
-| Ctrl+A | select all shapes |
-| Ctrl++, Ctrl+- | zoom in, zoom out |
-| Ctrl+1, Ctrl+0 | fit to window, 100 % |
-| Ctrl+Up, Ctrl+Down | raise, lower the selected shape |
-| arrows, Shift+arrows | nudge the selection by 1 px, by 10 px |
-| Delete, Backspace | delete the selected shapes |
-| Esc | close |

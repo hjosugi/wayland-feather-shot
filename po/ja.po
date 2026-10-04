@@ -72,38 +72,8 @@ msgstr "ペン"
 msgid "Line"
 msgstr "直線"
 
-msgid "Arrow"
-msgstr "矢印"
-
-msgid "Rect"
-msgstr "矩形"
-
-msgid "Ellipse"
-msgstr "楕円"
-
 msgid "Text"
 msgstr "文字"
-
-msgid "Blur"
-msgstr "ぼかし"
-
-msgid "Pixel"
-msgstr "モザイク"
-
-msgid "Crop"
-msgstr "切抜"
-
-msgid "Select"
-msgstr "選択"
-
-msgid "Step"
-msgstr "手順"
-
-msgid "Bubble"
-msgstr "吹出"
-
-msgid "Emoji"
-msgstr "絵文字"
 
 msgid "Move / resize selection (V)"
 msgstr "選択範囲の移動・リサイズ (V)"
@@ -150,20 +120,11 @@ msgstr "モザイク (X)"
 msgid "Numbered marker — click (M)"
 msgstr "番号マーカー — クリックで配置 (M)"
 
-msgid "Numbered marker — click to place (M)"
-msgstr "番号マーカー — クリックで配置 (M)"
-
 msgid "Numbered step arrow (G)"
 msgstr "番号付き矢印 (G)"
 
-msgid "Speech bubble (U)"
-msgstr "吹き出し (U)"
-
 msgid "Speech bubble — click to type (U)"
 msgstr "吹き出し — クリックして入力 (U)"
-
-msgid "Emoji sticker (J)"
-msgstr "絵文字スタンプ (J)"
 
 msgid "Emoji sticker — click (J)"
 msgstr "絵文字スタンプ — クリックで配置 (J)"
@@ -171,23 +132,8 @@ msgstr "絵文字スタンプ — クリックで配置 (J)"
 msgid "Spotlight — dim everything outside (O)"
 msgstr "スポットライト — 範囲外を暗く (O)"
 
-msgid "Crop image (C)"
-msgstr "画像を切り抜き (C)"
-
-msgid "Select / move a shape (V)"
-msgstr "図形を選択・移動 (V)"
-
 msgid "Annotation color"
 msgstr "注釈の色"
-
-msgid "Line width"
-msgstr "線の太さ"
-
-msgid "Colour & width presets"
-msgstr "色と太さのプリセット"
-
-msgid "Extract text / QR (local)"
-msgstr "テキスト/QR を抽出(ローカル)"
 
 msgid "Copy text (OCR)"
 msgstr "テキストをコピー(OCR)"
@@ -273,9 +219,6 @@ msgstr "スマート伏せ字…"
 msgid "Proposed {count} redactions — adjust them, or Ctrl+Z to drop them."
 msgstr "{count}件の伏せ字を提案しました — 調整するか、Ctrl+Zで取り消せます。"
 
-msgid "Find text that looks sensitive and propose blur regions"
-msgstr "機密らしいテキストを探してぼかし領域を提案します"
-
 msgid "Scanning for sensitive text…"
 msgstr "機密テキストを走査中…"
 
@@ -293,12 +236,6 @@ msgstr "ぼかし半径とモザイクのブロックサイズ — 選択中の�
 
 msgid "Marker"
 msgstr "マーカー"
-
-msgid "Highlighter pen (H)"
-msgstr "蛍光ペン (H)"
-
-msgid "Spot"
-msgstr "スポット"
 
 msgid "Spotlight — dim everything outside (S)"
 msgstr "スポットライト — 範囲外を暗く (S)"
@@ -354,6 +291,9 @@ msgstr "終点"
 msgid "None"
 msgstr "なし"
 
+msgid "Arrow"
+msgstr "矢印"
+
 msgid "Outlined triangle"
 msgstr "三角(輪郭)"
 
@@ -375,29 +315,8 @@ msgstr "棒"
 msgid "Inverted"
 msgstr "逆向き"
 
-msgid "Freeform"
-msgstr "自由"
-
-msgid "Original"
-msgstr "元の比率"
-
 msgid "Cancel (Esc)"
 msgstr "キャンセル (Esc)"
-
-msgid "Crop (Enter)"
-msgstr "切り抜き (Enter)"
-
-msgid "Cropped. Undo restores the full image."
-msgstr "切り抜きました。元に戻すで全体が復元されます。"
-
-msgid "Zoom out (Ctrl+-)"
-msgstr "縮小 (Ctrl+-)"
-
-msgid "Zoom in (Ctrl++)"
-msgstr "拡大 (Ctrl++)"
-
-msgid "Fit / actual size (Ctrl+1 / Ctrl+0)"
-msgstr "全体表示 / 等倍 (Ctrl+1 / Ctrl+0)"
 
 msgid "Undo (Ctrl+Z)"
 msgstr "元に戻す (Ctrl+Z)"
@@ -423,15 +342,6 @@ msgstr "保存先フォルダーを開く (Ctrl+O)"
 msgid "Pin to screen (frameless window)"
 msgstr "画面にピン留め(枠なしウィンドウ)"
 
-msgid "Pin to screen (Ctrl+P)"
-msgstr "画面にピン留め (Ctrl+P)"
-
-msgid "Saved  {path}"
-msgstr "保存しました  {path}"
-
-msgid "Copied path  {path}"
-msgstr "パスをコピーしました  {path}"
-
 msgid "Opened save folder  {path}"
 msgstr "保存先フォルダーを開きました  {path}"
 
@@ -444,9 +354,6 @@ msgstr "保存に失敗しました: {error}"
 msgid "Copy failed: {error}"
 msgstr "コピーに失敗しました: {error}"
 
-msgid "Copied to clipboard via {how}"
-msgstr "クリップボードへコピーしました ({how})"
-
 msgid "Copied — keep this window open while pasting (install wl-clipboard to copy & close)"
 msgstr "コピーしました — 貼り付けるまでこのウィンドウを開いたままにしてください(wl-clipboard を入れるとコピー後すぐ閉じられます)"
 
@@ -455,18 +362,6 @@ msgstr "クリップボード(エディタを開いている間有効)"
 
 msgid "holder process"
 msgstr "保持プロセス"
-
-msgid "Text… (Enter to add)"
-msgstr "テキスト…(Enterで追加)"
-
-msgid "Outline"
-msgstr "縁取り"
-
-msgid "Add"
-msgstr "追加"
-
-msgid "Enter: newline · Ctrl+Enter: add"
-msgstr "Enter: 改行 · Ctrl+Enter: 追加"
 
 msgid "Text font"
 msgstr "テキストのフォント"
@@ -477,20 +372,8 @@ msgstr "ドラッグ: 範囲選択   •   クリック / Enter: 全画面   •
 msgid "Drag: copy area   •   Click / Enter: copy full screen   •   Esc: cancel"
 msgstr "ドラッグ: 範囲をコピー   •   クリック / Enter: 全画面をコピー   •   Esc: キャンセル"
 
-msgid "Discard this screenshot?"
-msgstr "このスクリーンショットを破棄しますか?"
-
-msgid "It has not been saved or copied."
-msgstr "まだ保存もコピーもされていません。"
-
 msgid "Cancel"
 msgstr "キャンセル"
-
-msgid "Discard"
-msgstr "破棄"
-
-msgid "Save & Close"
-msgstr "保存して閉じる"
 
 msgid "Choose the window or screen to record\nin the portal dialog…"
 msgstr "ポータルのダイアログで、録画するウィンドウ\nまたは画面を選んでください…"
@@ -587,9 +470,6 @@ msgstr "スクリーンショットポータルが失敗しました: {error}"
 
 msgid "Could not read the captured image: {error}"
 msgstr "キャプチャ画像を読み込めませんでした: {error}"
-
-msgid "Scrolling capture needs GStreamer (gst-plugins-base + pipewire plugin) with GObject introspection."
-msgstr "スクロールキャプチャには GStreamer(gst-plugins-base と pipewire プラグイン、GObject introspection 対応)が必要です。"
 
 msgid "Scrolling capture failed: {error}"
 msgstr "スクロールキャプチャに失敗しました: {error}"

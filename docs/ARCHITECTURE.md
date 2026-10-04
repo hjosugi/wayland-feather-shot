@@ -14,7 +14,7 @@ src/wayland_feather_shot/
                          Screenshot, ScreenCast (+ PipeWire fd), GlobalShortcuts
   overlay/               Flameshot-style fullscreen region overlay
     window.py            OverlayWindow: pointer and key input, undo history,
-                         save/copy/pin/editor; assembled from the mixins below
+                         save/copy/pin; assembled from the mixins below
     view.py              image/widget coordinates, zoom and pan, resize
                          handles; one MonitorView (window) per monitor
     controls.py          toolbar, action bar, size and text style controls,
@@ -23,7 +23,12 @@ src/wayland_feather_shot/
     draw.py              the per-frame snapshot
     canvas.py            the snapshot widget and the cached screenshot texture
     layout.py            GTK-free placement of the bars and the size label
-  editor/                full editor window (canvas, tools, crop, OCR/QR)
+    hand.py              picking, moving and reshaping placed shapes
+    extract.py           OCR, QR and smart redaction of the selection
+    frame.py             the background frame and its preview
+  editor/                the annotation model the overlay draws with: shapes,
+                         rendering, the selection frame's geometry, the
+                         editable sidecar, OCR/QR, the style preset
   gif/                   short animated-GIF capture and its pure-Python encoder
   scrollcap/recorder.py  ScreenCast + GStreamer/PipeWire recording,
                          damage-driven frame keeping
@@ -41,10 +46,10 @@ src/wayland_feather_shot/
 
 1. `portal.Portal.screenshot()` calls `org.freedesktop.portal.Screenshot`
    (non-interactive first, portal-interactive retry if refused).
-2. `gui`, `copy` and `full` freeze that image under
-   `overlay.window.OverlayWindow`; annotation happens directly on the
-   selection. `edit`, the history, `window` and scrolling captures, and
-   scripted captures open `editor.window.EditorWindow` instead.
+2. The image opens in `overlay.window.OverlayWindow`; annotation happens
+   directly on the selection. `gui` starts without one; `full`, `window`
+   and scripted captures with everything selected. `edit`, the history and
+   a scrolling capture's result open there too.
 3. Saving/copying goes through `save.py`; the portal temp file is deleted.
 
 ## Scrolling capture

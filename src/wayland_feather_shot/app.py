@@ -5,7 +5,7 @@ Modes (parsed in cli.py, which imports this module lazily):
   copy    select a region and copy it straight to the clipboard
   full    the whole screen in the overlay, already selected
   scroll  scrolling capture (record while you scroll, auto-stitch)
-  edit    open an existing image file in the editor
+  edit    open an existing image file in the overlay
   daemon  bind Ctrl+PrtSc and Ctrl+Shift+PrtSc via the GlobalShortcuts portal
 """
 
@@ -126,13 +126,9 @@ class FeatherShotApp(Gtk.Application):
             # Let the portal show its own picker so the user can choose a
             # window (or region) — uniform across GNOME/KDE/wlroots without
             # relying on the version-3 `target` key that backends vary on.
-            self._start_screenshot(overlay=False, force_interactive=True)
+            self._start_screenshot(force_interactive=True)
         else:
-            # The overlay for the interactive captures; a scripted capture
-            # (--region / --output / --no-editor) is non-interactive.
-            overlay = (self.mode in ("gui", "copy", "full")
-                       and not self._scripted())
-            self._start_screenshot(overlay=overlay)
+            self._start_screenshot()
         return False  # one-shot timeout
 
     def _scripted(self) -> bool:
@@ -140,7 +136,7 @@ class FeatherShotApp(Gtk.Application):
 
     # -- screenshot modes ---------------------------------------------------
 
-    def _start_screenshot(self, overlay: bool, force_interactive: bool = False):
+    def _start_screenshot(self, force_interactive: bool = False):
         def on_shot(path, error):
             if path is None:
                 if error == "cancelled":
@@ -150,7 +146,7 @@ class FeatherShotApp(Gtk.Application):
                 # the portal's own dialog before giving up.
                 self._request_screenshot(on_interactive_shot, interactive=True)
                 return
-            self._open_capture(path, overlay)
+            self._open_capture(path)
 
         def on_interactive_shot(path, error):
             if path is None:
@@ -159,7 +155,7 @@ class FeatherShotApp(Gtk.Application):
                 else:
                     self._fail(tr("Screenshot portal failed: {error}", error=error))
                 return
-            self._open_capture(path, overlay)
+            self._open_capture(path)
 
         if force_interactive:
             self._request_screenshot(on_interactive_shot, interactive=True)
@@ -182,11 +178,9 @@ class FeatherShotApp(Gtk.Application):
 
     def _unlock_when_removed(self, window):
         """The next capture may start once *window* (the overlay, or a
-        scroll or GIF capture window) is gone.
-
-        An editor window does not hold the lock: it is not a capture, and
-        capturing again with one open is fine.
-        """
+        scroll or GIF capture window) is gone. A picture opened from a file
+        or a scrolling capture's result holds no lock: it is not a capture,
+        and capturing again with one open is fine."""
 
         def on_removed(_app, removed):
             if removed is not window:
@@ -208,7 +202,12 @@ class FeatherShotApp(Gtk.Application):
         h = max(1, min(h, bh - y))
         return pixbuf.new_subpixbuf(x, y, w, h).copy()
 
-    def _open_capture(self, path: str, overlay: bool):
+    def _open_capture(self, path: str):
+        """Show a fresh screenshot in the overlay.
+
+        A region capture starts without a selection; the full screen, a
+        window and a scripted capture (--region, --output) start with all
+        of it selected, and a scripted one saves to --output."""
         try:
             pixbuf = GdkPixbuf.Pixbuf.new_from_file(path)
         except GLib.Error as e:
@@ -223,21 +222,14 @@ class FeatherShotApp(Gtk.Application):
             self._save_and_exit(pixbuf)
             return
 
-        if overlay:
-            win = OverlayWindow(self, pixbuf, self.settings,
-                                copy_on_select=self.mode == "copy",
-                                select_all=self.mode == "full",
-                                remember_style=True)
-        else:
-            from .editor.window import EditorWindow
-            win = EditorWindow(self, pixbuf, self.settings,
-                               save_path=self.output)
+        win = OverlayWindow(
+            self, pixbuf, self.settings,
+            copy_on_select=self.mode == "copy",
+            select_all=self.mode in ("full", "window") or self._scripted(),
+            save_path=self.output, remember_style=True)
         release_on_window_removed(self, win)
         win.present()
-        if overlay:
-            self._unlock_when_removed(win)
-        else:
-            self._release_capture_lock()
+        self._unlock_when_removed(win)
 
     def _save_and_exit(self, pixbuf):
         """Headless --no-editor path: save, print the path, quit."""
@@ -267,10 +259,11 @@ class FeatherShotApp(Gtk.Application):
         self.release()
 
     def _open_existing(self, path: str, hold: bool = False):
-        """Open an image file in the editor (edit mode / history gallery).
+        """Open an image file in the overlay (edit mode / history gallery),
+        with its annotations when a sidecar kept them.
 
         *hold* keeps the app alive independently (used when opening from the
-        gallery, which stays open behind the editor)."""
+        gallery, which stays open behind the overlay)."""
         if hold:
             self.hold()
         try:
@@ -281,10 +274,20 @@ class FeatherShotApp(Gtk.Application):
             return
         pixbuf, shapes, crop, background, toast = self._restore_sidecar(
             path, pixbuf)
-        from .editor.window import EditorWindow
-        win = EditorWindow(self, pixbuf, self.settings, shapes=shapes,
-                           startup_toast=toast, crop=crop,
-                           background=background)
+        self._open_picture(pixbuf, shapes, crop, background, toast)
+
+    def _open_picture(self, pixbuf, shapes=None, crop=None, background=None,
+                      toast=None):
+        """Show a picture that is not a fresh screenshot in the overlay,
+        all of it (or the sidecar's *crop*) selected. The sidecar keeps
+        *shapes* in the crop's coordinates; the overlay in the picture's."""
+        from .editor import sidecar
+        x, y, w, h = sidecar.crop_to_pixels(
+            crop or sidecar.UNIT, (pixbuf.get_width(), pixbuf.get_height()))
+        win = OverlayWindow(
+            self, pixbuf, self.settings, selection=(x, y, w, h),
+            shapes=[s.translate(x, y) for s in shapes or ()],
+            background=background, startup_toast=toast, remember_style=True)
         release_on_window_removed(self, win)
         win.present()
 
@@ -323,14 +326,6 @@ class FeatherShotApp(Gtk.Application):
                 tr("Restored {count} editable annotations.",
                    count=len(document.shapes)))
 
-    def _open_editor(self, pixbuf, shapes=None, startup_toast=None):
-        self.hold()
-        from .editor.window import EditorWindow
-        win = EditorWindow(self, pixbuf, self.settings, shapes=shapes,
-                           startup_toast=startup_toast)
-        release_on_window_removed(self, win)
-        win.present()
-        self._release_capture_lock()
 
     # -- scrolling capture ----------------------------------------------------
 
@@ -345,7 +340,10 @@ class FeatherShotApp(Gtk.Application):
                 if error and error != "cancelled":
                     _die_dialog(self, tr("Scrolling capture failed: {error}", error=error))
                 return
-            self._open_editor(pixbuf, startup_toast=warning)
+            # The capture window is going; the stitched picture outlives it.
+            self.hold()
+            self._release_capture_lock()
+            self._open_picture(pixbuf, toast=warning)
 
         if rec.gstreamer_available():
             win = rec.ScrollCaptureWindow(self, self.settings, on_result,

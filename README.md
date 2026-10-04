@@ -97,7 +97,7 @@ $ wayland-feather-shot window     # pick a window via the portal picker
 $ wayland-feather-shot scroll     # scrolling capture (you scroll)
 $ wayland-feather-shot scroll --auto  # auto-scroll via RemoteDesktop portal (experimental)
 $ wayland-feather-shot gif        # record a region to an animated GIF
-$ wayland-feather-shot edit x.png # open an existing image in the editor
+$ wayland-feather-shot edit x.png # open an existing image in the overlay
 $ wayland-feather-shot history    # gallery of recent screenshots
 $ wayland-feather-shot settings   # edit the config in a window
 $ wayland-feather-shot -d 3 gui   # 3-second delay
@@ -106,30 +106,28 @@ $ wayland-feather-shot diagnose   # check portals/GTK/GStreamer availability
 $ wayland-feather-shot updater remove  # remove install.sh-managed files
 ```
 
-The overlay and the editor both have a **step-arrow** (numbered), **speech
-bubble**, **spotlight** and **emoji sticker**, and — when `tesseract` /
-`zbarimg` are installed — **OCR / QR** extraction that copies recognized
+Every picture opens in the overlay: a fresh capture, a file (`edit`), one
+reopened from the history with its annotations, and a window or scrolling
+capture. Besides the tools above it has, under "…" and when `tesseract` /
+`zbarimg` are installed, **OCR / QR** extraction that copies recognized
 text to the clipboard and **smart redaction** that proposes blurs over text
 that looks sensitive, and a **background frame** (fill, padding, rounded
-corners, shadow, border, watermark) for the result; the overlay has them
-under "…". The editor toolbar adds colour/width **presets** and a
-**flatten-blur** toggle. `Ctrl+Shift+C`
-copies the saved file path; `Ctrl+O` opens the save folder; images save as
-PNG/JPEG/WebP/AVIF by extension.
+corners, shadow, border, watermark) for the result. `Ctrl+O` opens the save
+folder; images save as PNG/JPEG/WebP/AVIF by extension, with an editable
+`<image>.wfs.json` next to them when they have annotations.
 
-Annotations stay editable after they are drawn. With the **select** tool (`V`)
-you can click a shape — precisely: a click inside a hollow rectangle or beside
-a diagonal arrow goes through to whatever is really there — then **resize** it
+Annotations stay editable after they are drawn. With the **hand** (`S`) you
+pick a shape (Shift- or Ctrl-click for several), then move it, **resize** it
 from eight handles, **rotate** it from the handles just outside the corners,
-shift-click or rubber-band to select several at once, nudge with the arrow keys
-and reorder with `Ctrl+↑` / `Ctrl+↓`. Holding <kbd>Shift</kbd> keeps a corner
-resize proportional, snaps a rotation to 15°, squares off a new rectangle and
-locks a move to one axis.
+nudge it with the arrow keys and reorder with `Ctrl+↑` / `Ctrl+↓`; a
+double-click on a text or bubble types into it again. Holding
+<kbd>Shift</kbd> keeps a corner resize proportional and snaps a rotation to
+15°.
 
-The canvas has a camera: **`Ctrl`+scroll** or **`Ctrl` + `+` / `-`** to zoom
-(10 %…1600 %), scroll or middle-drag to pan, **`Ctrl+1`** to fit and
-**`Ctrl+0`** for actual size — so a 4K capture can be annotated at the pixel
-rather than guessed at while shrunk to fit.
+The overlay has a camera: **`Ctrl`+scroll** or **`Ctrl` + `+` / `-`** to
+zoom, scroll to pan while zoomed in, **`Ctrl+1`** to fit the selection and
+**`Ctrl+0`** to see everything — so a 4K capture can be annotated at the
+pixel rather than guessed at while shrunk to fit.
 
 Stroke widths, font sizes and badge diameters are authored against a reference
 image size, so the same settings look the same on a 1080p and a 4K capture.
@@ -141,7 +139,7 @@ image size, so the same settings look the same on a 1080p and a 4K capture.
 ```console
 $ wayland-feather-shot full --no-editor                 # save, print the path, exit
 $ wayland-feather-shot full --region 0,0,1280,720 -o a.png --no-editor
-$ wayland-feather-shot full -o ~/shot.png               # open editor, Ctrl+S → that path
+$ wayland-feather-shot full -o ~/shot.png               # open the overlay, Ctrl+S → that path
 ```
 
 `--region X,Y,W,H` crops the capture (clamped to the screen), `--output/-o PATH`
@@ -168,8 +166,8 @@ prints the saved path. Exit codes: `0` ok, `1` error, `2` bad usage,
 1. `wayland-feather-shot scroll` — pick the window/screen in the portal dialog.
 2. Scroll the content slowly top→bottom, pausing briefly after each scroll
    (each pause is captured automatically — watch the frame counter).
-3. Press **Finish & stitch**. The stitched tall image opens in the editor;
-   `Ctrl+S` / `Ctrl+C` as usual.
+3. Press **Finish & stitch**. The stitched tall image opens in the overlay,
+   fitted to the width and scrolled to the top; `Ctrl+S` / `Ctrl+C` as usual.
 
 The trick is to scroll slowly and pause for a moment after each scroll. Sticky
 headers and footers are detected and de-duplicated automatically; to pin them by

@@ -66,39 +66,49 @@ class CaptureLockTests(unittest.TestCase):
 
 @unittest.skipUnless(HAVE_GTK_DISPLAY, "GTK display unavailable")
 class CaptureLockScopeTests(unittest.TestCase):
-    """The lock keeps a second overlay off the first; an editor window is
-    not a capture, so a full-screen capture's editor must not hold it."""
+    """A capture holds the lock until its overlay closes, whatever the
+    mode; a picture opened from a file is not a capture and holds none."""
 
-    def open_capture(self, overlay):
-        directory = tempfile.mkdtemp()
-        app = FeatherShotApp(mode="gui" if overlay else "full", delay=0)
-        app.set_application_id("io.github.hjosugi.WaylandFeatherShot."
-                               + ("OverlayLockTest" if overlay
-                                  else "EditorLockTest"))
-        app.register(None)
-        app._capture_lock = acquire_capture_lock(directory)
+    def picture(self):
         fd, path = tempfile.mkstemp(suffix=".png")
         os.close(fd)
+        self.addCleanup(lambda: os.path.exists(path) and os.unlink(path))
         pixbuf = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 64, 48)
         pixbuf.fill(0xffffffff)
         pixbuf.savev(path, "png", [], [])
-        app._open_capture(path, overlay=overlay)
+        return path
+
+    def app(self, mode):
+        directory = tempfile.mkdtemp()
+        app = FeatherShotApp(mode=mode, delay=0)
+        app.set_application_id("io.github.hjosugi.WaylandFeatherShot."
+                               + mode.capitalize() + "LockTest")
+        app.register(None)
+        return app, directory
+
+    def window_of(self, app):
         window = app.get_active_window() or app.get_windows()[0]
         self.addCleanup(window.destroy)
-        return app, directory, window
+        return window
 
-    def test_an_editor_window_releases_the_lock(self):
-        app, directory, _window = self.open_capture(overlay=False)
-        self.assertIsNone(app._capture_lock)
-        again = acquire_capture_lock(directory)
-        self.assertIsNotNone(again)
-        again.close()
+    def test_a_capture_holds_the_lock_until_its_overlay_closes(self):
+        for mode in ("gui", "window"):
+            with self.subTest(mode=mode):
+                app, directory = self.app(mode)
+                app._capture_lock = acquire_capture_lock(directory)
+                app._open_capture(self.picture())
+                window = self.window_of(app)
+                self.assertIsNone(acquire_capture_lock(directory))
+                window.destroy()
+                self.assertIsNone(app._capture_lock)
+                again = acquire_capture_lock(directory)
+                self.assertIsNotNone(again)
+                again.close()
 
-    def test_the_overlay_holds_the_lock_until_it_closes(self):
-        app, directory, window = self.open_capture(overlay=True)
-        self.assertIsNone(acquire_capture_lock(directory))
-        window.destroy()
-        self.assertIsNone(app._capture_lock)
+    def test_a_picture_from_a_file_holds_no_lock(self):
+        app, directory = self.app("edit")
+        app._open_existing(self.picture())
+        self.window_of(app)
         again = acquire_capture_lock(directory)
         self.assertIsNotNone(again)
         again.close()

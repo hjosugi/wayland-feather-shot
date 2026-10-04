@@ -29,12 +29,12 @@ class FallbackTableTests(unittest.TestCase):
 
     def test_english_is_identity(self):
         i18n = load_i18n(WFS_LANG="en")
-        self.assertEqual(i18n._("Blur"), "Blur")
+        self.assertEqual(i18n._("Pen"), "Pen")
 
     def test_japanese_uses_embedded_table(self):
         i18n = load_i18n(WFS_LANG="ja", WFS_LOCALEDIR="/nonexistent")
         self.assertIsNone(i18n._catalog)  # no catalog there
-        self.assertEqual(i18n._("Blur"), "ぼかし")
+        self.assertEqual(i18n._("Pen"), "ペン")
 
     def test_tr_formats(self):
         i18n = load_i18n(WFS_LANG="en")

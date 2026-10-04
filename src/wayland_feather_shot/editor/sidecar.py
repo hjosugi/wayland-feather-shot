@@ -27,11 +27,26 @@ import os
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from . import background as bg_mod
-from . import crop as crop_mod
 from . import shapes as S
 
 SIDECAR_VERSION = 1
 SIDECAR_SUFFIX = ".wfs.json"
+
+# A crop is a rect over the stored base, normalized (0…1, top-left origin):
+# it describes a region rather than cut pixels, so it can be widened again.
+Crop = Tuple[float, float, float, float]
+UNIT: Crop = (0.0, 0.0, 1.0, 1.0)
+
+
+def crop_to_pixels(crop: Crop, size: Tuple[float, float]):
+    """*crop* as (x, y, w, h) pixels of a picture of *size*, clamped to
+    it and never empty."""
+    iw, ih = int(size[0]), int(size[1])
+    x = max(0, min(int(round(crop[0] * iw)), max(0, iw - 1)))
+    y = max(0, min(int(round(crop[1] * ih)), max(0, ih - 1)))
+    w = max(1, min(int(round(crop[2] * iw)), iw - x))
+    h = max(1, min(int(round(crop[3] * ih)), ih - y))
+    return (x, y, w, h)
 
 
 class SidecarError(Exception):
@@ -55,7 +70,7 @@ class Document:
     # The edited region of the stored base, normalized.  Storing the crop as a
     # rect over the pristine image rather than cropped pixels is what lets a
     # reopened screenshot have its crop widened again.
-    crop: Tuple[float, float, float, float] = crop_mod.UNIT
+    crop: Crop = UNIT
     background: "bg_mod.BackgroundSettings" = dataclasses.field(
         default_factory=lambda: bg_mod.BackgroundSettings())
 
@@ -257,7 +272,7 @@ def decode_background(data: Any):
 
 def encode(shapes: Sequence[S.Shape], base_png: Optional[bytes] = None,
            base_image: str = "",
-           crop: Tuple[float, float, float, float] = crop_mod.UNIT,
+           crop: Crop = UNIT,
            background=None) -> Dict[str, Any]:
     document: Dict[str, Any] = {
         "version": SIDECAR_VERSION,
@@ -321,13 +336,13 @@ def _decode_crop(value: Any) -> Tuple[float, float, float, float]:
     crop is recoverable, losing the annotations with it is not.
     """
     if not isinstance(value, (list, tuple)) or len(value) != 4:
-        return crop_mod.UNIT
+        return UNIT
     try:
         x, y, w, h = (float(v) for v in value)
     except (TypeError, ValueError):
-        return crop_mod.UNIT
+        return UNIT
     if not (w > 0 and h > 0) or x < 0 or y < 0 or x + w > 1.001 or y + h > 1.001:
-        return crop_mod.UNIT
+        return UNIT
     return (x, y, w, h)
 
 
@@ -335,7 +350,7 @@ def _decode_crop(value: Any) -> Tuple[float, float, float, float]:
 
 def save(image_path: str, shapes: Sequence[S.Shape],
          base_png: Optional[bytes] = None,
-         crop: Tuple[float, float, float, float] = crop_mod.UNIT,
+         crop: Crop = UNIT,
          background=None) -> str:
     """Write the sidecar for *image_path* and return its path.
 

@@ -87,10 +87,33 @@ class OverlayViewMixin:
         return (scale, (w - vw * scale) / 2 + self._pan[0] - vx * scale,
                 (h - vh * scale) / 2 + self._pan[1] - vy * scale)
 
+    def _zoom_max(self) -> float:
+        """How far in the zoom goes: ZOOM_MAX times "it fits", or for a
+        picture that fits only far below its own size (a scrolling
+        capture's tall result) until a pixel is ZOOM_MAX screen pixels."""
+        w = max(1, self.area.get_width())
+        h = max(1, self.area.get_height())
+        _vx, _vy, vw, vh = self._view.rect
+        return max(ZOOM_MAX, ZOOM_MAX / min(w / vw, h / vh))
+
+    def _fit_tall_picture(self) -> None:
+        """Start a picture much taller than the window (a scrolling
+        capture's result) at the window's width, from its top, rather than
+        as a sliver in the middle."""
+        w = max(1, self.area.get_width())
+        h = max(1, self.area.get_height())
+        _vx, _vy, vw, vh = self._view.rect
+        base = min(w / vw, h / vh)
+        zoom = (w / vw) / base
+        if zoom < 1.5:
+            return
+        over_y = vh * base * zoom - h
+        self._set_view(zoom, (0.0, over_y / 2))
+
     def _set_view(self, zoom: float, pan: Tuple[float, float]) -> None:
         """Apply a zoom level and pan, clamped so the image never leaves a
         gap at an edge it is large enough to cover."""
-        zoom = max(1.0, min(ZOOM_MAX, zoom))
+        zoom = max(1.0, min(self._zoom_max(), zoom))
         w = max(1, self.area.get_width())
         h = max(1, self.area.get_height())
         _vx, _vy, vw, vh = self._view.rect
@@ -115,7 +138,7 @@ class OverlayViewMixin:
             anchor = self._pointer or (w / 2, h / 2)
         ax, ay = anchor
         ix, iy = self._to_image(ax, ay)
-        zoom = max(1.0, min(ZOOM_MAX, zoom))
+        zoom = max(1.0, min(self._zoom_max(), zoom))
         scale = min(w / vw, h / vh) * zoom
         self._set_view(zoom, (ax - (ix - vx) * scale - (w - vw * scale) / 2,
                               ay - (iy - vy) * scale - (h - vh * scale) / 2))
@@ -145,7 +168,7 @@ class OverlayViewMixin:
         x, y, sw, sh = self.sel
         base = min(w / vw, h / vh)
         zoom = min(w / (sw * base), h / (sh * base)) * 0.9
-        zoom = max(1.0, min(ZOOM_MAX, zoom))
+        zoom = max(1.0, min(self._zoom_max(), zoom))
         scale = base * zoom
         cx, cy = x + sw / 2, y + sh / 2
         self._set_view(zoom, (w / 2 - (cx - vx) * scale - (w - vw * scale) / 2,
