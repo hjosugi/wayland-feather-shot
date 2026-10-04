@@ -71,6 +71,9 @@ mkdir -p \
     "$APPDIR/usr/share/icons/hicolor/scalable/apps" \
     "$APPDIR/usr/share/doc/wayland-feather-shot"
 cp -R src/wayland_feather_shot "$APPDIR/usr/src/"
+# Bytecode left by the test run is for the build machine's Python; the host
+# Python ignores it, so it would only add weight.
+find "$APPDIR/usr/src" -name __pycache__ -prune -exec rm -rf {} +
 cp bin/wayland-feather-shot "$APPDIR/usr/bin/wayland-feather-shot"
 chmod +x "$APPDIR/usr/bin/wayland-feather-shot"
 cp packaging/appimage/AppRun "$APPDIR/AppRun"

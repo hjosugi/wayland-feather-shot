@@ -8,6 +8,9 @@
   opens them (GNOME Settings → Keyboard, KDE System Settings → Shortcuts),
   or on Hyprland and Sway shows the lines for their config file. The app's
   launcher menu gets a "Settings" entry.
+- **A third smaller AppImage.** It carried bytecode compiled by the release
+  machine's Python, which the host's Python ignores; it now ships the
+  sources alone (390 KB instead of 579 KB).
 
 ## 0.13.0 (2026-10-04)
 
