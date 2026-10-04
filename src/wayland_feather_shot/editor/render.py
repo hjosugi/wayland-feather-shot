@@ -315,9 +315,12 @@ def draw_shape(cr, shape: S.Shape, base_pixbuf) -> None:
     if shape.rotation:
         cr.rotate(shape.rotation)
 
-    drawer = _DRAWERS.get(shape.kind)
-    if drawer is not None:
-        drawer(cr, shape, base_pixbuf)
+    if shape.kind == "obscure":
+        _draw_obscure(cr, shape, base_pixbuf)
+    else:
+        drawer = _DRAWERS.get(shape.kind)
+        if drawer is not None:
+            drawer(cr, shape)
 
     if shape.opacity < 1.0:
         cr.pop_group_to_source()
@@ -377,7 +380,7 @@ def _quad_to(cr, control, end) -> None:
                 end[0], end[1])
 
 
-def _draw_pen(cr, shape, base):
+def _draw_pen(cr, shape):
     props = shape.props
     if len(props.points) < 2:
         return
@@ -409,7 +412,7 @@ def _draw_head(cr, style_name: str, tip, angle: float, style) -> None:
         cr.stroke()
 
 
-def _draw_arrow(cr, shape, base):
+def _draw_arrow(cr, shape):
     props = shape.props
     style = props.style
     start, end = props.start, props.end
@@ -440,7 +443,7 @@ def _draw_arrow(cr, shape, base):
         _badge(cr, 0.0, 0.0, props.badge_radius, str(props.number), style)
 
 
-def _draw_geo(cr, shape, base):
+def _draw_geo(cr, shape):
     props = shape.props
     if props.w < 1 or props.h < 1:
         return
@@ -460,7 +463,7 @@ def _draw_geo(cr, shape, base):
         cr.stroke()
 
 
-def _draw_highlight(cr, shape, base):
+def _draw_highlight(cr, shape):
     props = shape.props
     r, g, b, _a = props.style.rgba
     cr.set_source_rgba(r, g, b, 0.35)
@@ -497,7 +500,7 @@ def _draw_obscure(cr, shape, base):
     cr.restore()
 
 
-def _draw_text(cr, shape, base):
+def _draw_text(cr, shape):
     props = shape.props
     if props.background:
         pad = props.padding
@@ -509,7 +512,7 @@ def _draw_text(cr, shape, base):
               wrap_width=props.effective_wrap, align=props.align)
 
 
-def _draw_marker(cr, shape, base):
+def _draw_marker(cr, shape):
     props = shape.props
     r = props.diameter / 2
     _badge(cr, r, r, r, str(props.number), props.style)
@@ -531,7 +534,7 @@ def bubble_body(text: str, style: S.Style) -> Tuple[float, float]:
     return (w + 2 * BUBBLE_PAD, h + 2 * BUBBLE_PAD)
 
 
-def _draw_bubble(cr, shape, base):
+def _draw_bubble(cr, shape):
     props = shape.props
     w, h = props.w, props.h
     if w < 6 or h < 6:
@@ -557,32 +560,26 @@ def _draw_bubble(cr, shape, base):
               rgba=BUBBLE_TEXT_RGBA)
 
 
-def _draw_spotlight(cr, shape, base):
-    """Nothing: the scrim pass in :func:`draw_scene` handles spotlights.
-
-    Drawing one here would darken each region separately, and two overlapping
-    spotlights would double-darken where they meet — the opposite of what a
-    spotlight means.
-    """
-
-
-def _draw_emoji(cr, shape, base):
+def _draw_emoji(cr, shape):
     props = shape.props
     draw_text(cr, props.char, 0, 0, S.Style(font_size=props.size),
               bold=False, size=props.size, rgba=(0, 0, 0, 1))
 
 
+# Obscure is drawn apart, as the one kind that reads the base image. Spotlight
+# has no drawer: the scrim pass in :func:`draw_scene` handles spotlights, since
+# drawing one here would darken each region separately, and two overlapping
+# spotlights would double-darken where they meet — the opposite of what a
+# spotlight means.
 _DRAWERS = {
     "pen": _draw_pen,
     "arrow": _draw_arrow,
     "geo": _draw_geo,
     "highlight": _draw_highlight,
-    "obscure": _draw_obscure,
     "text": _draw_text,
     "marker": _draw_marker,
     "bubble": _draw_bubble,
     "emoji": _draw_emoji,
-    "spotlight": _draw_spotlight,
 }
 
 
