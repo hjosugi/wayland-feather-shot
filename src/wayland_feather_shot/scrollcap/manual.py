@@ -230,7 +230,7 @@ class ManualScrollWindow(Gtk.ApplicationWindow):
 
     # -- drawing / input ----------------------------------------------------
 
-    def _draw(self, area, cr, width, height):
+    def _draw(self, _area, cr, width, height):
         cr.set_source_rgb(0.10, 0.10, 0.12)
         cr.paint()
         if self._first is None:
@@ -265,7 +265,7 @@ class ManualScrollWindow(Gtk.ApplicationWindow):
         ih = self._first.get_height() if self._first else 0
         return (max(0, min(ix, iw)), max(0, min(iy, ih)))
 
-    def _on_drag_begin(self, gesture, x, y):
+    def _on_drag_begin(self, _gesture, x, y):
         if self._phase != "select":
             return
         self._sel_start = self._to_image(x, y)

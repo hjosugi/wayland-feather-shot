@@ -158,7 +158,7 @@ class GifCaptureWindow(Gtk.ApplicationWindow):
     def _grab(self):
         asked = time.time()
 
-        def got(path, error):
+        def got(path, _error):
             if path is None:
                 return
             try:
@@ -202,7 +202,7 @@ class GifCaptureWindow(Gtk.ApplicationWindow):
 
     # -- region select drawing --------------------------------------------
 
-    def _draw(self, area, cr, width, height):
+    def _draw(self, _area, cr, width, height):
         cr.set_source_rgb(0.10, 0.10, 0.12)
         cr.paint()
         if self._first is None:
@@ -237,7 +237,7 @@ class GifCaptureWindow(Gtk.ApplicationWindow):
         ih = self._first.get_height() if self._first else 0
         return (max(0, min(ix, iw)), max(0, min(iy, ih)))
 
-    def _on_begin(self, gesture, x, y):
+    def _on_begin(self, _gesture, x, y):
         if self._phase != "select":
             return
         self._sel_start = self._to_image(x, y)

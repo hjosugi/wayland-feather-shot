@@ -289,7 +289,7 @@ class ScreenCastSession:
         # Response code 1 is the user saying no in the portal's dialog: the
         # capture ends quietly ("cancelled"), not with an error dialog that
         # tells them to check their portal installation.
-        def on_sources(code, results):
+        def on_sources(code, _results):
             if code == 1:
                 return fail("cancelled")
             if code != 0:
@@ -438,7 +438,7 @@ class RemoteDesktop:
                 {"types": GLib.Variant("u", 2)},   # 2 = pointer
                 on_selected)
 
-        def on_selected(code, results):
+        def on_selected(code, _results):
             if code != 0:
                 return fail("SelectDevices failed or was cancelled")
             self.portal.request(
@@ -448,7 +448,7 @@ class RemoteDesktop:
                 {},
                 on_started)
 
-        def on_started(code, results):
+        def on_started(code, _results):
             if code != 0:
                 return fail("input injection not authorized (cancelled?)")
             callback(True, None)

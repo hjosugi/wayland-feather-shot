@@ -316,7 +316,7 @@ class ScrollCaptureWindow(Gtk.ApplicationWindow):
             max_steps=self.settings.scroll_auto_steps,
             delta=self.settings.scroll_auto_delta)
 
-        def ready(ok, error):
+        def ready(ok, _error):
             if not ok:
                 self._status.set_text(
                     _("Auto-scroll unavailable — scroll manually."))
