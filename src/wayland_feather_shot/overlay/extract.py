@@ -20,7 +20,7 @@ from gi.repository import GLib  # noqa: E402
 from .. import save as save_mod
 from ..editor import recognize, sensitive
 from ..editor.shapes import Obscure
-from ..i18n import _, tr
+from ..util.i18n import _, tr
 
 
 class OverlayExtractMixin:

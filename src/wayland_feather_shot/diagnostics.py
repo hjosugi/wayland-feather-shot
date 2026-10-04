@@ -121,7 +121,7 @@ def print_diagnostics() -> int:
 
     # Hotkey setup guidance for this desktop (the "nothing happens when I press
     # the key" case is almost always the wrong binding mechanism).
-    from . import hotkey
+    from .util import hotkey
     desktop = hotkey.detect_desktop()
     support = hotkey.portal_support(desktop)
     print(f"\n[info] desktop: {desktop} "

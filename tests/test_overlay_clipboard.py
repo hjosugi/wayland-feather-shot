@@ -26,7 +26,7 @@ except (ImportError, ValueError):
 if HAVE_GTK_DISPLAY:
     from wayland_feather_shot import save as save_mod  # noqa: E402
     from wayland_feather_shot.overlay.window import OverlayWindow  # noqa: E402
-    from wayland_feather_shot.settings import Settings  # noqa: E402
+    from wayland_feather_shot.util.settings import Settings  # noqa: E402
 
 
 def run_until(condition, seconds=5.0):

@@ -18,7 +18,7 @@ from gi.repository import Gsk  # noqa: E402
 import cairo  # noqa: E402
 
 from ..editor import arrows, render
-from ..i18n import _
+from ..util.i18n import _
 from .canvas import color, dim_outside, rect
 from .layout import position_label
 from .view import HANDLE_R

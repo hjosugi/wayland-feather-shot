@@ -37,8 +37,8 @@ from ..editor import shapes as shape_model
 from ..editor.shapes import (EMOJI_CHOICES, Arrow, EllipseShape, EmojiSticker,
                             Highlight, Line, Marker, Obscure, Pen, RectShape,
                             Spotlight, StepArrow, Style)
-from ..i18n import _, tr
-from ..theme import install_custom_css
+from ..util.i18n import _, tr
+from ..util.theme import install_custom_css
 from .canvas import OverlayCanvas, OverlayScene
 from .controls import OVERLAY_TOOLS, OverlayControlsMixin, menu_popover
 from .draw import OverlayDrawMixin

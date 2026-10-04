@@ -9,7 +9,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from wayland_feather_shot import clipboard_holder as ch  # noqa: E402
+from wayland_feather_shot.util import clipboard_holder as ch  # noqa: E402
 
 
 class HolderCommandTests(unittest.TestCase):
@@ -17,7 +17,7 @@ class HolderCommandTests(unittest.TestCase):
         cmd, env = ch.holder_command("/tmp/x.png", python="/usr/bin/python3")
         self.assertEqual(cmd[:3],
                          ["/usr/bin/python3", "-m",
-                          "wayland_feather_shot.clipboard_holder"])
+                          "wayland_feather_shot.util.clipboard_holder"])
         self.assertEqual(cmd[3], "/tmp/x.png")
 
     def test_pythonpath_includes_package_src_root(self):

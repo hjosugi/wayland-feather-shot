@@ -28,7 +28,7 @@ if HAVE_GTK_DISPLAY:
     from wayland_feather_shot.editor.shapes import (  # noqa: E402
         RectShape, Style)
     from wayland_feather_shot.overlay.window import OverlayWindow  # noqa: E402
-    from wayland_feather_shot.settings import Settings  # noqa: E402
+    from wayland_feather_shot.util.settings import Settings  # noqa: E402
 
 
 def picture(width, height, colour=0x336699ff):

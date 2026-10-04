@@ -16,7 +16,7 @@ try:
     gi.require_version("Gdk", "4.0")
     gi.require_version("GdkPixbuf", "2.0")
     from gi.repository import Gdk, GdkPixbuf, Gtk  # noqa: E402,F401
-    from wayland_feather_shot.lifecycle import acquire_capture_lock
+    from wayland_feather_shot.util.lifecycle import acquire_capture_lock
     HAVE_GI = True
     HAVE_GTK_DISPLAY = Gdk.Display.get_default() is not None
 except (ImportError, ValueError):

@@ -26,9 +26,9 @@ if HAS_DISPLAY:
     import wayland_feather_shot
     from wayland_feather_shot.app import FeatherShotApp
     from wayland_feather_shot.editor.shapes import TEXT_STYLE_BUTTONS
-    from wayland_feather_shot.i18n import _
+    from wayland_feather_shot.util.i18n import _
     from wayland_feather_shot.overlay.window import OVERLAY_TOOLS, OverlayWindow
-    from wayland_feather_shot.settings import Settings
+    from wayland_feather_shot.util.settings import Settings
 
 
 def icon_of(button):

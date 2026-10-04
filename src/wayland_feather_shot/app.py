@@ -25,12 +25,12 @@ from gi.repository import GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 
 from . import APP_ID
 from .cli import EXIT_CANCELLED
-from .i18n import _, tr
-from .lifecycle import acquire_capture_lock, release_on_window_removed  # noqa: F401
+from .util.i18n import _, tr
+from .util.lifecycle import acquire_capture_lock, release_on_window_removed  # noqa: F401
 from .portal import Portal, PortalError, cleanup_portal_file
 from .overlay.window import OverlayWindow
-from .settings import Settings
-from .theme import apply_system_color_scheme, register_bundled_icons
+from .util.settings import Settings
+from .util.theme import apply_system_color_scheme, register_bundled_icons
 
 
 def _die_dialog(app, message: str):
@@ -393,7 +393,7 @@ class FeatherShotApp(Gtk.Application):
         *shortcut* overrides the region trigger (default Ctrl+Shift+PrtSc).
         *bind_once* binds the shortcuts and exits, for testing the binding.
         """
-        from . import hotkey
+        from .util import hotkey
         from .portal import GlobalShortcuts
 
         desktop = hotkey.detect_desktop()
@@ -480,7 +480,7 @@ def spawn_capture(mode: str) -> bool:
     command and any failure — a silent spawn is exactly the "I pressed the key
     and nothing happened" bug.
     """
-    from . import hotkey
+    from .util import hotkey
     src_dir = os.path.dirname(os.path.abspath(__file__))
     src_dir = os.path.dirname(src_dir)  # .../src
     cmd, extra = hotkey.capture_command(

@@ -20,8 +20,8 @@ from gi.repository import Gdk, Gtk, Pango  # noqa: E402
 from ..editor import render
 from ..editor import shapes as shape_model
 from ..editor.shapes import SpeechBubble, Text
-from ..i18n import _
-from ..theme import style_live_bubble, style_live_text
+from ..util.i18n import _
+from ..util.theme import style_live_bubble, style_live_text
 
 
 JUSTIFICATIONS = {"left": Gtk.Justification.LEFT,

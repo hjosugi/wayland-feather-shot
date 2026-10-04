@@ -21,7 +21,7 @@ except (ImportError, ValueError):
     HAVE_GTK_DISPLAY = False
 if HAVE_GTK_DISPLAY:
     from wayland_feather_shot.overlay.window import OverlayWindow  # noqa: E402
-    from wayland_feather_shot.settings import Settings  # noqa: E402
+    from wayland_feather_shot.util.settings import Settings  # noqa: E402
 
 
 class FakeDrag:

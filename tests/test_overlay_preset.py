@@ -26,7 +26,7 @@ except (ImportError, ValueError):
 if HAVE_GTK_DISPLAY:
     from wayland_feather_shot.editor import preset as preset_mod  # noqa: E402
     from wayland_feather_shot.overlay.window import OverlayWindow  # noqa: E402
-    from wayland_feather_shot.settings import Settings  # noqa: E402
+    from wayland_feather_shot.util.settings import Settings  # noqa: E402
 
 SAVED = {
     "tool": "select", "rgba": [0.1, 0.5, 0.9, 1.0], "width": 8.0,

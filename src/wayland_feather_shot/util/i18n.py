@@ -40,7 +40,7 @@ def _detect_lang() -> str:
 
 def _localedir() -> str:
     return (os.environ.get("WFS_LOCALEDIR")
-            or os.path.join(os.path.dirname(__file__), "locale"))
+            or os.path.join(os.path.dirname(os.path.dirname(__file__)), "locale"))
 
 
 def _load_catalog(lang: str):

@@ -36,10 +36,16 @@ src/wayland_feather_shot/
                          numpy fast path, sticky header/footer detection)
   save.py                PNG/JPEG/WebP save + clipboard (wl-copy preferred so
                          the copy survives the app; GDK clipboard fallback)
-  settings.py            ~/.config/wayland-feather-shot/config.json
-  paths.py               XDG helpers (localized Pictures dir, e.g. ~/画像)
   diagnostics.py         `diagnose` runtime checks, import-light
-  i18n.py                dict-based English/Japanese strings (LANG / WFS_LANG)
+  util/                  helpers the modules above lean on
+    settings.py          ~/.config/wayland-feather-shot/config.json
+    paths.py             XDG helpers (localized Pictures dir, e.g. ~/画像)
+    i18n.py              dict-based English/Japanese strings (LANG / WFS_LANG)
+    theme.py             app CSS and the bundled tool icons
+    hotkey.py            desktop detection and per-desktop shortcut hints
+    lifecycle.py         application holds and the capture lock
+    imaging.py           the image format for a save path
+    clipboard_holder.py  keeps a copy on the clipboard when wl-copy is missing
 ```
 
 ## Capture flow

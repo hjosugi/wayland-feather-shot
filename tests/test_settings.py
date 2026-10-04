@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 def fresh_settings(config_home):
     os.environ["XDG_CONFIG_HOME"] = config_home
-    import wayland_feather_shot.settings as settings
+    import wayland_feather_shot.util.settings as settings
     return importlib.reload(settings)
 
 

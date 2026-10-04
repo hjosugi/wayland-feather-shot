@@ -18,7 +18,7 @@ from gi.repository import Gdk, GLib, Gtk, Pango  # noqa: E402
 
 from ..editor import arrows
 from ..editor import shapes as shape_model
-from ..i18n import _
+from ..util.i18n import _
 from .hand import WIDTH_KINDS, restyled, with_props
 from .layout import layout_controls
 

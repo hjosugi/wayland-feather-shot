@@ -6,7 +6,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from wayland_feather_shot.lifecycle import release_on_window_removed
+from wayland_feather_shot.util.lifecycle import release_on_window_removed
 
 
 class SignalApp:

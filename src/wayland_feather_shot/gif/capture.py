@@ -22,7 +22,7 @@ gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # noqa: E402
 
 from . import encoder
-from ..i18n import _, tr
+from ..util.i18n import _, tr
 from ..portal import Portal, cleanup_portal_file
 
 MAX_FRAMES = 60

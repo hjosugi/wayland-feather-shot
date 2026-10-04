@@ -23,7 +23,7 @@ if HAVE_GTK_DISPLAY:
     from wayland_feather_shot.editor import render  # noqa: E402
     from wayland_feather_shot.editor.shapes import EMOJI_CHOICES  # noqa: E402
     from wayland_feather_shot.overlay.window import OverlayWindow  # noqa: E402
-    from wayland_feather_shot.settings import Settings  # noqa: E402
+    from wayland_feather_shot.util.settings import Settings  # noqa: E402
 
 CTRL = 1 << 2
 

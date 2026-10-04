@@ -21,7 +21,7 @@ import os
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, Tuple
 
-from ..settings import CONFIG_DIR
+from ..util.settings import CONFIG_DIR
 
 PRESET_PATH = os.path.join(CONFIG_DIR, "editor-preset.json")
 

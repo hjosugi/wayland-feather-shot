@@ -159,7 +159,7 @@ class SettingsSeedTests(unittest.TestCase):
     def test_the_preset_is_not_the_settings_file(self):
         # Overwriting config.json with wherever the last session ended would
         # make "reset to defaults" meaningless.
-        from wayland_feather_shot.settings import CONFIG_PATH
+        from wayland_feather_shot.util.settings import CONFIG_PATH
         self.assertNotEqual(P.PRESET_PATH, CONFIG_PATH)
 
 

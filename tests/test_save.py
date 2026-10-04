@@ -9,7 +9,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from wayland_feather_shot import imaging  # noqa: E402
+from wayland_feather_shot.util import imaging  # noqa: E402
 
 
 class FormatForPathTests(unittest.TestCase):

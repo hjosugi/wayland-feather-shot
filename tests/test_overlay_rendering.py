@@ -38,7 +38,7 @@ if HAVE_GTK:
 
 if HAVE_DISPLAY:
     from wayland_feather_shot.overlay.window import OverlayWindow
-    from wayland_feather_shot.settings import Settings
+    from wayland_feather_shot.util.settings import Settings
 
 
 class PixelImage:

@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from wayland_feather_shot import paths  # noqa: E402
+from wayland_feather_shot.util import paths  # noqa: E402
 
 
 class XdgPicturesDirTests(unittest.TestCase):

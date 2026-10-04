@@ -22,7 +22,7 @@ except (ImportError, ValueError):
 if HAVE_GTK_DISPLAY:
     from wayland_feather_shot.editor.shapes import Text  # noqa: E402
     from wayland_feather_shot.overlay.window import OverlayWindow  # noqa: E402
-    from wayland_feather_shot.settings import Settings  # noqa: E402
+    from wayland_feather_shot.util.settings import Settings  # noqa: E402
 
 
 SHIFT, CTRL = 1 << 0, 1 << 2

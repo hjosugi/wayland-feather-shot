@@ -22,7 +22,7 @@ from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # noqa: E402
 
 from ..editor import background as bg
 from ..editor import render
-from ..i18n import _
+from ..util.i18n import _
 
 # The preview is rendered from the selection shrunk to this longer edge; the
 # frame's sizes are fractions of the picture, so it scales as a whole.

@@ -13,9 +13,9 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk  # noqa: E402
 
-from . import hotkey
-from .i18n import _, tr
-from .settings import DEFAULTS
+from .util import hotkey
+from .util.i18n import _, tr
+from .util.settings import DEFAULTS
 
 # Short one-line help per setting, shown under each field.
 _HELP = {

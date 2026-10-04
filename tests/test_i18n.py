@@ -19,7 +19,7 @@ def load_i18n(**env):
     for key in ("WFS_LANG", "WFS_LOCALEDIR", "LC_ALL", "LC_MESSAGES", "LANG"):
         os.environ.pop(key, None)
     os.environ.update(env)
-    import wayland_feather_shot.i18n as i18n
+    import wayland_feather_shot.util.i18n as i18n
     return importlib.reload(i18n)
 
 

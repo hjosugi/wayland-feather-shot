@@ -238,7 +238,7 @@ you press the key. You can override the portal trigger with
 
 `~/.config/wayland-feather-shot/config.json` (created on first run):
 save directory, filename pattern, default color/width, blur strength,
-scroll-capture margins and limits. See `src/wayland_feather_shot/settings.py`.
+scroll-capture margins and limits. See `src/wayland_feather_shot/util/settings.py`.
 
 `save_dir` defaults to empty = automatic: the OS/XDG Pictures directory
 (localized, e.g. `~/画像`) plus `/Screenshots`. The `Ctrl+O` save-folder

@@ -19,8 +19,8 @@ gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gdk, GdkPixbuf, GLib, GObject  # noqa: E402
 from gi.repository import Gio  # noqa: E402
 
-from . import clipboard_holder
-from .imaging import format_for_path
+from .util import clipboard_holder
+from .util.imaging import format_for_path
 
 
 def timestamp_path(settings) -> str:

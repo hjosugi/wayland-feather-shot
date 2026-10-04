@@ -38,7 +38,7 @@ def _build_window(app, settings, open_file):
     gi.require_version("GdkPixbuf", "2.0")
     from gi.repository import GdkPixbuf, GLib, Gtk
 
-    from .i18n import _, tr
+    from .util.i18n import _, tr
 
     class HistoryWindow(Gtk.ApplicationWindow):
         def __init__(self):

@@ -11,7 +11,7 @@ so the copy survives the app closing, with no external dependency.
 
 Invoked as::
 
-    python3 -m wayland_feather_shot.clipboard_holder PNGPATH [--timeout SECONDS]
+    python3 -m wayland_feather_shot.util.clipboard_holder PNGPATH [--timeout SECONDS]
 
 `gi` is imported lazily inside ``main`` so the pure helpers below stay
 importable (and unit-testable) on machines without GTK.
@@ -33,11 +33,12 @@ def holder_command(png_path: str, python: str | None = None,
     (repo checkout, ``install.sh`` copy, or pip install).
     """
     python = python or sys.executable
-    cmd = [python, "-m", "wayland_feather_shot.clipboard_holder", png_path]
+    cmd = [python, "-m", "wayland_feather_shot.util.clipboard_holder", png_path]
     if timeout and timeout > 0:
         cmd += ["--timeout", str(int(timeout))]
     # .../src, so `python3 -m wayland_feather_shot...` finds the package.
-    src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    src_dir = os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))))
     env = dict(os.environ)
     existing = env.get("PYTHONPATH")
     env["PYTHONPATH"] = (src_dir if not existing

@@ -19,7 +19,7 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # noqa: E402
 
-from ..i18n import _, tr
+from ..util.i18n import _, tr
 from ..portal import Portal, ScreenCastSession
 from . import stitcher
 from .stitcher import Frame

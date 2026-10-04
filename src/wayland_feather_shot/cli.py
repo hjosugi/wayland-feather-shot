@@ -120,7 +120,7 @@ def _validate(parser: argparse.ArgumentParser, args) -> None:
     if (args.shortcut or args.bind_once) and args.mode != "daemon":
         parser.error("--shortcut/--bind-once only apply to the 'daemon' mode")
     if args.shortcut is not None:
-        from .hotkey import valid_trigger
+        from .util.hotkey import valid_trigger
         if not valid_trigger(args.shortcut):
             parser.error(f"invalid shortcut trigger: {args.shortcut!r} "
                          "(expected e.g. CTRL+Print or SHIFT+CTRL+F12)")
@@ -161,7 +161,7 @@ def main() -> int:
         # stack loads: the portal takes about a second, and GTK, the editor
         # and the overlay load while it works.
         try:
-            from .lifecycle import acquire_capture_lock
+            from .util.lifecycle import acquire_capture_lock
             from .portal import PendingScreenshot, Portal, PortalError
         except ImportError:
             pass  # reported below, with the full stack

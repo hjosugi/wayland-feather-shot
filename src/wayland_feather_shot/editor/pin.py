@@ -18,8 +18,8 @@ gi.require_version("Gdk", "4.0")
 from gi.repository import Gdk, Gtk  # noqa: E402
 
 from .. import save as save_mod
-from ..lifecycle import release_on_window_removed
-from ..theme import install_custom_css
+from ..util.lifecycle import release_on_window_removed
+from ..util.theme import install_custom_css
 
 MAX_W, MAX_H = 1000, 800
 

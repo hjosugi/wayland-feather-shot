@@ -21,7 +21,7 @@ def register_bundled_icons() -> None:
     if display is None:
         return
     icon_theme = Gtk.IconTheme.get_for_display(display)
-    icon_path = str(Path(__file__).resolve().parent / "icons")
+    icon_path = str(Path(__file__).resolve().parent.parent / "icons")
     if icon_path not in icon_theme.get_search_path():
         icon_theme.add_search_path(icon_path)
 
