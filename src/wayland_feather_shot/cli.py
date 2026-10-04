@@ -60,7 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
                              "clipboard / full: whole screen, already "
                              "selected / window: pick a window via the portal "
                              "picker / scroll: scrolling capture / edit: "
-                             "open an existing image in the editor / "
+                             "open an existing image in the overlay / "
                              "daemon: GlobalShortcuts-portal hotkey daemon "
                              "/ diagnose: print runtime environment checks / "
                              "updater: maintenance commands")
@@ -158,8 +158,8 @@ def main() -> int:
 
     if args.mode in ("gui", "copy", "full") and not args.delay:
         # Take the capture lock and send the portal request before the GTK
-        # stack loads: the portal takes about a second, and GTK, the editor
-        # and the overlay load while it works.
+        # stack loads: the portal takes about a second, and GTK and the
+        # overlay load while it works.
         try:
             from .util.lifecycle import acquire_capture_lock
             from .portal import PendingScreenshot, Portal, PortalError

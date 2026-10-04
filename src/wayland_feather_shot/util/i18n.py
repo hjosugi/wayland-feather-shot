@@ -186,8 +186,8 @@ JA = {
     "Copied — keep this window open while pasting (install wl-clipboard to copy & close)":
         "コピーしました — 貼り付けるまでこのウィンドウを開いたままにしてください"
         "(wl-clipboard を入れるとコピー後すぐ閉じられます)",
-    "clipboard (valid while the editor stays open)":
-        "クリップボード(エディタを開いている間有効)",
+    "clipboard (valid while the window stays open)":
+        "クリップボード(ウィンドウを開いている間有効)",
     "holder process": "保持プロセス",
     "Text font": "テキストのフォント",
     # selector hint

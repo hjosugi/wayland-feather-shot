@@ -33,7 +33,7 @@ ALIGNMENTS = ("left", "center", "right")
 
 @dataclass
 class EditorPreset:
-    """Where the editor left off last time."""
+    """The annotation style as it was left last time."""
 
     tool: str = "pen"
     rgba: Tuple[float, float, float, float] = (1.0, 0.23, 0.19, 1.0)
@@ -145,8 +145,8 @@ def starting_point(settings, rgba) -> EditorPreset:
 
 
 def from_settings(settings) -> EditorPreset:
-    """The configured defaults, as a preset — the starting point on a machine
-    that has never opened the editor."""
+    """The configured defaults, as a preset — the starting point before
+    any style has been remembered."""
     preset = EditorPreset()
     preset.width = _clamped(settings.get("pen_width"), 0.5, 200.0, preset.width)
     preset.font_size = _clamped(settings.get("font_size"), 4.0, 400.0,

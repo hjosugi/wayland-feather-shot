@@ -2,13 +2,12 @@
 and reshaping them.
 
 A press picks the shape under the pointer (Shift or Ctrl adds to the pick),
-and a drag moves every picked shape. The picked shapes get the editor
-window's frame: its handles resize them, the ones beyond the corners rotate
-them, and a lone arrow has handles for its ends and its bend instead. The
-frame engine (editor/interaction.py) does that geometry, over the picked
-shapes alone. Shapes on the move are lifted
-out of the cached composite and drawn live (draw.py). A mixin of
-overlay.window.OverlayWindow.
+and a drag moves every picked shape. The picked shapes get a frame: its
+handles resize them, the ones beyond the corners rotate them, and a lone
+arrow has handles for its ends and its bend instead. The frame engine
+(editor/interaction.py) does that geometry, over the picked shapes alone.
+Shapes on the move are lifted out of the cached composite and drawn live
+(draw.py). A mixin of overlay.window.OverlayWindow.
 """
 
 from __future__ import annotations
@@ -82,9 +81,8 @@ class OverlayHandMixin:
     def _shape_at(self, ix, iy) -> Optional[int]:
         """Index of the topmost shape under an image point, within 8 screen px.
 
-        Unlike the editor's select tool, the hand also takes the inside of an
-        unfilled frame: grabbing a rectangle by its middle is what people try
-        first.
+        The inside of an unfilled frame counts too: grabbing a rectangle by
+        its middle is what people try first.
         """
         scale = self._view_params()[0]
         margin = max(3.0, 8.0 / scale)
@@ -231,8 +229,7 @@ class OverlayHandMixin:
     # -- keys --
 
     def _picked_key(self, keyval, ctrl, shift) -> bool:
-        """The editor window's keys for its selection, on the picked
-        shapes: Ctrl+A picks them all (with the hand), Delete removes them,
+        """Keys for the picked shapes: Ctrl+A picks them all (with the hand), Delete removes them,
         the arrows nudge them by a pixel (ten with Shift), Ctrl+Up and
         Ctrl+Down raise and lower them. True when the key was used."""
         if ctrl and Gdk.keyval_to_lower(keyval) == Gdk.KEY_a:
@@ -288,8 +285,7 @@ class OverlayHandMixin:
 
     def _restyle_picked(self, what, change, sliding=False):
         """Apply *change* (a shape, or None where it does not apply) to the
-        picked shapes, as the editor applies its controls to its selection.
-        One undo step; for a *sliding* control (a spinner, a slider) merged
+        picked shapes. One undo step; for a *sliding* control (a spinner, a slider) merged
         with the same change just before it, so a whole slide undoes at
         once."""
         if (self.tool != "hand" or not self._picked
@@ -327,8 +323,7 @@ class OverlayHandMixin:
             self._live_shapes() if self._lifted else [])
 
     def _draw_pick_frame(self, snapshot):
-        """The picked shapes' frame and handles, as the editor draws them:
-        one frame around them all (a lone shape's own, rotated), or a lone
+        """The picked shapes' frame and handles: one frame around them all (a lone shape's own, rotated), or a lone
         arrow's three handles. Several picked shapes are outlined too."""
         shapes = self._picked_shapes()
         if not shapes:

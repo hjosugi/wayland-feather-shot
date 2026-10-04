@@ -478,8 +478,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     def _flatten_under(self, redaction):
         """Add a blur or pixelate drawn with flatten_redactions on: the
         annotations under it become part of the picture first, so it hides
-        them too, as the editor window's option does. One undo step, which
-        brings them back as annotations."""
+        them too. One undo step, which brings them back as annotations."""
         self._push_history()
         if self.shapes:
             self._set_base(render.flatten(self.pixbuf, self.shapes))
@@ -551,8 +550,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         if not ok:
             return
         if self._drag_kind == "reshape":
-            # Shift keeps the proportions or snaps the angle, as in the
-            # editor window.
+            # Shift keeps the proportions or snaps the angle.
             self._drag_shift = bool(gesture.get_current_event_state()
                                     & Gdk.ModifierType.SHIFT_MASK)
         ix, iy = self._to_image(sx + dx, sy + dy)
@@ -689,7 +687,7 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
                 and not self._handle_at(x, y))
 
     def _on_click_pressed(self, _gesture, n_press, x, y):
-        # A press anywhere finishes the text being typed, as in the editor.
+        # A press anywhere finishes the text being typed.
         self._end_text(commit=True)
         if n_press == 1:
             self._copy_first_click = False

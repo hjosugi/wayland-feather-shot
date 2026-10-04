@@ -348,8 +348,8 @@ msgstr "コピーに失敗しました: {error}"
 msgid "Copied — keep this window open while pasting (install wl-clipboard to copy & close)"
 msgstr "コピーしました — 貼り付けるまでこのウィンドウを開いたままにしてください(wl-clipboard を入れるとコピー後すぐ閉じられます)"
 
-msgid "clipboard (valid while the editor stays open)"
-msgstr "クリップボード(エディタを開いている間有効)"
+msgid "clipboard (valid while the window stays open)"
+msgstr "クリップボード(ウィンドウを開いている間有効)"
 
 msgid "holder process"
 msgstr "保持プロセス"

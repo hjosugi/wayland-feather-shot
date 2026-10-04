@@ -48,10 +48,9 @@ class OverlayTextMixin:
     shape (or drops it)."""
 
     def _begin_text(self, ix, iy, kind="text"):
-        """Type the text on the canvas, at the size and colour it will have.
-
-        The editor window does the same (#31); a popover showed the words but
-        not how big they would come out. A bubble is typed inside a live
+        """Type the text on the canvas, at the size and colour it will have,
+        rather than in a popover, which showed the words but not how big they
+        would come out (#31). A bubble is typed inside a live
         bubble whose top-left corner is at (ix, iy).
         """
         self._end_text(commit=True)
@@ -229,7 +228,7 @@ class OverlayTextMixin:
         if keyval == Gdk.KEY_Escape:
             self._end_text(commit=False)
             return True
-        # Enter is a newline; Ctrl+Enter finishes, as in the editor window.
+        # Enter is a newline; Ctrl+Enter finishes.
         if (keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter)
                 and state & Gdk.ModifierType.CONTROL_MASK):
             self._end_text(commit=True)

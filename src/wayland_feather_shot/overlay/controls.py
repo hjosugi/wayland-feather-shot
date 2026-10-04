@@ -85,7 +85,7 @@ ALIGN_BUTTONS = (
     ("right", "format-justify-right-symbolic", "Align right"),
 )
 
-# The style button's palette (the editor window's presets).
+# The style button's palette.
 PALETTE = ((0.90, 0.15, 0.12), (0.95, 0.55, 0.10), (0.98, 0.85, 0.10),
            (0.20, 0.70, 0.25), (0.15, 0.50, 0.95), (0.60, 0.20, 0.80),
            (0.10, 0.10, 0.10), (1.0, 1.0, 1.0))
@@ -282,7 +282,7 @@ class OverlayControlsMixin:
         menu.append(size_row)
         self._style_rows["size"] = size_row
 
-        # The editor window's width presets, one click each.
+        # Width presets, one click each.
         widths = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         for width in WIDTH_PRESETS:
             btn = Gtk.Button(label=str(width))

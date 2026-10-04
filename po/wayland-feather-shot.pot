@@ -348,7 +348,7 @@ msgstr ""
 msgid "Copied — keep this window open while pasting (install wl-clipboard to copy & close)"
 msgstr ""
 
-msgid "clipboard (valid while the editor stays open)"
+msgid "clipboard (valid while the window stays open)"
 msgstr ""
 
 msgid "holder process"

@@ -219,7 +219,7 @@ def copy_text(text: str) -> str:
     clipboard = display.get_clipboard()
     clipboard.set_content(Gdk.ContentProvider.new_for_bytes(
         "text/plain;charset=utf-8", GLib.Bytes.new(text.encode("utf-8"))))
-    return "clipboard (valid while the editor stays open)"
+    return "clipboard (valid while the window stays open)"
 
 
 def _spawn_holder(png: bytes):
@@ -282,4 +282,4 @@ def copy_pixbuf(pixbuf: GdkPixbuf.Pixbuf) -> str:
         Gdk.ContentProvider.new_for_bytes("image/png", GLib.Bytes.new(png)),
     ])
     clipboard.set_content(provider)
-    return "clipboard (valid while the editor stays open)"
+    return "clipboard (valid while the window stays open)"
