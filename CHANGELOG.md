@@ -21,9 +21,10 @@
   opens them (GNOME Settings → Keyboard, KDE System Settings → Shortcuts),
   or on Hyprland and Sway shows the lines for their config file. The app's
   launcher menu gets a "Settings" entry.
-- **A third smaller AppImage.** It carried bytecode compiled by the release
-  machine's Python, which the host's Python ignores; it now ships the
-  sources alone (390 KB instead of 579 KB).
+- **The AppImage starts without libfuse2.** It is built with the maintained
+  appimagetool, whose runtime needs no libfuse2 on the host (Ubuntu 22.04
+  and later no longer install it). It also stops carrying bytecode compiled
+  by the release machine's Python, which the host's Python ignored.
 - **The Flatpak starts about 0.1 s sooner.** Its build threw away the
   compiled bytecode, and since the sandbox cannot write it back, every
   launch compiled the sources again.

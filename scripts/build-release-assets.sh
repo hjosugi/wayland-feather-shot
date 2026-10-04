@@ -95,7 +95,7 @@ APPIMAGETOOL="$TOOL_DIR/appimagetool-x86_64.AppImage"
 if ! [ -x "$APPIMAGETOOL" ]; then
     curl -L --fail --retry 3 \
         -o "$APPIMAGETOOL" \
-        https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+        https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
     chmod +x "$APPIMAGETOOL"
 fi
 
