@@ -113,8 +113,13 @@ trigger syntax:
 $ wayland-feather-shot daemon --shortcut "CTRL+SHIFT+s"
 ```
 
-For a permanent change, edit the `Exec=` line of the autostart entry, or use
-the desktop's own shortcut settings once the keys are registered.
+For a permanent change, use the desktop's own shortcut settings once the
+keys are registered, or edit the `Exec=` line of the autostart entry. The
+settings window (`wayland-feather-shot settings`, or "Settings" in the app's
+launcher menu) has a "Keyboard settings…" button that opens them: Settings →
+Keyboard on GNOME, System Settings → Shortcuts on KDE Plasma. On Hyprland
+and Sway, which keep the keys in their config file, it shows the lines to
+add instead.
 
 ### Checking that it works
 

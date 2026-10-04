@@ -54,6 +54,18 @@ msgstr ""
 msgid "Could not save settings: {error}"
 msgstr ""
 
+msgid "Capture keys"
+msgstr ""
+
+msgid "Ctrl+PrtSc captures the full screen and Ctrl+Shift+PrtSc a region, unless changed. The desktop keeps them: change them in its keyboard settings."
+msgstr ""
+
+msgid "Keyboard settings…"
+msgstr ""
+
+msgid "Bind the capture keys in the desktop's configuration"
+msgstr ""
+
 msgid "Pen"
 msgstr ""
 

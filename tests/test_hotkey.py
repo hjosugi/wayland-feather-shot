@@ -68,6 +68,30 @@ class SetupHintTests(unittest.TestCase):
             self.assertNotIn("wfs copy", hint)
 
 
+class ShortcutSettingsTests(unittest.TestCase):
+    """Where the capture keys are changed: the desktop's own settings."""
+
+    def test_gnome_opens_its_keyboard_panel(self):
+        self.assertEqual(
+            hotkey.shortcut_settings_command("gnome", which=lambda p: p),
+            ["gnome-control-center", "keyboard"])
+
+    def test_kde_takes_the_first_installed_settings_app(self):
+        installed = {"kcmshell6"}
+        self.assertEqual(
+            hotkey.shortcut_settings_command(
+                "kde", which=lambda p: p if p in installed else None),
+            ["kcmshell6", "kcm_keys"])
+
+    def test_config_file_desktops_and_missing_apps_have_none(self):
+        for desktop in ("sway", "hyprland", "other"):
+            with self.subTest(desktop=desktop):
+                self.assertIsNone(hotkey.shortcut_settings_command(
+                    desktop, which=lambda p: p))
+        self.assertIsNone(hotkey.shortcut_settings_command(
+            "gnome", which=lambda p: None))
+
+
 class ValidTriggerTests(unittest.TestCase):
     def test_valid(self):
         for t in ("CTRL+Print", "SHIFT+CTRL+F12", "Print", "SUPER+s"):

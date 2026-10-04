@@ -54,6 +54,18 @@ msgstr "無効な値: {keys}"
 msgid "Could not save settings: {error}"
 msgstr "設定を保存できませんでした: {error}"
 
+msgid "Capture keys"
+msgstr "キャプチャのキー"
+
+msgid "Ctrl+PrtSc captures the full screen and Ctrl+Shift+PrtSc a region, unless changed. The desktop keeps them: change them in its keyboard settings."
+msgstr "変更していなければ Ctrl+PrtSc で全画面、Ctrl+Shift+PrtSc で範囲をキャプチャします。キーはデスクトップが管理しているので、デスクトップのキーボード設定で変更します。"
+
+msgid "Keyboard settings…"
+msgstr "キーボード設定…"
+
+msgid "Bind the capture keys in the desktop's configuration"
+msgstr "キャプチャのキーはデスクトップの設定ファイルで割り当てます"
+
 msgid "Pen"
 msgstr "ペン"
 

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **A way to the keyboard settings.** The capture keys belong to the
+  desktop, which shows and changes them in its own keyboard settings. The
+  settings window now says so and has a "Keyboard settings…" button that
+  opens them (GNOME Settings → Keyboard, KDE System Settings → Shortcuts),
+  or on Hyprland and Sway shows the lines for their config file. The app's
+  launcher menu gets a "Settings" entry.
+
 ## 0.13.0 (2026-10-04)
 
 - **The overlay is the one place to annotate a capture.** Everything the

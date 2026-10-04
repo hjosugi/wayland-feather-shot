@@ -75,6 +75,14 @@ JA = {
     "Save": "保存",
     "Invalid value for: {keys}": "無効な値: {keys}",
     "Could not save settings: {error}": "設定を保存できませんでした: {error}",
+    "Capture keys": "キャプチャのキー",
+    "Ctrl+PrtSc captures the full screen and Ctrl+Shift+PrtSc a region, unless changed. The desktop keeps them: change them in its keyboard settings.":
+        "変更していなければ Ctrl+PrtSc で全画面、Ctrl+Shift+PrtSc で範囲を"
+        "キャプチャします。キーはデスクトップが管理しているので、デスクトップの"
+        "キーボード設定で変更します。",
+    "Keyboard settings…": "キーボード設定…",
+    "Bind the capture keys in the desktop's configuration":
+        "キャプチャのキーはデスクトップの設定ファイルで割り当てます",
     # tool labels
     "Pen": "ペン", "Line": "直線", "Arrow": "矢印",
     "Rect": "矩形", "Ellipse": "楕円", "Text": "文字",

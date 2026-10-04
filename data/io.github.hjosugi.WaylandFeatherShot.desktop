@@ -10,7 +10,7 @@ Terminal=false
 Categories=Graphics;Utility;
 Keywords=screenshot;capture;annotate;blur;scroll;wayland;
 StartupNotify=true
-Actions=full;scroll;
+Actions=full;scroll;settings;
 
 [Desktop Action full]
 Name=Capture full screen
@@ -21,3 +21,8 @@ Exec=wayland-feather-shot full
 Name=Scrolling capture
 Name[ja]=スクロールキャプチャ
 Exec=wayland-feather-shot scroll
+
+[Desktop Action settings]
+Name=Settings
+Name[ja]=設定
+Exec=wayland-feather-shot settings

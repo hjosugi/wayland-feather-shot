@@ -21,6 +21,7 @@ makes the launch robust across install layouts.
 from __future__ import annotations
 
 import os
+import shutil
 
 DEFAULT_SHORTCUT = "CTRL+SHIFT+Print"   # region capture
 
@@ -109,6 +110,26 @@ def setup_hint(desktop: str, cmd: str = "wayland-feather-shot") -> str:
         f"    Ctrl+Shift+PrtSc  ->  {cmd} gui\n"
         "  If your desktop implements the GlobalShortcuts portal you can\n"
         f"  instead run:  {cmd} daemon")
+
+
+# Commands that open a desktop's keyboard-shortcut settings, where the
+# capture keys are changed (the portal daemon's under the app's name, the
+# native bindings among the custom ones); the first one installed is used.
+SHORTCUT_SETTINGS = {
+    "gnome": (("gnome-control-center", "keyboard"),),
+    "kde": (("systemsettings", "kcm_keys"), ("kcmshell6", "kcm_keys"),
+            ("systemsettings5", "kcm_keys"), ("kcmshell5", "kcm_keys")),
+}
+
+
+def shortcut_settings_command(desktop: str, which=shutil.which):
+    """The command that opens *desktop*'s keyboard-shortcut settings, or
+    None where the keys live in a config file instead (Hyprland, Sway):
+    setup_hint says what to write there."""
+    for command in SHORTCUT_SETTINGS.get(desktop, ()):
+        if which(command[0]):
+            return list(command)
+    return None
 
 
 def valid_trigger(trigger: str) -> bool:

@@ -1,15 +1,19 @@
-"""Settings window — a simple form over config.json.
+"""Settings window — a simple form over config.json, and the way to the
+desktop's keyboard settings, where the capture keys are changed.
 
 config.json stays the source of truth; this just edits it. GTK only.
 """
 
 from __future__ import annotations
 
+import subprocess
+
 import gi
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk  # noqa: E402
 
+from . import hotkey
 from .i18n import _, tr
 from .settings import DEFAULTS
 
@@ -47,6 +51,8 @@ class SettingsWindow(Gtk.ApplicationWindow):
         outer.set_margin_end(16)
         self.set_child(outer)
 
+        outer.append(self._build_capture_keys())
+
         scroller = Gtk.ScrolledWindow()
         scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scroller.set_vexpand(True)
@@ -69,6 +75,48 @@ class SettingsWindow(Gtk.ApplicationWindow):
         buttons.append(cancel)
         buttons.append(save)
         outer.append(buttons)
+
+    def _build_capture_keys(self):
+        """The capture keys belong to the desktop, which shows and changes
+        them in its own keyboard settings; this leads there."""
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        text.set_hexpand(True)
+        title = Gtk.Label(label=_("Capture keys"), xalign=0.0)
+        title.add_css_class("heading")
+        text.append(title)
+        about = Gtk.Label(label=_(
+            "Ctrl+PrtSc captures the full screen and Ctrl+Shift+PrtSc a "
+            "region, unless changed. The desktop keeps them: change them in "
+            "its keyboard settings."), xalign=0.0)
+        about.set_wrap(True)
+        about.add_css_class("dim-label")
+        text.append(about)
+        box.append(text)
+        button = Gtk.Button(label=_("Keyboard settings…"))
+        button.set_valign(Gtk.Align.CENTER)
+        button.connect("clicked", lambda *_: self.open_shortcut_settings())
+        box.append(button)
+        return box
+
+    def open_shortcut_settings(self):
+        """Open the desktop's keyboard-shortcut settings; where there are
+        none, show how to bind the keys in its configuration."""
+        desktop = hotkey.detect_desktop()
+        command = hotkey.shortcut_settings_command(desktop)
+        if command is not None:
+            try:
+                subprocess.Popen(command, start_new_session=True,
+                                 stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.DEVNULL)
+                return
+            except OSError:
+                pass
+        dialog = Gtk.AlertDialog()
+        dialog.set_message(_("Bind the capture keys in the desktop's "
+                             "configuration"))
+        dialog.set_detail(hotkey.setup_hint(desktop))
+        dialog.show(self)
 
     def _make_row(self, key):
         row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
