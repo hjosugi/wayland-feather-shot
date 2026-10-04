@@ -181,7 +181,6 @@ JA = {
         "クリップボードへコピー (Ctrl+C / Enter)",
     "Open save folder (Ctrl+O)": "保存先フォルダーを開く (Ctrl+O)",
     "Pin to screen (frameless window)": "画面にピン留め(枠なしウィンドウ)",
-    "Cancel (Esc)": "キャンセル (Esc)",
     # toasts / messages
     "Opened save folder  {path}": "保存先フォルダーを開きました  {path}",
     "Open folder failed: {error}": "フォルダーを開けませんでした: {error}",
@@ -193,7 +192,6 @@ JA = {
     "clipboard (valid while the editor stays open)":
         "クリップボード(エディタを開いている間有効)",
     "holder process": "保持プロセス",
-    "Background": "背景",
     "Text font": "テキストのフォント",
     # selector hint
     "Drag: select area   •   Click / Enter: full screen   •   Esc: cancel":
