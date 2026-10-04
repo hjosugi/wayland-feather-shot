@@ -28,6 +28,7 @@ from .cli import EXIT_CANCELLED
 from .util.i18n import _, tr
 from .util.lifecycle import acquire_capture_lock, release_on_window_removed  # noqa: F401
 from .portal import Portal, PortalError, cleanup_portal_file
+from .overlay.canvas import warm_up_renderer
 from .overlay.window import OverlayWindow
 from .util.settings import Settings
 from .util.theme import apply_system_color_scheme, register_bundled_icons
@@ -137,7 +138,11 @@ class FeatherShotApp(Gtk.Application):
     # -- screenshot modes ---------------------------------------------------
 
     def _start_screenshot(self, force_interactive: bool = False):
+        answered = False
+
         def on_shot(path, error):
+            nonlocal answered
+            answered = True
             if path is None:
                 if error == "cancelled":
                     self._cancel()
@@ -149,6 +154,8 @@ class FeatherShotApp(Gtk.Application):
             self._open_capture(path)
 
         def on_interactive_shot(path, error):
+            nonlocal answered
+            answered = True
             if path is None:
                 if error == "cancelled":
                     self._cancel()
@@ -166,6 +173,15 @@ class FeatherShotApp(Gtk.Application):
             pending.then(on_shot)
         else:
             self._request_screenshot(on_shot, interactive=False)
+
+        def warm_up():
+            if not answered:
+                warm_up_renderer()
+            return False
+
+        # GTK has nothing to do until the portal answers; start the renderer
+        # meanwhile, so the overlay's first frame does not have to.
+        GLib.idle_add(warm_up)
 
     def _request_screenshot(self, callback, interactive: bool):
         self._capture_started = time.time()

@@ -30,6 +30,9 @@
   launch compiled the sources again.
 - **Thinner lines to start with.** The default line width is 2 instead of
   3. A width you picked before is remembered as it was.
+- **The overlay appears about 0.1 s sooner.** The GPU renderer's start-up
+  (loading the driver, building its shaders) held up the overlay's first
+  frame; it now happens while the screenshot portal is still working.
 
 ## 0.13.0 (2026-10-04)
 

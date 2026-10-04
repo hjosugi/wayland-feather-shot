@@ -29,7 +29,7 @@ HAVE_DISPLAY = HAVE_GTK and Gdk.Display.get_default() is not None
 
 if HAVE_GTK:
     from wayland_feather_shot.overlay.canvas import (
-        OverlayScene, color, dim_outside, rect,
+        OverlayScene, color, dim_outside, rect, warm_up_renderer,
     )
     from wayland_feather_shot.editor.shapes import (
         Arrow, EllipseShape, Highlight, Line, Marker, Obscure, Pen,
@@ -396,6 +396,11 @@ class OverlayRendererTests(unittest.TestCase):
 
     def test_vulkan_renderer_keeps_mask_coverage(self):
         self.check_renderer_mask("VulkanRenderer")
+
+    def test_the_warm_up_draws_off_screen_and_leaves_no_window(self):
+        before = set(Gtk.Window.list_toplevels())
+        warm_up_renderer()
+        self.assertEqual(set(Gtk.Window.list_toplevels()), before)
 
 
 if __name__ == "__main__":

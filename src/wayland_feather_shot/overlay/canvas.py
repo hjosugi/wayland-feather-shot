@@ -26,6 +26,43 @@ def color(r, g, b, a=1):
     return rgba
 
 
+def warm_up_renderer():
+    """Start the GPU renderer on a tiny frame drawn off screen.
+
+    The renderer's first frame loads the driver and builds its shaders,
+    about 100 ms, and the overlay's first frame used to pay for it. The
+    screenshot portal takes the better part of a second while GTK is idle;
+    drawing the overlay's kinds of content (a texture, a fill, a border, a
+    rounded clip, cairo) 16 pixels wide in that wait takes the cost off the
+    overlay. The window is realized for its renderer and never shown.
+    """
+    window = Gtk.Window()
+    try:
+        window.realize()
+        renderer = window.get_renderer()
+        if renderer is None:
+            return
+        bounds = rect(0, 0, 16, 16)
+        snapshot = Gtk.Snapshot.new()
+        snapshot.append_texture(Gdk.MemoryTexture.new(
+            16, 16, Gdk.MemoryFormat.B8G8R8A8_PREMULTIPLIED,
+            GLib.Bytes.new(bytes(16 * 16 * 4)), 16 * 4), bounds)
+        shade = color(0, 0, 0, 0.5)
+        snapshot.append_color(shade, bounds)
+        outline = Gsk.RoundedRect()
+        outline.init_from_rect(bounds, 4)
+        snapshot.append_border(outline, [1.0] * 4, [shade] * 4)
+        snapshot.push_rounded_clip(outline)
+        snapshot.append_color(shade, bounds)
+        snapshot.pop()
+        cr = snapshot.append_cairo(bounds)
+        cr.paint()
+        del cr
+        renderer.render_texture(snapshot.to_node(), bounds)
+    finally:
+        window.destroy()
+
+
 def dim_outside(snapshot, width, height, selection, alpha):
     """Darken the viewport outside the selection with continuous coverage."""
     shade = color(0, 0, 0, alpha)
