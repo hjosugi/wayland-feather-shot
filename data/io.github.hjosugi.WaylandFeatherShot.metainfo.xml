@@ -52,6 +52,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.15.0" date="2026-10-22">
+      <description>
+        <p>
+          Ctrl+PrtSc opens the full-screen overlay on the monitor the
+          pointer is on, rather than wherever the compositor put it.
+        </p>
+      </description>
+    </release>
     <release version="0.14.0" date="2026-10-04">
       <description>
         <p>

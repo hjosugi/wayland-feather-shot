@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.15.0 (2026-10-22)
+
 - **Ctrl+PrtSc opens on the monitor the pointer is on.** The full-screen
   overlay, the whole screenshot of every monitor in one window, went on
   whichever monitor the compositor chose. Wayland does not say where the
