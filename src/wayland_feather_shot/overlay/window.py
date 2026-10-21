@@ -45,6 +45,7 @@ from .draw import OverlayDrawMixin
 from .extract import OverlayExtractMixin
 from .frame import OverlayFrameMixin
 from .hand import OverlayHandMixin
+from .pointer import PointerProbe
 from .text import OverlayTextMixin, TextLayer
 from .view import ZOOM_MAX, ZOOM_STEP, MonitorView, OverlayViewMixin, Rect
 
@@ -85,8 +86,8 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
     toolbar and action bar appear and the tools draw on the screenshot.
     With select_all (the `full` mode, Ctrl+PrtSc) it starts with the whole
     screen selected, so the handles can still cut a part out of it, and
-    shows the whole screenshot in one window on the active monitor instead
-    of one window per monitor.
+    shows the whole screenshot in one window instead of one window per
+    monitor, on the monitor the pointer is on (present_on_pointer_monitor).
 
     It opens a picture that is not a fresh screenshot the same way: a file
     (`edit`), one reopened from the history with its annotations (*shapes*,
@@ -201,8 +202,8 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
         if selection is None and select_all:
             selection = whole
         if selection is not None and monitor_layout is None:
-            # The whole picture at a glance: one window, on the monitor the
-            # compositor puts it on, fitting every monitor's part.
+            # The whole picture at a glance: one window, fitting every
+            # monitor's part.
             monitor_layout = [(None, whole)]
         self._fit_width_pending = selection is not None
         self._build_ui(monitor_layout)
@@ -222,6 +223,16 @@ class OverlayWindow(OverlayViewMixin, OverlayControlsMixin, OverlayTextMixin,
             self._selection_made()
         if startup_toast:
             GLib.idle_add(lambda: (self.toast(startup_toast, 4.0), False)[1])
+
+    def present_on_pointer_monitor(self):
+        """Present the overlay. One window showing a screenshot of several
+        monitors (the full screen) opens on the monitor the pointer is on
+        (pointer.py); a window per monitor covers them all anyway."""
+        layout = self._monitor_layout()
+        if len(self._views) > 1 or len(layout) < 2:
+            self.present()
+            return
+        PointerProbe(self, self._scene.background, layout).start()
 
     def _remember_style(self):
         """Save the style for the next session, when it changed; best

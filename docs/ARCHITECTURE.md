@@ -26,6 +26,8 @@ src/wayland_feather_shot/
     hand.py              picking, moving and reshaping placed shapes
     extract.py           OCR, QR and smart redaction of the selection
     frame.py             the background frame and its preview
+    pointer.py           opening the full-screen overlay on the monitor
+                         the pointer is on
   editor/                the annotation model the overlay draws with: shapes,
                          rendering, the selection frame's geometry, the
                          editable sidecar, OCR/QR, the style preset

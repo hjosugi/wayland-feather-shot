@@ -244,7 +244,7 @@ class FeatherShotApp(Gtk.Application):
             select_all=self.mode in ("full", "window") or self._scripted(),
             save_path=self.output, remember_style=True)
         release_on_window_removed(self, win)
-        win.present()
+        win.present_on_pointer_monitor()
         self._unlock_when_removed(win)
 
     def _save_and_exit(self, pixbuf):

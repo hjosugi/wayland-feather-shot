@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Ctrl+PrtSc opens on the monitor the pointer is on.** The full-screen
+  overlay, the whole screenshot of every monitor in one window, went on
+  whichever monitor the compositor chose. Wayland does not say where the
+  pointer is, so each monitor now shows its own part of the screenshot for
+  a moment, and the overlay opens on the one the pointer is over. A region
+  capture (Ctrl+Shift+PrtSc) still opens on every monitor.
+
 ## 0.14.0 (2026-10-04)
 
 - **Every picture opens in the overlay; the editor window is gone.** A

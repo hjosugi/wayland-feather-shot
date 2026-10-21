@@ -125,6 +125,76 @@ class OverlayMonitorTests(unittest.TestCase):
         self.assertEqual(view.rect, (0, 0, 400, 600))
         self.assertEqual(window.sel, (0, 0, 400, 600))
 
+    def full_screen_window(self):
+        """A Ctrl+PrtSc overlay of the two monitors, not shown: present and
+        fullscreen_on_monitor are recorded instead."""
+        from unittest.mock import Mock, patch
+        pixbuf = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8,
+                                      400, 600)
+        with patch.object(OverlayWindow, "_monitor_layout",
+                          return_value=[("upper", TOP), ("lower", BOTTOM)]):
+            window = OverlayWindow(self.app, pixbuf, Settings(),
+                                   select_all=True)
+        self.addCleanup(window.destroy)
+        window.present = Mock()
+        window.fullscreen_on_monitor = Mock()
+        return window
+
+    def probe(self, window):
+        from wayland_feather_shot.overlay.pointer import PointerProbe
+        probe = PointerProbe(window, window._scene.background,
+                             [("upper", TOP), ("lower", BOTTOM)])
+        for frozen in probe._windows:
+            self.addCleanup(frozen.destroy)
+        return probe
+
+    def test_full_screen_opens_on_the_monitor_the_pointer_enters(self):
+        window = self.full_screen_window()
+        probe = self.probe(window)
+        upper, lower = probe._windows
+        probe._found(1)
+        window.fullscreen_on_monitor.assert_called_once_with("lower")
+        window.present.assert_called_once_with()
+        # The upper monitor's frozen window goes now; the lower one stays
+        # under the overlay until it has appeared.
+        self.assertNotIn(upper, Gtk.Window.list_toplevels())
+        self.assertIn(lower, Gtk.Window.list_toplevels())
+        # Entering another one later changes nothing.
+        probe._found(0)
+        window.fullscreen_on_monitor.assert_called_once_with("lower")
+        window.present.assert_called_once_with()
+
+    def test_without_the_pointer_the_compositor_places_the_overlay(self):
+        window = self.full_screen_window()
+        probe = self.probe(window)
+        probe._timed_out()
+        window.fullscreen_on_monitor.assert_not_called()
+        window.present.assert_called_once_with()
+        for frozen in probe._windows:
+            self.assertIn(frozen, Gtk.Window.list_toplevels())
+
+    def test_full_screen_looks_for_the_pointer_before_opening(self):
+        from unittest.mock import patch
+        window = self.full_screen_window()
+        layout = [("upper", TOP), ("lower", BOTTOM)]
+        with patch.object(OverlayWindow, "_monitor_layout",
+                          return_value=layout), \
+                patch("wayland_feather_shot.overlay.window.PointerProbe") \
+                as probe:
+            window.present_on_pointer_monitor()
+        probe.assert_called_once_with(window, window._scene.background,
+                                      layout)
+        probe.return_value.start.assert_called_once_with()
+        window.present.assert_not_called()
+
+    def test_a_region_capture_opens_on_every_monitor_without_a_probe(self):
+        from unittest.mock import Mock, patch
+        self.window.present = Mock()
+        with patch("wayland_feather_shot.overlay.window.PointerProbe") as probe:
+            self.window.present_on_pointer_monitor()
+        probe.assert_not_called()
+        self.window.present.assert_called_once_with()
+
 
 if __name__ == "__main__":
     unittest.main()
