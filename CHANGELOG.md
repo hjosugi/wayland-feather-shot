@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **`updater remove` also takes out an AppImage manager's copy.** A desktop
+  entry Gear Lever or AppImageLauncher wrote for an older AppImage, with the
+  AppImage and its icon, stayed in the app grid as a second Feather Shot
+  next to the one a package manager keeps current. They are found by what
+  the entry runs (`X-AppImage-Name=Feather Shot`, or the app's name with an
+  `.AppImage` to run), not by file name. A symlinked entry -- how soar links
+  the copy it manages -- and an autostart entry with `Hidden=true` (one that
+  switches the daemon off) are left alone.
+- **Install with soar.** The README shows the `packages.toml` entry that
+  installs the release AppImage and keeps it current; `soar update` removes
+  the version it replaces.
+
 ## 0.15.0 (2026-10-22)
 
 - **Ctrl+PrtSc opens on the monitor the pointer is on.** The full-screen

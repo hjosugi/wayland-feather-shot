@@ -47,6 +47,36 @@ $ grep -q '^\[wayland-feather-shot\]' /etc/pacman.conf || printf '\n[wayland-fea
 $ sudo pacman -Syu wayland-feather-shot
 ```
 
+On any distribution, [soar](https://github.com/pkgforge/soar) can install the
+release AppImage and keep it current. Declare it in
+`~/.config/soar/packages.toml`:
+
+```toml
+[packages.wayland-feather-shot]
+github = "hjosugi/wayland-feather-shot"
+asset_pattern = "wayland-feather-shot-*-x86_64.AppImage"
+pkg_type = "appimage"
+```
+
+```console
+$ soar apply     # install the newest release
+$ soar update    # later releases; soar removes the version it replaces
+```
+
+The AppImage runs the system `python3`, so it needs the GTK 4, PyGObject and
+pycairo packages from the table below. soar rewrites `packages.toml` with
+the version it installed; if that file is managed elsewhere (dotfiles), hand
+`soar apply --packages` a copy.
+
+A copy installed some other way stays where it is and shows up as a second
+Feather Shot that never updates. Remove the one `install.sh` put in
+`~/.local`, or one an AppImage manager (Gear Lever, AppImageLauncher)
+integrated from an older AppImage, with soar's copy:
+
+```console
+$ ~/.local/share/soar/bin/wayland-feather-shot updater remove
+```
+
 Dependencies for a source install (`install.sh` or pip): GTK 4, PyGObject and
 pycairo are all it needs.
 
@@ -69,7 +99,8 @@ $ ./install.sh                # user install into ~/.local
 $ ./install.sh --with-hotkey  # …and register the hotkeys (GNOME: automatic)
 ```
 
-Remove files installed by `install.sh`:
+Remove files installed by `install.sh` (and an AppImage manager's
+integration of an older AppImage; your config is kept):
 
 ```console
 $ wayland-feather-shot updater remove
@@ -103,7 +134,7 @@ $ wayland-feather-shot settings   # edit the config in a window
 $ wayland-feather-shot -d 3 gui   # 3-second delay
 $ wayland-feather-shot daemon     # GlobalShortcuts-portal hotkey daemon
 $ wayland-feather-shot diagnose   # check portals/GTK/GStreamer availability
-$ wayland-feather-shot updater remove  # remove install.sh-managed files
+$ wayland-feather-shot updater remove  # remove install.sh / AppImage-manager copies
 ```
 
 Every picture opens in the overlay: a fresh capture, a file (`edit`), one

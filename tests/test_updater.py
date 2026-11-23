@@ -62,6 +62,102 @@ class UpdaterRemoveTests(unittest.TestCase):
         self.assertFalse(any(".config/autostart" in str(path)
                              for path in paths))
 
+    def _gear_lever(self, name="feather_shot"):
+        """What Gear Lever wrote for the AppImage of an older release."""
+        appimages = self.home / "AppImages"
+        appimage = appimages / f"{name}.appimage"
+        icon = appimages / ".icons" / name
+        self._touch(appimage)
+        self._touch(icon)
+        entry = (self.home / ".local" / "share" / "applications" /
+                 f"{name}.desktop")
+        entry.parent.mkdir(parents=True, exist_ok=True)
+        entry.write_text(
+            "[Desktop Entry]\n"
+            "Type=Application\n"
+            "Name=Feather Shot\n"
+            f"Icon={icon}\n"
+            f"TryExec={appimage}\n"
+            f"Exec=env DESKTOPINTEGRATION=1 {appimage} gui\n"
+            "X-AppImage-Name=Feather Shot\n"
+            "\n[Desktop Action full]\n"
+            "Name=Capture full screen\n"
+            f"Exec={appimage} full\n",
+            encoding="utf-8")
+        return entry, appimage, icon
+
+    def test_remove_deletes_appimage_manager_integration(self):
+        entry, appimage, icon = self._gear_lever()
+        other = self.home / "AppImages" / "other.appimage"
+        self._touch(other)
+
+        result = updater.remove_installation(
+            prefix=self.prefix, home=self.home, system=False,
+            refresh_caches=False)
+
+        for path in (entry, appimage, icon):
+            self.assertFalse(path.exists(), path)
+            self.assertIn(path, result.removed)
+        self.assertTrue(other.exists())
+
+    def test_appimage_entry_found_by_exec_without_marker(self):
+        appimage = self.home / "Applications" / "Feather_Shot-x86_64.AppImage"
+        self._touch(appimage)
+        entry = (self.home / ".local" / "share" / "applications" /
+                 "appimagekit_0123-Feather_Shot.desktop")
+        entry.parent.mkdir(parents=True, exist_ok=True)
+        entry.write_text(
+            "[Desktop Entry]\nName=Feather Shot\n"
+            f"Exec={appimage} gui\nIcon=appimagekit_0123_feather\n",
+            encoding="utf-8")
+
+        paths = updater.appimage_integration_paths(self.home)
+
+        self.assertEqual(paths, [entry, appimage])
+
+    def test_symlinked_entry_is_left_alone(self):
+        """soar links the entry of the copy it manages into applications/."""
+        package = self.root / "soar" / "packages" / "wfs-0.15.0"
+        self._touch(package / "wayland-feather-shot.desktop")
+        (package / "wayland-feather-shot.desktop").write_text(
+            "[Desktop Entry]\nName=Feather Shot\n"
+            "Exec=/x/soar/bin/wayland-feather-shot gui\n"
+            "X-AppImage-Name=Feather Shot\n", encoding="utf-8")
+        apps = self.home / ".local" / "share" / "applications"
+        apps.mkdir(parents=True)
+        link = apps / "wayland-feather-shot-soar.desktop"
+        link.symlink_to(package / "wayland-feather-shot.desktop")
+
+        self.assertEqual(updater.appimage_integration_paths(self.home), [])
+
+    def test_unrelated_desktop_entries_are_kept(self):
+        apps = self.home / ".local" / "share" / "applications"
+        apps.mkdir(parents=True)
+        (apps / "other.desktop").write_text(
+            "[Desktop Entry]\nName=Other\nExec=/opt/Other.AppImage\n",
+            encoding="utf-8")
+        (apps / "feather-src.desktop").write_text(
+            "[Desktop Entry]\nName=Feather Shot\n"
+            "Exec=/src/wayland-feather-shot/bin/wayland-feather-shot gui\n",
+            encoding="utf-8")
+
+        self.assertEqual(updater.appimage_integration_paths(self.home), [])
+
+    def test_hidden_autostart_override_is_kept(self):
+        autostart = (self.home / ".config" / "autostart" /
+                     f"{APP_ID}.Daemon.desktop")
+        autostart.parent.mkdir(parents=True)
+        autostart.write_text(
+            "[Desktop Entry]\nType=Application\n"
+            "Exec=wayland-feather-shot daemon\nHidden=true\n",
+            encoding="utf-8")
+
+        updater.remove_installation(
+            prefix=self.prefix, home=self.home, system=False,
+            refresh_caches=False)
+
+        self.assertTrue(autostart.exists())
+
     def test_remove_reports_missing_paths(self):
         result = updater.remove_installation(
             prefix=self.prefix, home=self.home, system=False,
